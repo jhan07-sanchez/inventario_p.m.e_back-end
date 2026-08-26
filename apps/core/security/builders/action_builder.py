@@ -1,5 +1,5 @@
 """
-Veltrion Action Builder
+inventario-pme Action Builder
 =======================
 
 Agrupa las acciones efectivas del usuario por módulo para

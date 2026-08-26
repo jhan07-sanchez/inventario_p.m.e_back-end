@@ -1,5 +1,5 @@
 """
-Veltrion Permission Builder
+inventario-pme Permission Builder
 ===========================
 
 Agrupa los permisos efectivos del usuario por módulo para

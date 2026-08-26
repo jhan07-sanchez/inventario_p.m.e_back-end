@@ -1,5 +1,5 @@
 """
-Veltrion Security Service
+inventario-pme Security Service
 =========================
 
 Orquestador del contexto de seguridad del usuario autenticado.

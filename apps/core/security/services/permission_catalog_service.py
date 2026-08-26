@@ -1,6 +1,6 @@
 """
 Servicio de dominio para construir el catalogo
-dinamico de permisos y acciones de Veltrion.
+dinamico de permisos y acciones de inventario-pme.
 """
 from __future__ import annotations
 

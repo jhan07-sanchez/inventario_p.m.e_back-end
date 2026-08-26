@@ -1,5 +1,5 @@
 """
-Veltrion Permission Service
+inventario-pme Permission Service
 ============================
 
 Servicio de dominio responsable de calcular los permisos efectivos

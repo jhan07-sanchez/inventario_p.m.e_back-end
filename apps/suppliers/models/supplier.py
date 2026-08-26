@@ -5,7 +5,7 @@ from apps.core.models.base_model import BaseModel
 
 class Supplier(BaseModel):
     """
-    Modelo que representa un proveedor en el sistema Veltrion.
+    Modelo que representa un proveedor en el sistema inventario-pme.
     """
 
     class DocumentType(models.TextChoices):

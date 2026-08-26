@@ -9,7 +9,7 @@ from ..validators import document_number_validator
 
 class User(AbstractUser, BaseModel):
     """
-    Modelo de usuario personalizado para Veltrion.
+    Modelo de usuario personalizado para inventario-pme.
     """
 
     id_user = models.BigAutoField(primary_key=True, verbose_name="ID")

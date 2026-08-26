@@ -7,7 +7,7 @@ from apps.core.models.base_model import BaseModel
 
 class Customer(BaseModel):
     """
-    Modelo que representa a un cliente en el sistema Veltrion.
+    Modelo que representa a un cliente en el sistema inventario-pme.
     """
 
     class DocumentType(models.TextChoices):

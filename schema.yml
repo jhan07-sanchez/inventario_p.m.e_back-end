@@ -1,14 +1,14 @@
 openapi: 3.0.3
 info:
-  title: Veltrion API
+  title: inventario-pme API
   version: 1.0.0
-  description: API REST empresarial del sistema Veltrion.\n\nEsta API proporciona
-    acceso completo a los módulos, de Veltrion ERP.\n\n**Características Principales:**\n-
+  description: API REST empresarial del sistema inventario-pme.\n\nEsta API proporciona
+    acceso completo a los módulos, de inventario-pme ERP.\n\n**Características Principales:**\n-
     Respuestas estandarizadas en formato JSON.\n- Autenticación segura mediante tokens
     JWT.\n- Paginación unificada y filtros avanzados.
-  termsOfService: https://www.veltrion.com/terms/
+  termsOfService: https://www.inventario-pme.com/terms/
   contact:
-    name: Soporte Veltrion
+    name: Soporte inventario-pme
     url: ''
     email: jhansancheza@gmail.com
 paths:
@@ -29,7 +29,7 @@ paths:
             examples:
               EjemploDeLoginExitoso:
                 value:
-                  username: software_veltrion
+                  username: software_inventario-pme
                   password: '12345678'
                 summary: Ejemplo de Login Exitoso
           application/x-www-form-urlencoded:

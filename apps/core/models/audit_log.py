@@ -49,7 +49,7 @@ class AuditLog(BaseModel):
         verbose_name = "Registro de Auditoría"
         verbose_name_plural = "Registros de Auditoría"
         ordering = ["-created_at"]
-        db_table = "veltrion_audit_logs"
+        db_table = "inventario-pme_audit_logs"
 
     def __str__(self):
         return f"[{self.method}] {self.path} - {self.status_code} ({self.created_at.strftime('%Y-%m-%d %H:%M:%S')})"

@@ -147,19 +147,19 @@ REST_FRAMEWORK = {
 # ======================================
 
 SPECTACULAR_SETTINGS = {
-    "TITLE": "Veltrion API",
+    "TITLE": "inventario-pme API",
     "DESCRIPTION": (
-        "API REST empresarial del sistema Veltrion.\\n\\n"
+        "API REST empresarial del sistema inventario-pme.\\n\\n"
         "Esta API proporciona acceso completo a los módulos, "
-        "de Veltrion ERP.\\n\\n"
+        "de inventario-pme ERP.\\n\\n"
         "**Características Principales:**\\n"
         "- Respuestas estandarizadas en formato JSON.\\n"
         "- Autenticación segura mediante tokens JWT.\\n"
         "- Paginación unificada y filtros avanzados."
     ),
-    "TOS": "https://www.veltrion.com/terms/",
+    "TOS": "https://www.inventario-pme.com/terms/",
     "CONTACT": {
-        "name": "Soporte Veltrion",
+        "name": "Soporte inventario-pme",
         "url": "",
         "email": "jhansancheza@gmail.com",
     },

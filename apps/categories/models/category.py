@@ -8,7 +8,7 @@ from apps.core.models.base_model import BaseModel
 class Category(BaseModel):
     """
     Modelo que representa una categoria de productos
-    dentro del sistema Veltrion.
+    dentro del sistema inventario-pme.
     """
 
     id_category = models.BigAutoField(primary_key=True, verbose_name="ID",)

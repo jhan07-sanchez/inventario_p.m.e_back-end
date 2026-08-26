@@ -47,7 +47,7 @@ login_schema = extend_schema(
             name="Ejemplo de Login Exitoso",
             request_only=True,
             value={
-                "email": "usuario1@veltrion.com",
+                "email": "usuario1@inventario-pme.com",
                 "password": "12345678",
             },
         ),

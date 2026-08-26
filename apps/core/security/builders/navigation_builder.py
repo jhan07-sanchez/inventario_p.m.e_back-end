@@ -1,5 +1,5 @@
 """
-Veltrion Navigation Builder
+inventario-pme Navigation Builder
 ============================
 
 Construye el árbol jerárquico de navegación (sidebar) filtrado

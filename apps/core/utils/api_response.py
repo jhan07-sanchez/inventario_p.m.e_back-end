@@ -5,7 +5,7 @@ from rest_framework.response import Response
 class ApiResponse:
     """
     Clase utilitaria para estandarizar las respuestas
-    de toda la API de veltrion
+    de toda la API de inventario-pme
     """
 
     @staticmethod

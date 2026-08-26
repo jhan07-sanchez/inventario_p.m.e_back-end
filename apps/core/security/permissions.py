@@ -1,5 +1,5 @@
 """
-Veltrion Dynamic Permission Classes for DRF
+inventario-pme Dynamic Permission Classes for DRF
 =============================================
 
 Proporciona una única clase reutilizable ``HasPermission`` que

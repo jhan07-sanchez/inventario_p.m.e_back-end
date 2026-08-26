@@ -7,7 +7,7 @@ from apps.core.utils.api_response import ApiResponse
 
 class BaseViewSet(ModelViewSet):
     """
-    ViewSet base para todos los modulos de Veltrion.
+    ViewSet base para todos los modulos de inventario-pme.
 
     Centraliza la logica comun utilizada para todos los ViewSets,
     evitando duplicacion de codigo y garantizando respuestas

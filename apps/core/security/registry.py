@@ -1,5 +1,5 @@
 """
-Veltrion Security Registry v1
+inventario-pme Security Registry v1
 ==============================
 
 Registro centralizado en memoria de todos los módulos, permisos,

@@ -97,7 +97,7 @@ class Migration(migrations.Migration):
             options={
                 "verbose_name": "Registro de Auditoría",
                 "verbose_name_plural": "Registros de Auditoría",
-                "db_table": "veltrion_audit_logs",
+                "db_table": "inventario-pme_audit_logs",
                 "ordering": ["-created_at"],
             },
         ),

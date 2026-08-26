@@ -4,10 +4,10 @@ from .base import *  # noqa: F403
 
 DEBUG = config("DEBUG", default=False, cast=bool)
 
-ALLOWED_HOSTS = config("ALLOWED_HOSTS", default="api.veltrion.com", cast=Csv())
+ALLOWED_HOSTS = config("ALLOWED_HOSTS", default="api.inventario-pme.com", cast=Csv())
 
 CORS_ALLOWED_ORIGINS = config(
-    "CORS_ALLOWED_ORIGINS", default="https://veltrion.com", cast=Csv()
+    "CORS_ALLOWED_ORIGINS", default="https://inventario-pme.com", cast=Csv()
 )
 
 # ======================================

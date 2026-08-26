@@ -1,5 +1,5 @@
 """
-Veltrion Dashboard Builder
+inventario-pme Dashboard Builder
 ===========================
 
 Genera la configuración dinámica del dashboard según los

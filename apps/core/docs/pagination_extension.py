@@ -7,7 +7,7 @@ from apps.core.docs.api_response_schema import build_api_response_schema
 class CustomPaginationExtension(OpenApiPaginationExtension):
     """
     Extensión para DRF Spectacular para documentar correctamente la
-    clase de paginación 'CustomPagination' del proyecto Veltrion.
+    clase de paginación 'CustomPagination' del proyecto inventario-pme.
     """
 
     target_class = "apps.core.pagination.custom_pagination.CustomPagination"
