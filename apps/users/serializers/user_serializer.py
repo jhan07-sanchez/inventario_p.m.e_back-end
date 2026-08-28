@@ -3,6 +3,7 @@ from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
 from apps.users.models import User
+from apps.core.security.services.permission_service import PermissionService
 
 from .role_serializer import RoleListSerializer
 
@@ -28,10 +29,10 @@ class UserListSerializer(serializers.ModelSerializer):
     @extend_schema_field(RoleListSerializer(many=True))
     def get_roles(self, obj):
         """
-        Retorna todos los roles asignados al usuario.
+        Retorna todos los roles asignados al usuario de forma optimizada.
         """
 
-        roles = [ur.role for ur in obj.user_roles.all() if ur.role.is_active]
+        roles = PermissionService._get_active_roles(obj)
 
         return RoleListSerializer(
             roles,
@@ -61,7 +62,7 @@ class UserDetailSerializer(serializers.ModelSerializer):
 
     @extend_schema_field(RoleListSerializer(many=True))
     def get_roles(self, obj):
-        roles = [ur.role for ur in obj.user_roles.all() if ur.role.is_active]
+        roles = PermissionService._get_active_roles(obj)
 
         return RoleListSerializer(
             roles,

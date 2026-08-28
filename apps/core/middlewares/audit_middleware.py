@@ -1,7 +1,9 @@
 import json
 import logging
+import threading
 
 from django.utils.deprecation import MiddlewareMixin
+from django.db import connection
 
 from apps.core.models.audit_log import AuditLog
 
@@ -14,6 +16,23 @@ class AuditMiddleware(MiddlewareMixin):
     """
 
     SENSITIVE_KEYS = frozenset(["password", "token", "access", "refresh", "secret"])
+
+    @staticmethod
+    def _save_audit_log_async(user_id, method, path, ip_address, user_agent, status_code, payload):
+        try:
+            AuditLog.objects.create(
+                user_id=user_id,
+                method=method,
+                path=path,
+                ip_address=ip_address,
+                user_agent=user_agent,
+                status_code=status_code,
+                payload=payload,
+            )
+        except Exception as e:  # noqa: BLE001
+            logger.error(f"No se pudo guardar el registro de auditoría en background: {e!s}")
+        finally:
+            connection.close()
 
     def __call__(self, request):
         payload = {}
@@ -51,17 +70,22 @@ class AuditMiddleware(MiddlewareMixin):
             ip_address = self._get_client_ip(request)
 
             try:
-                AuditLog.objects.create(
-                    user=user,
-                    method=request.method,
-                    path=request.path,
-                    ip_address=ip_address,
-                    user_agent=request.META.get("HTTP_USER_AGENT", ""),
-                    status_code=response.status_code,
-                    payload=masked_payload,
+                user_id = user.id_user if user else None
+                thread = threading.Thread(
+                    target=self._save_audit_log_async,
+                    args=(
+                        user_id,
+                        request.method,
+                        request.path,
+                        ip_address,
+                        request.META.get("HTTP_USER_AGENT", ""),
+                        response.status_code,
+                        masked_payload,
+                    )
                 )
+                thread.start()
             except Exception as e:  # noqa: BLE001
-                logger.error(f"No se pudo guardar el registro de auditoría: {e!s}")
+                logger.error(f"No se pudo iniciar el hilo de auditoría: {e!s}")
 
         return response
 

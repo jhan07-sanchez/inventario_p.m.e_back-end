@@ -31,6 +31,24 @@ class PermissionService:
     """
 
     @staticmethod
+    def _get_active_roles(user: User):
+        """
+        Obtiene los roles activos del usuario de forma optimizada.
+        Utiliza prefetch cache si existe, o un cache temporal en el objeto user.
+        """
+        if hasattr(user, "_prefetched_objects_cache") and "user_roles" in user._prefetched_objects_cache:
+            return [ur.role for ur in user.user_roles.all() if ur.role.is_active]
+
+        if hasattr(user, "_active_roles_cache"):
+            return user._active_roles_cache
+
+        active_roles = [
+            ur.role for ur in user.user_roles.filter(role__is_active=True).select_related("role")
+        ]
+        user._active_roles_cache = active_roles
+        return active_roles
+
+    @staticmethod
     def get_effective_permissions(user: User) -> dict[str, bool]:
         """
         Calcula los permisos efectivos de un usuario fusionando
@@ -54,12 +72,9 @@ class PermissionService:
         all_codes = SecurityRegistry.get_all_security_codes()
         effective: dict[str, bool] = {code: False for code in all_codes}
 
-        active_roles = user.user_roles.filter(
-            role__is_active=True,
-        ).select_related("role")
+        active_roles = PermissionService._get_active_roles(user)
 
-        for user_role in active_roles:
-            role = user_role.role
+        for role in active_roles:
             for code in all_codes:
                 if PermissionService.role_grants_permission(role, code):
                     effective[code] = True
@@ -127,13 +142,11 @@ class PermissionService:
         if user.is_superuser:
             return True
 
-        active_roles = user.user_roles.filter(
-            role__is_active=True,
-        ).select_related("role")
+        active_roles = PermissionService._get_active_roles(user)
 
-        for user_role in active_roles:
+        for role in active_roles:
             if PermissionService.role_grants_permission(
-                user_role.role,
+                role,
                 permission_code,
             ):
                 return True
@@ -159,17 +172,15 @@ class PermissionService:
     def get_user_role_names(user: User) -> list[str]:
         """Devuelve los nombres de los roles activos del usuario."""
 
-        return list(
-            user.user_roles.filter(role__is_active=True)
-            .select_related("role")
-            .values_list("role__role_name", flat=True)
-        )
+        active_roles = PermissionService._get_active_roles(user)
+        return [role.role_name for role in active_roles]
 
     @staticmethod
     def has_any_active_role(user: User) -> bool:
         """Verifica que el usuario tiene al menos un rol activo asignado."""
 
-        return user.user_roles.filter(role__is_active=True).exists()
+        active_roles = PermissionService._get_active_roles(user)
+        return len(active_roles) > 0
 
     @staticmethod
     def has_any_permission(
