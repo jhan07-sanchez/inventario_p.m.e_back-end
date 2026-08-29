@@ -163,7 +163,7 @@ class UserViewSet(BaseViewSet):
         """
         Crea un nuevo usuario.
         """
-        
+
         if "roles" in request.data:
             if not PermissionService.user_has_permission(request.user, "user_roles.create"):
                 raise PermissionDenied(detail="No tiene permisos para asignar roles.", code="PERMISSION_DENIED")
@@ -187,7 +187,7 @@ class UserViewSet(BaseViewSet):
         """
         Actualiza completamente un usuario.
         """
-        
+
         if "roles" in request.data:
             if not PermissionService.user_has_permission(request.user, "user_roles.update"):
                 raise PermissionDenied(detail="No tiene permisos para actualizar roles.", code="PERMISSION_DENIED")
@@ -218,7 +218,7 @@ class UserViewSet(BaseViewSet):
         """
         Actualizar parcialmente un usuario.
         """
-        
+
         if "roles" in request.data:
             if not PermissionService.user_has_permission(request.user, "user_roles.update"):
                 raise PermissionDenied(detail="No tiene permisos para actualizar roles.", code="PERMISSION_DENIED")
