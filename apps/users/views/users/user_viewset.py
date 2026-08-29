@@ -1,8 +1,10 @@
 from django.core.exceptions import ValidationError
 from rest_framework import status
+from rest_framework.exceptions import PermissionDenied
 from rest_framework.decorators import action
 
 from apps.core.security import HasPermission
+from apps.core.security.services.permission_service import PermissionService
 from apps.core.views.base_viewset import BaseViewSet
 from apps.users.docs.user_docs import (
     user_create_schema,
@@ -161,6 +163,10 @@ class UserViewSet(BaseViewSet):
         """
         Crea un nuevo usuario.
         """
+        
+        if "roles" in request.data:
+            if not PermissionService.user_has_permission(request.user, "user_roles.create"):
+                raise PermissionDenied(detail="No tiene permisos para asignar roles.", code="PERMISSION_DENIED")
 
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -181,6 +187,10 @@ class UserViewSet(BaseViewSet):
         """
         Actualiza completamente un usuario.
         """
+        
+        if "roles" in request.data:
+            if not PermissionService.user_has_permission(request.user, "user_roles.update"):
+                raise PermissionDenied(detail="No tiene permisos para actualizar roles.", code="PERMISSION_DENIED")
 
         user = self.get_object()
 
@@ -208,6 +218,10 @@ class UserViewSet(BaseViewSet):
         """
         Actualizar parcialmente un usuario.
         """
+        
+        if "roles" in request.data:
+            if not PermissionService.user_has_permission(request.user, "user_roles.update"):
+                raise PermissionDenied(detail="No tiene permisos para actualizar roles.", code="PERMISSION_DENIED")
 
         user = self.get_object()
 

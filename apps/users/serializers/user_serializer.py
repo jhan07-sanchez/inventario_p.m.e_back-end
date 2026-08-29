@@ -77,6 +77,12 @@ class UserCreateSerializer(serializers.ModelSerializer):
         required=True,
         validators=[validate_password],
     )
+    
+    roles = serializers.ListField(
+        child=serializers.IntegerField(),
+        required=False,
+        write_only=True,
+    )
 
     class Meta:
         model = User
@@ -89,6 +95,7 @@ class UserCreateSerializer(serializers.ModelSerializer):
             "email",
             "document_number",
             "phone_number",
+            "roles",
         )
 
         extra_kwargs = {
@@ -106,6 +113,12 @@ class UserCreateSerializer(serializers.ModelSerializer):
 
 # Serializer para actualizar usuarios
 class UserUpdateSerializer(serializers.ModelSerializer):
+    roles = serializers.ListField(
+        child=serializers.IntegerField(),
+        required=False,
+        write_only=True,
+    )
+
     class Meta:
         model = User
 
@@ -115,6 +128,7 @@ class UserUpdateSerializer(serializers.ModelSerializer):
             "email",
             "phone_number",
             "is_active",
+            "roles",
         )
 
         extra_kwargs = {

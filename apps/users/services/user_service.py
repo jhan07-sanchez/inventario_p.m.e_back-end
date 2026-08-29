@@ -7,7 +7,7 @@ from apps.core.exceptions.custom_exceptions import (
     UserInactiveException,
 )
 from apps.core.services.base_service import BaseService
-from apps.users.models import User
+from apps.users.models import User, Role, UserRole
 
 
 class UserService(BaseService[User]):
@@ -62,16 +62,25 @@ class UserService(BaseService[User]):
 
     def perform_create(self, data: dict) -> User:
         password = data.pop("password")
+        roles_ids = data.pop("roles", [])
+        
         if "email" in data and data["email"]:
             data["email"] = data["email"].strip().lower()
         user = User(**data)
         user.set_password(password)
         user.full_clean()
         user.save()
+        
+        if roles_ids:
+            roles = Role.objects.filter(id_role__in=roles_ids, is_active=True)
+            for role in roles:
+                UserRole.objects.create(user=user, role=role)
+                
         return user
 
     def perform_update(self, instance: User, data: dict) -> User:
         password = data.pop("password", None)
+        roles_ids = data.pop("roles", None)
         
         if "email" in data and data["email"]:
             data["email"] = data["email"].strip().lower()
@@ -84,6 +93,15 @@ class UserService(BaseService[User]):
 
         instance.full_clean()
         instance.save()
+        
+        if roles_ids is not None:
+            # Eliminar roles existentes y asignar los nuevos
+            UserRole.objects.filter(user=instance).delete()
+            if roles_ids:
+                roles = Role.objects.filter(id_role__in=roles_ids, is_active=True)
+                for role in roles:
+                    UserRole.objects.create(user=instance, role=role)
+            
         return instance
 
     def perform_delete(self, instance: User, soft_delete: bool = True) -> None:
