@@ -43,5 +43,16 @@ class User(AbstractUser, BaseModel):
         verbose_name_plural = "Usuarios"
         ordering = ["id_user"]
 
+        indexes = [
+            models.Index(
+                fields=["is_active"],
+                name="user_is_active_idx",
+            ),
+            models.Index(
+                fields=["deleted_at"],
+                name="user_deleted_at_idx",
+            ),
+        ]
+
     def __str__(self):
         return self.username

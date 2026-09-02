@@ -1,6 +1,7 @@
 from django.core.exceptions import ValidationError
 from rest_framework import status
 from rest_framework.decorators import action
+from rest_framework.filters import SearchFilter, OrderingFilter
 
 from apps.core.security import HasPermission
 from apps.core.views.base_viewset import BaseViewSet
@@ -33,6 +34,22 @@ class RoleViewSet(BaseViewSet):
     queryset = Role.objects.all()
 
     permission_classes = [IsAuthenticatedAndActive]
+
+    filter_backends = [SearchFilter, OrderingFilter]
+
+    search_fields = [
+        "role_name",
+        "role_description",
+    ]
+
+    ordering_fields = [
+        "id_role",
+        "role_name",
+        "role_description",
+        "is_active",
+    ]
+
+    ordering = ["role_name"]
 
     def get_permissions(self):
         permission_map = {

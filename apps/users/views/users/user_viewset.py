@@ -2,6 +2,7 @@ from django.core.exceptions import ValidationError
 from rest_framework import status
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.decorators import action
+from rest_framework.filters import SearchFilter, OrderingFilter
 from rest_framework.permissions import AllowAny  # <--- Importante para acceso libre en desarrollo
 
 from apps.core.security import HasPermission
@@ -47,6 +48,27 @@ class UserViewSet(BaseViewSet):
     permission_classes = [
         IsAuthenticatedAndActive,
     ]
+
+    filter_backends = [SearchFilter, OrderingFilter]
+
+    search_fields = [
+        "username",
+        "first_name",
+        "last_name",
+        "email",
+        "document_number",
+    ]
+
+    ordering_fields = [
+        "id_user",
+        "username",
+        "first_name",
+        "last_name",
+        "email",
+        "is_active",
+    ]
+
+    ordering = ["id_user"]
 
     def get_queryset(self):
         """

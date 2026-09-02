@@ -59,6 +59,14 @@ class Customer(BaseModel):
                 fields=['business_name'],
                 name='customer_business_name_idx',
             ),
+            models.Index(
+                fields=['created_at'],
+                name='customer_created_at_idx',
+            ),
+            models.Index(
+                fields=['deleted_at'],
+                name='customer_deleted_at_idx',
+            ),
         ]
 
     def __str__(self) -> str:

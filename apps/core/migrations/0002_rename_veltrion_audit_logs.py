@@ -7,14 +7,26 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.RunSQL(
-            sql=(
-                'ALTER TABLE "veltrion_audit_logs" '
-                'RENAME TO "inventario_pme_audit_logs";'
-            ),
-            reverse_sql=(
-                'ALTER TABLE "inventario_pme_audit_logs" '
-                'RENAME TO "veltrion_audit_logs";'
-            ),
-        ),
+        migrations.SeparateDatabaseAndState(
+            # Lo que realmente ejecuta en PostgreSQL (lo que ya tenías)
+            database_operations=[
+                migrations.RunSQL(
+                    sql=(
+                        'ALTER TABLE "veltrion_audit_logs" '
+                        'RENAME TO "inventario_pme_audit_logs";'
+                    ),
+                    reverse_sql=(
+                        'ALTER TABLE "inventario_pme_audit_logs" '
+                        'RENAME TO "veltrion_audit_logs";'
+                    ),
+                ),
+            ],
+            # Le informa a Django que el nombre del modelo/tabla cambió
+            state_operations=[
+                migrations.AlterModelTable(
+                    name="auditlog",
+                    table="inventario_pme_audit_logs",
+                ),
+            ],
+        )
     ]

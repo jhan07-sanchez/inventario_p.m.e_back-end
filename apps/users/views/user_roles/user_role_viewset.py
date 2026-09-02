@@ -1,5 +1,6 @@
 from rest_framework import status
 from rest_framework.decorators import action
+from rest_framework.filters import SearchFilter, OrderingFilter
 
 from apps.core.helpers.boolean_parser import parse_bool
 from apps.core.security import HasPermission
@@ -34,6 +35,23 @@ class UserRoleViewSet(BaseViewSet):
     queryset = UserRole.objects.all()
 
     permission_classes = (IsAuthenticatedAndActive,)
+
+    filter_backends = [SearchFilter, OrderingFilter]
+
+    search_fields = [
+        "user__username",
+        "user__email",
+        "role__role_name",
+    ]
+
+    ordering_fields = [
+        "id_user_role",
+        "user__username",
+        "role__role_name",
+        "is_active",
+    ]
+
+    ordering = ["id_user_role"]
 
     def get_permissions(self):
         """

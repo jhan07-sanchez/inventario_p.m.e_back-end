@@ -1,6 +1,7 @@
 from django.core.exceptions import ValidationError
 from rest_framework import status
 from rest_framework.decorators import action
+from rest_framework.filters import SearchFilter, OrderingFilter
 
 from apps.core.security import HasPermission
 from apps.core.views.base_viewset import BaseViewSet
@@ -35,6 +36,27 @@ class CustomerViewSet(BaseViewSet):
     queryset = Customer.objects.all()
 
     permission_classes = [IsAuthenticatedAndActive]
+
+    filter_backends = [SearchFilter, OrderingFilter]
+
+    search_fields = [
+        "document_number",
+        "first_name",
+        "last_name",
+        "business_name",
+        "email",
+    ]
+
+    ordering_fields = [
+        "id_customer",
+        "first_name",
+        "last_name",
+        "business_name",
+        "email",
+        "is_active",
+    ]
+
+    ordering = ["id_customer"]
 
     def get_permissions(self):
         """
