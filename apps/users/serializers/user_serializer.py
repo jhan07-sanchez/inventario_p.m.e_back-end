@@ -77,7 +77,7 @@ class UserCreateSerializer(serializers.ModelSerializer):
         required=True,
         validators=[validate_password],
     )
-    
+
     roles = serializers.ListField(
         child=serializers.IntegerField(),
         required=False,
@@ -123,9 +123,11 @@ class UserUpdateSerializer(serializers.ModelSerializer):
         model = User
 
         fields = (
+            "username",
             "first_name",
             "last_name",
             "email",
+            "document_number",
             "phone_number",
             "is_active",
             "roles",
