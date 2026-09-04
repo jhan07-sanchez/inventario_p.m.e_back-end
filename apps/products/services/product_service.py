@@ -1,6 +1,9 @@
 from decimal import Decimal
 from typing import Any
 
+from django.db import transaction
+
+from apps.categories.models import Category
 from apps.core.exceptions.custom_exceptions import (
     CategoryInactiveException,
     ProductAlreadyExistsException,
@@ -14,6 +17,22 @@ class ProductService(BaseService[Product]):
     """
     Servicio encargado de la lógica de negocio relacionada
     con los productos.
+
+    Responsabilidades principales:
+
+    - Validar unicidad del código del producto.
+    - Validar unicidad del código de barras.
+    - Validar que la categoría esté activa.
+    - Validar precios.
+    - Validar parámetros de inventario.
+    - Crear productos.
+    - Actualizar productos.
+    - Desactivar productos.
+    - Restaurar productos.
+
+    La gestión de movimientos de inventario no pertenece a este
+    servicio. Esta responsabilidad será manejada posteriormente
+    por el servicio de inventario.
     """
 
     def __init__(self):
@@ -25,12 +44,34 @@ class ProductService(BaseService[Product]):
         instance: Product | None = None,
     ) -> dict[str, Any]:
         """
-        Valida las reglas de negocio específicas de un producto.
+        Ejecuta las validaciones de negocio de un producto.
+
+        Args:
+            data: Datos que serán creados o actualizados.
+            instance: Producto existente cuando se trata de una
+                actualización.
+
+        Returns:
+            Los datos normalizados y validados.
+
+        Raises:
+            ProductAlreadyExistsException:
+                Cuando el código o código de barras ya existe.
+
+            CategoryInactiveException:
+                Cuando se intenta asociar una categoría inactiva.
+
+            ValueError:
+                Cuando existe una inconsistencia en los valores
+                numéricos del producto.
         """
+
+        data = data.copy()
 
         code = data.get("code")
         barcode = data.get("barcode")
         category = data.get("category")
+
         purchase_price = data.get("purchase_price")
         sale_price = data.get("sale_price")
         stock = data.get("stock")
@@ -42,22 +83,36 @@ class ProductService(BaseService[Product]):
         if instance is not None:
             queryset = queryset.exclude(pk=instance.pk)
 
-        if code:
+        if code is not None:
             code = code.strip().upper()
-            data["code"] = code
+
+            if not code:
+                raise ValueError(
+                    "El código del producto no puede estar vacío."
+                )
 
             if queryset.filter(code=code).exists():
                 raise ProductAlreadyExistsException()
 
-        if barcode:
+            data["code"] = code
+
+        if barcode is not None:
             barcode = barcode.strip()
 
-            if queryset.filter(barcode=barcode).exists():
-                raise ProductAlreadyExistsException()
+            if barcode:
+                if queryset.filter(barcode=barcode).exists():
+                    raise ProductAlreadyExistsException()
 
-            data["barcode"] = barcode
+                data["barcode"] = barcode
+            else:
+                data["barcode"] = None
 
         if category is not None:
+            if not isinstance(category, Category):
+                raise ValueError(
+                    "La categoría proporcionada no es válida."
+                )
+
             if not category.is_active:
                 raise CategoryInactiveException()
 
@@ -65,7 +120,9 @@ class ProductService(BaseService[Product]):
             purchase_price = Decimal(str(purchase_price))
 
             if purchase_price < Decimal("0.00"):
-                raise ValueError("El precio de compra no puede ser negativo.")
+                raise ValueError(
+                    "El precio de compra no puede ser negativo."
+                )
 
             data["purchase_price"] = purchase_price
 
@@ -73,24 +130,49 @@ class ProductService(BaseService[Product]):
             sale_price = Decimal(str(sale_price))
 
             if sale_price < Decimal("0.00"):
-                raise ValueError("El precio de venta no puede ser negativo.")
+                raise ValueError(
+                    "El precio de venta no puede ser negativo."
+                )
 
             data["sale_price"] = sale_price
 
+        effective_purchase_price = (
+            purchase_price
+            if purchase_price is not None
+            else (
+                instance.purchase_price
+                if instance is not None
+                else None
+            )
+        )
+
+        effective_sale_price = (
+            sale_price
+            if sale_price is not None
+            else (
+                instance.sale_price
+                if instance is not None
+                else None
+            )
+        )
+
         if (
-            purchase_price is not None
-            and sale_price is not None
-            and sale_price < purchase_price
+            effective_purchase_price is not None
+            and effective_sale_price is not None
+            and effective_sale_price < effective_purchase_price
         ):
             raise ValueError(
-                "El precio de venta no puede ser menor que el precio de compra."
+                "El precio de venta no puede ser menor "
+                "que el precio de compra."
             )
 
         if stock is not None:
             stock = Decimal(str(stock))
 
             if stock < Decimal("0.00"):
-                raise ValueError("El stock no puede ser negativo.")
+                raise ValueError(
+                    "El stock no puede ser negativo."
+                )
 
             data["stock"] = stock
 
@@ -98,31 +180,56 @@ class ProductService(BaseService[Product]):
             minimum_stock = Decimal(str(minimum_stock))
 
             if minimum_stock < Decimal("0.00"):
-                raise ValueError("El stock mínimo no puede ser negativo.")
+                raise ValueError(
+                    "El stock mínimo no puede ser negativo."
+                )
 
             data["minimum_stock"] = minimum_stock
+
+        effective_minimum_stock = (
+            minimum_stock
+            if minimum_stock is not None
+            else (
+                instance.minimum_stock
+                if instance is not None
+                else None
+            )
+        )
 
         if maximum_stock is not None:
             maximum_stock = Decimal(str(maximum_stock))
 
             if maximum_stock < Decimal("0.00"):
-                raise ValueError("El stock máximo no puede ser negativo.")
-
-            if minimum_stock is not None and maximum_stock < minimum_stock:
                 raise ValueError(
-                    "El stock máximo no puede ser menor que el stock mínimo."
+                    "El stock máximo no puede ser negativo."
+                )
+
+            if (
+                effective_minimum_stock is not None
+                and maximum_stock < effective_minimum_stock
+            ):
+                raise ValueError(
+                    "El stock máximo no puede ser menor "
+                    "que el stock mínimo."
                 )
 
             data["maximum_stock"] = maximum_stock
 
         return data
 
-    def perform_create(self, data: dict[str, Any]) -> Product:
+    def perform_create(
+        self,
+        data: dict[str, Any],
+    ) -> Product:
         """
-        Crea un producto después de aplicar las reglas de negocio.
+        Persiste un nuevo producto.
         """
 
-        return Product.objects.create(**data)
+        product = Product(**data)
+        product.full_clean()
+        product.save()
+
+        return product
 
     def perform_update(
         self,
@@ -130,7 +237,7 @@ class ProductService(BaseService[Product]):
         data: dict[str, Any],
     ) -> Product:
         """
-        Actualiza los datos generales del producto.
+        Actualiza un producto existente.
         """
 
         for field, value in data.items():
@@ -147,9 +254,10 @@ class ProductService(BaseService[Product]):
         soft_delete: bool = True,
     ) -> None:
         """
-        Desactiva o elimina un producto.
+        Desactiva o elimina físicamente un producto.
 
-        Por defecto se realiza una desactivación lógica.
+        Por defecto se utiliza desactivación lógica mediante
+        is_active=False.
         """
 
         if not instance.is_active:
@@ -158,28 +266,35 @@ class ProductService(BaseService[Product]):
         if soft_delete:
             instance.is_active = False
             instance.full_clean()
-            instance.save(update_fields=["is_active", "updated_at"])
+            instance.save(
+                update_fields=[
+                    "is_active",
+                    "updated_at",
+                ]
+            )
             return
 
         instance.delete()
 
     @staticmethod
+    @transaction.atomic
     def create_product(
         validated_data: dict[str, Any],
     ) -> Product:
         """
-        Crea un producto.
+        Crea un producto aplicando las reglas de negocio.
         """
 
         return ProductService().create(**validated_data)
 
     @staticmethod
+    @transaction.atomic
     def update_product(
         product: Product,
         validated_data: dict[str, Any],
     ) -> Product:
         """
-        Actualiza un producto.
+        Actualiza un producto aplicando las reglas de negocio.
         """
 
         return ProductService().update(
@@ -188,11 +303,12 @@ class ProductService(BaseService[Product]):
         )
 
     @staticmethod
+    @transaction.atomic
     def deactivate_product(
         product: Product,
     ) -> Product:
         """
-        Desactiva un producto.
+        Desactiva lógicamente un producto.
         """
 
         ProductService().delete(
@@ -203,14 +319,12 @@ class ProductService(BaseService[Product]):
         return product
 
     @staticmethod
+    @transaction.atomic
     def restore_product(
         product: Product,
     ) -> Product:
         """
         Restaura un producto previamente desactivado.
         """
-
-        if product.is_active:
-            return product
 
         return ProductService().restore(product)
