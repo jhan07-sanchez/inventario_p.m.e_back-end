@@ -2,12 +2,12 @@ from decimal import Decimal
 from django.core.validators import MinValueValidator
 from django.db import models
 
-from apps.core.models.base_model import BaseModel
+from apps.core.models.active_model import ActiveModel
 from apps.categories.models.category import Category
 
 
 
-class Product(BaseModel):
+class Product(ActiveModel):
     """
     Modelo que representa un producto en el sistema.
     """
@@ -21,7 +21,7 @@ class Product(BaseModel):
         KILOGRAM = "KG", "Kilogramo"
         GRAM = "G", "Gramo"
         METER = "M", "Metro"
-        LETER = "L", "Litro"
+        LITER = "L", "Litro"
         GALLON = "GAL", "Galón"
         ROLL = "ROLL", "Rollo"
         PAIR = "PAIR", "Par"
@@ -48,7 +48,6 @@ class Product(BaseModel):
     minimum_stock = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal("0.00"), validators=[MinValueValidator(Decimal("0.00"))], verbose_name="Stock mínimo")
     maximum_stock = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True, default=Decimal("0.00"), validators=[MinValueValidator(Decimal("0.00"))], verbose_name="Stock máximo")
     unit = models.CharField(max_length=20, choices=unit.choices, default=unit.UNIT, verbose_name="Unidad de medida")
-    is_active = models.BooleanField(default=True, db_index=True, verbose_name="Activo")
 
     class Meta:
         db_table = "products"

@@ -1,9 +1,9 @@
 from django.db import models
 
-from apps.core.models.base_model import BaseModel
+from apps.core.models.active_model import ActiveModel
 
 
-class Supplier(BaseModel):
+class Supplier(ActiveModel):
     """
     Modelo que representa un proveedor en el sistema inventario-pme.
     """
@@ -103,12 +103,6 @@ class Supplier(BaseModel):
         blank=True,
         verbose_name="Notas",
         help_text="Notas adicionales sobre el proveedor.",
-    )
-
-    is_active = models.BooleanField(
-        default=True,
-        verbose_name="Estado",
-        help_text=("Indica si el proveedor está activo en el sistema."),
     )
 
     class Meta:

@@ -1,0 +1,111 @@
+# ======================================
+# Django REST Framework
+# ======================================
+
+REST_FRAMEWORK = {
+    # Autenticación por defecto
+    "DEFAULT_AUTHENTICATION_CLASSES": (
+        "rest_framework_simplejwt.authentication.JWTAuthentication",
+    ),
+    # Permisos por defecto
+    "DEFAULT_PERMISSION_CLASSES": ("rest_framework.permissions.IsAuthenticated",),
+    # Paginación
+    "DEFAULT_PAGINATION_CLASS": "apps.core.pagination.custom_pagination.CustomPagination",
+    "PAGE_SIZE": 10,
+    # Esquema OpenAPI
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+    # Renderizamos únicamente JSON
+    "DEFAULT_RENDERER_CLASSES": ("rest_framework.renderers.JSONRenderer",),
+    "EXCEPTION_HANDLER": "apps.core.exceptions.exception_handler.custom_exception_handler",
+    # Throttling
+    "DEFAULT_THROTTLE_CLASSES": [
+        "rest_framework.throttling.ScopedRateThrottle",
+    ],
+    "DEFAULT_THROTTLE_RATES": {
+        "auth_login": "5/minute",
+        "auth_refresh": "10/minute",
+    },
+}
+
+
+# ======================================
+# DRF Spectacular
+# ======================================
+
+SPECTACULAR_SETTINGS = {
+    "TITLE": "inventario-pme API",
+    "DESCRIPTION": (
+        "API REST empresarial del sistema inventario-pme.\n\n"
+        "Esta API proporciona acceso completo a los módulos, "
+        "de inventario-pme ERP.\n\n"
+        "**Características Principales:**\n"
+        "- Respuestas estandarizadas en formato JSON.\n"
+        "- Autenticación segura mediante tokens JWT.\n"
+        "- Paginación unificada y filtros avanzados."
+    ),
+    "TOS": "https://www.inventario-pme.com/terms/",
+    "CONTACT": {
+        "name": "Soporte inventario-pme",
+        "url": "",
+        "email": "jhansancheza@gmail.com",
+    },
+    "VERSION": "1.0.0",
+    "SERVE_INCLUDE_SCHEMA": False,
+    # Habilita el preprocesamiento de enums para componentes limpios
+    "ENUM_NAME_OVERRIDES": {},
+    # Configuramos los esquemas globales y componentes de seguridad
+    "COMPONENTS": {
+        "securitySchemes": {
+            "jwtAuth": {
+                "type": "http",
+                "scheme": "bearer",
+                "bearerFormat": "JWT",
+                "description": "Autenticación mediante JWT. Colocar el token de acceso obtenido en el login.",
+            }
+        }
+    },
+    "SECURITY": [{"jwtAuth": []}],
+    # Agrupación y metadata extendida de ReDoc
+    "EXTENSIONS_INFO": {},
+    "TAGS": [
+        {
+            "name": "Authentication",
+            "description": "Manejo del ciclo de vida de sesiones de usuario y tokens JWT.",
+        },
+        {
+            "name": "Users",
+            "description": "Gestión del directorio de usuarios del sistema.",
+        },
+        {
+            "name": "Roles",
+            "description": "Gestión de roles y niveles de acceso.",
+        },
+        {
+            "name": "User Roles",
+            "description": "Asignación y manejo de roles para los usuarios.",
+        },
+        {
+            "name": "Security Dashboard",
+            "description": "Consultas del estado de seguridad y panel principal de navegación.",
+        },
+    ],
+    "EXTENSIONS_ROOT": {
+        "x-tagGroups": [
+            {
+                "name": "Seguridad y Accesos",
+                "tags": [
+                    "Authentication",
+                    "Users",
+                    "Roles",
+                    "User Roles",
+                    "Security Dashboard",
+                ],
+            }
+        ]
+    },
+    # Removemos inline serializers anónimos por defecto en Spectacular (si es posible a nivel de prefijos)
+    "SCHEMA_PATH_PREFIX": r"/api/v[0-9]",
+    "POSTPROCESSING_HOOKS": [
+        "drf_spectacular.hooks.postprocess_schema_enums",
+    ],
+}

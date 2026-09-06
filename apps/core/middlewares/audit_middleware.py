@@ -1,11 +1,16 @@
 import json
 import logging
-import threading
+from concurrent.futures import ThreadPoolExecutor
 
 from django.utils.deprecation import MiddlewareMixin
 from django.db import connection
 
 from apps.core.models.audit_log import AuditLog
+
+# Executor global para evitar thread exhaustion
+audit_executor = ThreadPoolExecutor(max_workers=5)
+
+
 
 logger = logging.getLogger(__name__)
 
@@ -71,21 +76,18 @@ class AuditMiddleware(MiddlewareMixin):
 
             try:
                 user_id = user.id_user if user else None
-                thread = threading.Thread(
-                    target=self._save_audit_log_async,
-                    args=(
-                        user_id,
-                        request.method,
-                        request.path,
-                        ip_address,
-                        request.META.get("HTTP_USER_AGENT", ""),
-                        response.status_code,
-                        masked_payload,
-                    )
+                audit_executor.submit(
+                    self._save_audit_log_async,
+                    user_id,
+                    request.method,
+                    request.path,
+                    ip_address,
+                    request.META.get("HTTP_USER_AGENT", ""),
+                    response.status_code,
+                    masked_payload,
                 )
-                thread.start()
             except Exception as e:  # noqa: BLE001
-                logger.error(f"No se pudo iniciar el hilo de auditoría: {e!s}")
+                logger.error(f"No se pudo encolar la tarea de auditoría: {e!s}")
 
         return response
 

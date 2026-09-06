@@ -1,11 +1,11 @@
 from django.db import models
 
-from apps.core.models.base_model import BaseModel
+from apps.core.models.active_model import ActiveModel
 
 
 
 
-class Customer(BaseModel):
+class Customer(ActiveModel):
     """
     Modelo que representa a un cliente en el sistema inventario-pme.
     """
@@ -33,7 +33,6 @@ class Customer(BaseModel):
     city = models.CharField(max_length=100, blank=True, verbose_name='Ciudad', help_text='Ciudad de residencia del cliente.')
     country = models.CharField(max_length=100, blank=True, verbose_name='País', help_text='País de residencia del cliente.')
     notes = models.TextField(blank=True, verbose_name='Notas', help_text='Notas adicionales sobre el cliente.')
-    is_active = models.BooleanField(default=True, verbose_name='Estado', help_text='Indica si el cliente está activo en el sistema.')
 
 
     class Meta:
