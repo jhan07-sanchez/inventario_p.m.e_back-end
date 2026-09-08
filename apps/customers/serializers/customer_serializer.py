@@ -24,6 +24,7 @@ class CustomerListSerializer(serializers.ModelSerializer):
             "email",
             "phone",
             "mobile",
+            "address",
             "city",
             "is_active",
         )
