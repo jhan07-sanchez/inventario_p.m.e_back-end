@@ -148,9 +148,6 @@ product_create_schema = extend_schema(
                 "category": 1,
                 "purchase_price": "25000.00",
                 "sale_price": "35000.00",
-                "stock": "10.00",
-                "minimum_stock": "5.00",
-                "maximum_stock": "50.00",
                 "unit": "UNIT",
                 "is_active": True,
             },
@@ -165,7 +162,7 @@ product_update_schema = extend_schema(
     description=(
         "Actualiza completamente la información de un producto "
         "existente. El stock no se modifica mediante esta operación; "
-        "debe ser gestionado mediante los procesos de inventario."
+        "debe ser gestionado mediante el módulo de inventario."
     ),
     parameters=[
         OpenApiParameter(

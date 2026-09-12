@@ -74,9 +74,6 @@ class ProductService(BaseService[Product]):
 
         purchase_price = data.get("purchase_price")
         sale_price = data.get("sale_price")
-        stock = data.get("stock")
-        minimum_stock = data.get("minimum_stock")
-        maximum_stock = data.get("maximum_stock")
 
         queryset = Product.objects.all()
 
@@ -166,55 +163,6 @@ class ProductService(BaseService[Product]):
                 "que el precio de compra."
             )
 
-        if stock is not None:
-            stock = Decimal(str(stock))
-
-            if stock < Decimal("0.00"):
-                raise ValueError(
-                    "El stock no puede ser negativo."
-                )
-
-            data["stock"] = stock
-
-        if minimum_stock is not None:
-            minimum_stock = Decimal(str(minimum_stock))
-
-            if minimum_stock < Decimal("0.00"):
-                raise ValueError(
-                    "El stock mínimo no puede ser negativo."
-                )
-
-            data["minimum_stock"] = minimum_stock
-
-        effective_minimum_stock = (
-            minimum_stock
-            if minimum_stock is not None
-            else (
-                instance.minimum_stock
-                if instance is not None
-                else None
-            )
-        )
-
-        if maximum_stock is not None:
-            maximum_stock = Decimal(str(maximum_stock))
-
-            if maximum_stock < Decimal("0.00"):
-                raise ValueError(
-                    "El stock máximo no puede ser negativo."
-                )
-
-            if (
-                effective_minimum_stock is not None
-                and maximum_stock < effective_minimum_stock
-            ):
-                raise ValueError(
-                    "El stock máximo no puede ser menor "
-                    "que el stock mínimo."
-                )
-
-            data["maximum_stock"] = maximum_stock
-
         return data
 
     def perform_create(
@@ -285,7 +233,13 @@ class ProductService(BaseService[Product]):
         Crea un producto aplicando las reglas de negocio.
         """
 
-        return ProductService().create(**validated_data)
+        product = ProductService().create(**validated_data)
+
+        # Delegar la creación del inventario inicial al InventoryService
+        from apps.inventory.services.inventory_service import InventoryService
+        InventoryService.create_initial_inventory(product)
+
+        return product
 
     @staticmethod
     @transaction.atomic

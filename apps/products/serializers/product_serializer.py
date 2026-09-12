@@ -30,11 +30,34 @@ class ProductListSerializer(serializers.ModelSerializer):
         read_only=True,
     )
 
+    stock = serializers.DecimalField(
+        source="inventory.current_stock",
+        read_only=True,
+        max_digits=12,
+        decimal_places=2,
+    )
+
+    minimum_stock = serializers.DecimalField(
+        source="inventory.minimum_stock",
+        read_only=True,
+        max_digits=12,
+        decimal_places=2,
+    )
+
+    maximum_stock = serializers.DecimalField(
+        source="inventory.maximum_stock",
+        read_only=True,
+        max_digits=12,
+        decimal_places=2,
+    )
+
     is_low_stock = serializers.BooleanField(
+        source="inventory.is_low_stock",
         read_only=True,
     )
 
     is_overstocked = serializers.BooleanField(
+        source="inventory.is_overstocked",
         read_only=True,
     )
 
@@ -87,11 +110,34 @@ class ProductDetailSerializer(serializers.ModelSerializer):
         read_only=True,
     )
 
+    stock = serializers.DecimalField(
+        source="inventory.current_stock",
+        read_only=True,
+        max_digits=12,
+        decimal_places=2,
+    )
+
+    minimum_stock = serializers.DecimalField(
+        source="inventory.minimum_stock",
+        read_only=True,
+        max_digits=12,
+        decimal_places=2,
+    )
+
+    maximum_stock = serializers.DecimalField(
+        source="inventory.maximum_stock",
+        read_only=True,
+        max_digits=12,
+        decimal_places=2,
+    )
+
     is_low_stock = serializers.BooleanField(
+        source="inventory.is_low_stock",
         read_only=True,
     )
 
     is_overstocked = serializers.BooleanField(
+        source="inventory.is_overstocked",
         read_only=True,
     )
 
@@ -125,6 +171,9 @@ class ProductDetailSerializer(serializers.ModelSerializer):
             "id_product",
             "profit_amount",
             "profit_margin_percentage",
+            "stock",
+            "minimum_stock",
+            "maximum_stock",
             "is_low_stock",
             "is_overstocked",
             "created_at",
@@ -156,9 +205,6 @@ class ProductCreateSerializer(serializers.ModelSerializer):
             "category",
             "purchase_price",
             "sale_price",
-            "stock",
-            "minimum_stock",
-            "maximum_stock",
             "unit",
             "is_active",
         )
@@ -198,9 +244,6 @@ class ProductUpdateSerializer(serializers.ModelSerializer):
             "category",
             "purchase_price",
             "sale_price",
-            "stock",
-            "minimum_stock",
-            "maximum_stock",
             "unit",
             "is_active",
         )

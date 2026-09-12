@@ -20,9 +20,14 @@ class ProductSelector(BaseSelector[Product]):
     def get_queryset(self) -> QuerySet[Product]:
         """
         Retorna el queryset base de productos optimizando
-        las relaciones necesarias.
+        las relaciones necesarias (incluyendo el inventario).
         """
-        return super().get_queryset().select_related("category").order_by("id_product")
+        return (
+            super()
+            .get_queryset()
+            .select_related("category", "inventory")
+            .order_by("id_product")
+        )
 
     @staticmethod
     def get_products() -> QuerySet[Product]:
@@ -129,8 +134,9 @@ class ProductSelector(BaseSelector[Product]):
             )
 
         if low_stock is True:
+            # Se ajusta para filtrar a través de la relación de inventario
             queryset = queryset.filter(
-                stock__lte=models.F("minimum_stock"),
+                inventory__current_stock__lte=models.F("inventory__minimum_stock"),
             )
 
         return queryset.order_by("-created_at")

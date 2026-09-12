@@ -32,7 +32,7 @@ class ProductViewSet(BaseViewSet):
     del sistema.
     """
 
-    queryset = Product.objects.all()
+    queryset = Product.objects.none()
 
     permission_classes = [IsAuthenticatedAndActive]
 
