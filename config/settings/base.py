@@ -85,7 +85,16 @@ DATABASES = {
         "PASSWORD": config("DB_PASSWORD"),
         "HOST": config("DB_HOST"),
         "PORT": config("DB_PORT"),
-        "CONN_MAX_AGE": config("CONN_MAX_AGE", default=60, cast=int),
+        "CONN_MAX_AGE": config(
+            "CONN_MAX_AGE",
+            default=60,
+            cast=int,
+        ),
+        "CONN_HEALTH_CHECKS": config(
+            "CONN_HEALTH_CHECKS",
+            default=True,
+            cast=bool,
+        ),
     }
 }
 
