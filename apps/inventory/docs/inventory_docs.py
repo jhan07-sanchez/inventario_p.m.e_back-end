@@ -253,16 +253,16 @@ inventory_partial_update_schema = extend_schema(
 
 inventory_delete_schema = extend_schema(
     tags=["Inventory"],
-    summary="Eliminar inventario",
+    summary="Desactivar inventario",
     description=(
-        "Elimina físicamente o desactiva un registro de inventario del sistema."
+        "Desactiva lógicamente un registro de inventario del sistema."
     ),
     parameters=[
         OpenApiParameter(
             name="id",
             type=OpenApiTypes.INT,
             location=OpenApiParameter.PATH,
-            description=("Identificador único del inventario a eliminar."),
+            description=("Identificador único del inventario a desactivar."),
             required=True,
         ),
     ],
@@ -271,11 +271,11 @@ inventory_delete_schema = extend_schema(
             response=build_api_response_schema(
                 name="InventoryDeleteResponse",
             ),
-            description="Inventario eliminado correctamente.",
+            description="Inventario desactivado correctamente.",
         ),
         400: OpenApiResponse(
             response=ValidationErrorResponseSerializer,
-            description=("No fue posible eliminar el inventario."),
+            description=("No fue posible desactivar el inventario."),
         ),
         401: OpenApiResponse(
             response=ApiErrorResponseSerializer,
@@ -283,7 +283,7 @@ inventory_delete_schema = extend_schema(
         ),
         403: OpenApiResponse(
             response=ApiErrorResponseSerializer,
-            description=("El usuario no tiene permiso para eliminar inventarios."),
+            description=("El usuario no tiene permiso para desactivar inventarios."),
         ),
         404: OpenApiResponse(
             response=ApiErrorResponseSerializer,

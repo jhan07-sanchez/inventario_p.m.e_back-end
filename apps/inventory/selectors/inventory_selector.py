@@ -117,3 +117,13 @@ class InventorySelector(BaseSelector[Inventory]):
             )
 
         return queryset.order_by("-created_at")
+
+    @staticmethod
+    def get_movements(
+        inventory: Inventory,
+    ) -> QuerySet:
+        """
+        Obtiene el historial de movimientos de un inventario específico.
+        """
+        from apps.inventory.selectors.inventory_movement_selector import InventoryMovementSelector
+        return InventoryMovementSelector.get_movements_by_inventory(id_inventory=inventory.id_inventory)

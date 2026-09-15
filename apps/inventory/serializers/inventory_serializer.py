@@ -158,6 +158,10 @@ class InventoryCreateSerializer(serializers.ModelSerializer):
 
         return attrs
 
+    def create(self, validated_data):
+        from apps.inventory.services.inventory_service import InventoryService
+        return InventoryService.create_inventory(validated_data)
+
 
 class InventoryUpdateSerializer(serializers.ModelSerializer):
     """
@@ -198,6 +202,10 @@ class InventoryUpdateSerializer(serializers.ModelSerializer):
                 )
 
         return attrs
+
+    def update(self, instance, validated_data):
+        from apps.inventory.services.inventory_service import InventoryService
+        return InventoryService.update_inventory(instance, validated_data)
 
 
 class InventoryMovementListSerializer(
@@ -316,6 +324,10 @@ class InventoryThresholdUpdateSerializer(serializers.ModelSerializer):
             )
 
         return attrs
+
+    def update(self, instance, validated_data):
+        from apps.inventory.services.inventory_service import InventoryService
+        return InventoryService.update_thresholds(instance, validated_data)
 
 
 class InventoryEntrySerializer(serializers.Serializer):

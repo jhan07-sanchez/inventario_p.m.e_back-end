@@ -20,6 +20,7 @@ class InventoryService(BaseService[Inventory]):
         super().__init__(Inventory)
 
     @staticmethod
+    @transaction.atomic
     def create_inventory(data: dict) -> Inventory:
         """
         Crea el registro de inventario de un producto.
@@ -54,39 +55,55 @@ class InventoryService(BaseService[Inventory]):
         )
 
     @staticmethod
-    @transaction.atomic
-    def increase_stock(
-        id_inventory: int,
-        quantity: Decimal,
-        reference: str | None = None,
-        notes: str | None = None,
+    def update_thresholds(
+        inventory: Inventory,
+        data: dict,
     ) -> Inventory:
+        """
+        Actualiza los umbrales de stock mínimo y máximo.
+        """
+        return InventoryService().update(
+            inventory,
+            **data,
+        )
+
+    @staticmethod
+    @transaction.atomic
+    def register_entry(
+        inventory: Inventory,
+        data: dict,
+        user=None,
+    ) -> InventoryMovement:
         """
         Incrementa el stock y registra un movimiento de entrada.
         """
 
+        quantity = data.get("quantity")
+        reference = data.get("reference", None)
+        notes = data.get("notes", None)
+
         if quantity <= Decimal("0.00"):
             raise ValidationError("La cantidad de entrada debe ser mayor que cero.")
 
-        inventory = (
+        inventory_locked = (
             Inventory.objects.select_for_update()
             .select_related("product")
-            .get(id_inventory=id_inventory)
+            .get(pk=inventory.pk)
         )
 
-        previous_stock = inventory.current_stock
+        previous_stock = inventory_locked.current_stock
         new_stock = previous_stock + quantity
 
-        inventory.current_stock = new_stock
-        inventory.save(
+        inventory_locked.current_stock = new_stock
+        inventory_locked.save(
             update_fields=[
                 "current_stock",
                 "updated_at",
             ]
         )
 
-        InventoryMovement.objects.create(
-            inventory=inventory,
+        movement = InventoryMovement.objects.create(
+            inventory=inventory_locked,
             movement_type=InventoryMovement.MovementType.ENTRY,
             quantity=quantity,
             previous_stock=previous_stock,
@@ -95,46 +112,49 @@ class InventoryService(BaseService[Inventory]):
             notes=notes,
         )
 
-        return inventory
+        return movement
 
     @staticmethod
     @transaction.atomic
-    def decrease_stock(
-        id_inventory: int,
-        quantity: Decimal,
-        reference: str | None = None,
-        notes: str | None = None,
-    ) -> Inventory:
+    def register_exit(
+        inventory: Inventory,
+        data: dict,
+        user=None,
+    ) -> InventoryMovement:
         """
         Disminuye el stock y registra un movimiento de salida.
         """
+        
+        quantity = data.get("quantity")
+        reference = data.get("reference", None)
+        notes = data.get("notes", None)
 
         if quantity <= Decimal("0.00"):
             raise ValidationError("La cantidad de salida debe ser mayor que cero.")
 
-        inventory = (
+        inventory_locked = (
             Inventory.objects.select_for_update()
             .select_related("product")
-            .get(id_inventory=id_inventory)
+            .get(pk=inventory.pk)
         )
 
-        previous_stock = inventory.current_stock
+        previous_stock = inventory_locked.current_stock
 
         if quantity > previous_stock:
             raise ValidationError("No hay suficiente stock disponible.")
 
         new_stock = previous_stock - quantity
 
-        inventory.current_stock = new_stock
-        inventory.save(
+        inventory_locked.current_stock = new_stock
+        inventory_locked.save(
             update_fields=[
                 "current_stock",
                 "updated_at",
             ]
         )
 
-        InventoryMovement.objects.create(
-            inventory=inventory,
+        movement = InventoryMovement.objects.create(
+            inventory=inventory_locked,
             movement_type=InventoryMovement.MovementType.EXIT,
             quantity=quantity,
             previous_stock=previous_stock,
@@ -143,46 +163,49 @@ class InventoryService(BaseService[Inventory]):
             notes=notes,
         )
 
-        return inventory
+        return movement
 
     @staticmethod
     @transaction.atomic
-    def adjust_stock(
-        id_inventory: int,
-        new_stock: Decimal,
-        reference: str | None = None,
-        notes: str | None = None,
-    ) -> Inventory:
+    def register_adjustment(
+        inventory: Inventory,
+        data: dict,
+        user=None,
+    ) -> InventoryMovement:
         """
         Ajusta manualmente el stock y registra un movimiento.
         """
+        
+        new_stock = data.get("new_stock")
+        reference = data.get("reference", None)
+        notes = data.get("notes", None)
 
         if new_stock < Decimal("0.00"):
             raise ValidationError("El nuevo stock no puede ser negativo.")
 
-        inventory = (
+        inventory_locked = (
             Inventory.objects.select_for_update()
             .select_related("product")
-            .get(id_inventory=id_inventory)
+            .get(pk=inventory.pk)
         )
 
-        previous_stock = inventory.current_stock
+        previous_stock = inventory_locked.current_stock
 
         if new_stock == previous_stock:
             raise ValidationError("El nuevo stock debe ser diferente al stock actual.")
 
         quantity = abs(new_stock - previous_stock)
 
-        inventory.current_stock = new_stock
-        inventory.save(
+        inventory_locked.current_stock = new_stock
+        inventory_locked.save(
             update_fields=[
                 "current_stock",
                 "updated_at",
             ]
         )
 
-        InventoryMovement.objects.create(
-            inventory=inventory,
+        movement = InventoryMovement.objects.create(
+            inventory=inventory_locked,
             movement_type=(InventoryMovement.MovementType.ADJUSTMENT),
             quantity=quantity,
             previous_stock=previous_stock,
@@ -191,7 +214,7 @@ class InventoryService(BaseService[Inventory]):
             notes=notes,
         )
 
-        return inventory
+        return movement
 
     @staticmethod
     def deactivate_inventory(

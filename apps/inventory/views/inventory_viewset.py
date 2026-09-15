@@ -343,20 +343,20 @@ class InventoryViewSet(BaseViewSet):
         )
 
         try:
-            InventoryService.delete_inventory(
+            InventoryService.deactivate_inventory(
                 inventory,
             )
 
             return self.success_response(
-                message="Inventario eliminado correctamente.",
-                code="INVENTORY_DELETED",
+                message="Inventario desactivado correctamente.",
+                code="INVENTORY_DEACTIVATED",
                 status_code=status.HTTP_200_OK,
             )
 
         except ValidationError as exception:
             return self.handle_validation_error(
                 exception,
-                message="No fue posible eliminar el inventario.",
+                message="No fue posible desactivar el inventario.",
             )
 
     @inventory_thresholds_schema

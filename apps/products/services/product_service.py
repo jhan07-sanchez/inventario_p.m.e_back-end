@@ -1,6 +1,8 @@
 from decimal import Decimal
 from typing import Any
 
+from django.core.exceptions import ValidationError
+
 from django.db import transaction
 
 from apps.categories.models import Category
@@ -61,7 +63,7 @@ class ProductService(BaseService[Product]):
             CategoryInactiveException:
                 Cuando se intenta asociar una categoría inactiva.
 
-            ValueError:
+            ValidationError:
                 Cuando existe una inconsistencia en los valores
                 numéricos del producto.
         """
@@ -84,7 +86,7 @@ class ProductService(BaseService[Product]):
             code = code.strip().upper()
 
             if not code:
-                raise ValueError(
+                raise ValidationError(
                     "El código del producto no puede estar vacío."
                 )
 
@@ -106,7 +108,7 @@ class ProductService(BaseService[Product]):
 
         if category is not None:
             if not isinstance(category, Category):
-                raise ValueError(
+                raise ValidationError(
                     "La categoría proporcionada no es válida."
                 )
 
@@ -117,7 +119,7 @@ class ProductService(BaseService[Product]):
             purchase_price = Decimal(str(purchase_price))
 
             if purchase_price < Decimal("0.00"):
-                raise ValueError(
+                raise ValidationError(
                     "El precio de compra no puede ser negativo."
                 )
 
@@ -127,7 +129,7 @@ class ProductService(BaseService[Product]):
             sale_price = Decimal(str(sale_price))
 
             if sale_price < Decimal("0.00"):
-                raise ValueError(
+                raise ValidationError(
                     "El precio de venta no puede ser negativo."
                 )
 
@@ -158,7 +160,7 @@ class ProductService(BaseService[Product]):
             and effective_sale_price is not None
             and effective_sale_price < effective_purchase_price
         ):
-            raise ValueError(
+            raise ValidationError(
                 "El precio de venta no puede ser menor "
                 "que el precio de compra."
             )
@@ -237,7 +239,7 @@ class ProductService(BaseService[Product]):
 
         # Delegar la creación del inventario inicial al InventoryService
         from apps.inventory.services.inventory_service import InventoryService
-        InventoryService.create_initial_inventory(product)
+        InventoryService.create_inventory({"product": product})
 
         return product
 
