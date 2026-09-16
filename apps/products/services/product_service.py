@@ -253,10 +253,21 @@ class ProductService(BaseService[Product]):
         Actualiza un producto aplicando las reglas de negocio.
         """
 
-        return ProductService().update(
+        previous_is_active = product.is_active
+
+        updated_product = ProductService().update(
             product,
             **validated_data,
         )
+
+        if previous_is_active != updated_product.is_active:
+            if hasattr(updated_product, "inventory"):
+                inventory = updated_product.inventory
+                inventory.is_active = updated_product.is_active
+                inventory.full_clean()
+                inventory.save(update_fields=["is_active", "updated_at"])
+
+        return updated_product
 
     @staticmethod
     @transaction.atomic
@@ -264,13 +275,19 @@ class ProductService(BaseService[Product]):
         product: Product,
     ) -> Product:
         """
-        Desactiva lógicamente un producto.
+        Desactiva lógicamente un producto y su inventario asociado.
         """
 
         ProductService().delete(
             product,
             soft_delete=True,
         )
+
+        if hasattr(product, "inventory"):
+            inventory = product.inventory
+            inventory.is_active = False
+            inventory.full_clean()
+            inventory.save(update_fields=["is_active", "updated_at"])
 
         return product
 
@@ -280,7 +297,15 @@ class ProductService(BaseService[Product]):
         product: Product,
     ) -> Product:
         """
-        Restaura un producto previamente desactivado.
+        Restaura un producto previamente desactivado y su inventario.
         """
 
-        return ProductService().restore(product)
+        product = ProductService().restore(product)
+
+        if hasattr(product, "inventory"):
+            inventory = product.inventory
+            inventory.is_active = True
+            inventory.full_clean()
+            inventory.save(update_fields=["is_active", "updated_at"])
+
+        return product
