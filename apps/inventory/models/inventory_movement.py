@@ -63,6 +63,15 @@ class InventoryMovement(ActiveModel):
         null=True,
         verbose_name="Notas u observaciones",
     )
+    supplier = models.ForeignKey(
+        "suppliers.Supplier",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="inventory_movements",
+        verbose_name="Proveedor",
+        help_text="Proveedor asociado al movimiento (ej. para compras o entradas).",
+    )
 
     class Meta:
         db_table = "inventory_movements"

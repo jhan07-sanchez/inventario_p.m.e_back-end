@@ -3,6 +3,8 @@ from django.core.exceptions import ValidationError
 from rest_framework import status
 from rest_framework.decorators import action
 
+from rest_framework.filters import SearchFilter, OrderingFilter
+
 from apps.core.security import HasPermission
 from apps.core.views.base_viewset import BaseViewSet
 from apps.suppliers.models import Supplier
@@ -35,6 +37,8 @@ class SupplierViewSet(BaseViewSet):
     queryset = Supplier.objects.all()
 
     permission_classes = [IsAuthenticatedAndActive]
+    filter_backends = [SearchFilter, OrderingFilter]
+    search_fields = ["name", "document_number", "contact_name", "email", "phone"]
 
     def get_permissions(self):
         """

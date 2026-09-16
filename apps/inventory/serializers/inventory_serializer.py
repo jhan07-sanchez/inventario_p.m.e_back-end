@@ -230,6 +230,11 @@ class InventoryMovementListSerializer(
         read_only=True,
     )
 
+    supplier_name = serializers.CharField(
+        source="supplier.__str__",
+        read_only=True,
+    )
+
     class Meta:
         model = InventoryMovement
         fields = [
@@ -244,6 +249,7 @@ class InventoryMovementListSerializer(
             "new_stock",
             "reference",
             "notes",
+            "supplier_name",
             "created_at",
             "updated_at",
         ]
@@ -272,6 +278,11 @@ class InventoryMovementDetailSerializer(
         read_only=True,
     )
 
+    supplier_name = serializers.CharField(
+        source="supplier.__str__",
+        read_only=True,
+    )
+
     class Meta:
         model = InventoryMovement
         fields = [
@@ -286,6 +297,7 @@ class InventoryMovementDetailSerializer(
             "new_stock",
             "reference",
             "notes",
+            "supplier_name",
             "created_at",
             "updated_at",
         ]
@@ -347,6 +359,10 @@ class InventoryEntrySerializer(serializers.Serializer):
     notes = serializers.CharField(
         required=False,
         allow_blank=True,
+        allow_null=True,
+    )
+    supplier_id = serializers.IntegerField(
+        required=False,
         allow_null=True,
     )
 

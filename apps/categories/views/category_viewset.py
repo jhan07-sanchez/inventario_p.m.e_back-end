@@ -21,6 +21,8 @@ from apps.categories.docs.category_docs import (
 )
 from apps.categories.services.category_service import CategoryService
 from apps.core.security import HasPermission
+from rest_framework.filters import SearchFilter, OrderingFilter
+
 from apps.core.views.base_viewset import BaseViewSet
 from apps.users.permissions import IsAuthenticatedAndActive
 
@@ -34,6 +36,8 @@ class CategoryViewSet(BaseViewSet):
     queryset = Category.objects.all()
 
     permission_classes = [IsAuthenticatedAndActive]
+    filter_backends = [SearchFilter, OrderingFilter]
+    search_fields = ["name", "description"]
 
     def get_permissions(self):
         """

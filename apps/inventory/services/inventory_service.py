@@ -81,9 +81,19 @@ class InventoryService(BaseService[Inventory]):
         quantity = data.get("quantity")
         reference = data.get("reference", None)
         notes = data.get("notes", None)
+        supplier_id = data.get("supplier_id", None)
 
         if quantity <= Decimal("0.00"):
             raise ValidationError("La cantidad de entrada debe ser mayor que cero.")
+
+        # Resolver el proveedor si se proporcionó
+        supplier = None
+        if supplier_id:
+            from apps.suppliers.models import Supplier
+            try:
+                supplier = Supplier.objects.get(pk=supplier_id, is_active=True)
+            except Supplier.DoesNotExist:
+                raise ValidationError("El proveedor seleccionado no existe o está inactivo.")
 
         inventory_locked = (
             Inventory.objects.select_for_update()
@@ -110,6 +120,7 @@ class InventoryService(BaseService[Inventory]):
             new_stock=new_stock,
             reference=reference,
             notes=notes,
+            supplier=supplier,
         )
 
         return movement
