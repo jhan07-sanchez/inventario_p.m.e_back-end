@@ -196,3 +196,30 @@ class InvalidPurchaseTransitionException(BusinessException):
 class PurchaseHasNoDetailsException(BusinessException):
     default_detail = "La compra no tiene detalles asociados. No puede ser procesada."
     default_code = ErrorCodes.PURCHASE_HAS_NO_DETAILS
+
+
+class InvoiceNotFoundException(BusinessException):
+    default_detail = "La factura especificada no existe."
+    default_code = ErrorCodes.INVOICE_NOT_FOUND
+    status_code = 404
+
+
+class InvalidInvoiceStateException(BusinessException):
+    default_detail = "El estado actual de la factura no permite realizar esta operación."
+    default_code = ErrorCodes.INVALID_INVOICE_STATE
+
+
+class InvoiceTemplateNotFoundException(BusinessException):
+    default_detail = "La plantilla de factura especificada no existe."
+    default_code = ErrorCodes.INVOICE_TEMPLATE_NOT_FOUND
+    status_code = 404
+
+
+class InvoiceHasNoItemsException(BusinessException):
+    default_detail = "La factura no tiene ítems asociados. No puede ser emitida."
+    default_code = ErrorCodes.INVOICE_HAS_NO_ITEMS
+
+
+class InvalidInvoiceTransitionException(BusinessException):
+    default_detail = "La transición de estado solicitada no es válida para esta factura."
+    default_code = ErrorCodes.INVALID_INVOICE_TRANSITION
