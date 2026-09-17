@@ -11,7 +11,7 @@ class Inventory(ActiveModel):
     Modelo que representa el control de existencias de un producto en el sistema.
     """
 
-    id_inventory = models.AutoField(primary_key=True, verbose_name="ID")
+    id_inventory = models.BigAutoField(primary_key=True, verbose_name="ID")
     product = models.OneToOneField(
         Product,
         on_delete=models.PROTECT,

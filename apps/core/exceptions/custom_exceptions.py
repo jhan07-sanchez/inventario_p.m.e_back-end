@@ -175,3 +175,24 @@ class ProductBarcodeAlreadyExistsException(BusinessException):
     """
     default_detail = "El código de barras del producto ya existe."
     default_code = ErrorCodes.PRODUCT_BARCODE_ALREADY_EXISTS
+
+
+class PurchaseNotFoundException(BusinessException):
+    default_detail = "La compra especificada no existe."
+    default_code = ErrorCodes.PURCHASE_NOT_FOUND
+    status_code = 404
+
+
+class InvalidPurchaseStateException(BusinessException):
+    default_detail = "El estado actual de la compra no permite realizar esta operación."
+    default_code = ErrorCodes.INVALID_PURCHASE_STATE
+
+
+class InvalidPurchaseTransitionException(BusinessException):
+    default_detail = "La transición de estado solicitada no es válida para esta compra."
+    default_code = ErrorCodes.INVALID_PURCHASE_TRANSITION
+
+
+class PurchaseHasNoDetailsException(BusinessException):
+    default_detail = "La compra no tiene detalles asociados. No puede ser procesada."
+    default_code = ErrorCodes.PURCHASE_HAS_NO_DETAILS
