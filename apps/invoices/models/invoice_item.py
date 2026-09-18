@@ -17,28 +17,28 @@ class InvoiceItem(BaseModel):
         related_name="items",
         verbose_name="Factura",
     )
-    
+
     product = models.ForeignKey(
         "products.Product",
         on_delete=models.PROTECT,
         related_name="invoice_items",
         verbose_name="Producto",
     )
-    
+
     quantity = models.DecimalField(
         max_digits=12,
         decimal_places=2,
         validators=[MinValueValidator(Decimal("0.01"))],
         verbose_name="Cantidad",
     )
-    
+
     unit_price = models.DecimalField(
         max_digits=12,
         decimal_places=2,
         validators=[MinValueValidator(Decimal("0.00"))],
         verbose_name="Precio unitario",
     )
-    
+
     discount = models.DecimalField(
         max_digits=12,
         decimal_places=2,
@@ -46,7 +46,7 @@ class InvoiceItem(BaseModel):
         validators=[MinValueValidator(Decimal("0.00"))],
         verbose_name="Descuento",
     )
-    
+
     tax = models.DecimalField(
         max_digits=12,
         decimal_places=2,
@@ -54,7 +54,7 @@ class InvoiceItem(BaseModel):
         validators=[MinValueValidator(Decimal("0.00"))],
         verbose_name="Impuestos",
     )
-    
+
     subtotal = models.DecimalField(
         max_digits=12,
         decimal_places=2,

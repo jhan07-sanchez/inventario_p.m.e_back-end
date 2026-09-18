@@ -95,6 +95,7 @@ class InvoiceViewSet(BaseViewSet):
         """
         document_type = self.request.query_params.get("document_type")
         invoice_status = self.request.query_params.get("status")
+        purchase = self.request.query_params.get("purchase")
 
         is_active_param = self.request.query_params.get("is_active")
         is_active = None
@@ -105,6 +106,7 @@ class InvoiceViewSet(BaseViewSet):
             document_type=document_type,
             status=invoice_status,
             is_active=is_active,
+            purchase=purchase,
         )
 
     def get_serializer_class(self):

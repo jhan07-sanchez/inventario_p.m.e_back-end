@@ -46,6 +46,7 @@ class PurchaseListSerializer(serializers.ModelSerializer):
 class PurchaseRetrieveSerializer(serializers.ModelSerializer):
     supplier = SupplierListSerializer(read_only=True)
     details = PurchaseDetailSerializer(many=True, read_only=True)
+    invoices_summary = serializers.SerializerMethodField()
 
     class Meta:
         model = Purchase
@@ -58,10 +59,17 @@ class PurchaseRetrieveSerializer(serializers.ModelSerializer):
             "total",
             "notes",
             "details",
+            "invoices_summary",
             "is_active",
             "created_at",
             "updated_at",
         )
+
+    def get_invoices_summary(self, obj):
+        invoices = obj.invoices.filter(is_active=True).values(
+            "id", "invoice_number", "status", "document_type"
+        )
+        return list(invoices)
 
 
 class PurchaseDetailCreateSerializer(serializers.Serializer):

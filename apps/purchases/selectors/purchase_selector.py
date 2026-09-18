@@ -26,8 +26,8 @@ class PurchaseSelector(BaseSelector[Purchase]):
             super()
             .get_queryset()
             .select_related("supplier")
-            .prefetch_related("items", "items__product")
-            .order_by("-id")
+            .prefetch_related("details", "details__product")
+            .order_by("-id_purchase")
         )
 
     @staticmethod
@@ -45,13 +45,13 @@ class PurchaseSelector(BaseSelector[Purchase]):
         return PurchaseSelector().get_active()
 
     @staticmethod
-    def get_by_id(purchase_id: int) -> Purchase:
+    def get_purchase_by_id(purchase_id: int) -> Purchase:
         """
         Obtiene una compra por su identificador.
         """
         return get_object_or_404(
             PurchaseSelector().get_queryset(),
-            id=purchase_id,
+            pk=purchase_id,
         )
 
     @staticmethod
@@ -61,7 +61,7 @@ class PurchaseSelector(BaseSelector[Purchase]):
         """
         return get_object_or_404(
             PurchaseSelector().get_queryset(),
-            invoice_number=invoice_number,
+            invoices__invoice_number=invoice_number,
         )
 
     @staticmethod
@@ -75,7 +75,7 @@ class PurchaseSelector(BaseSelector[Purchase]):
         selector = PurchaseSelector()
 
         if invoice_number is not None:
-            return selector.exists(invoice_number=invoice_number)
+            return selector.exists(invoices__invoice_number=invoice_number)
 
         return False
 
@@ -104,7 +104,7 @@ class PurchaseSelector(BaseSelector[Purchase]):
 
         if invoice_number:
             queryset = queryset.filter(
-                invoice_number__icontains=invoice_number,
+                invoices__invoice_number__icontains=invoice_number,
             )
 
         if is_active is not None:

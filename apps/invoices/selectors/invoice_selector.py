@@ -65,6 +65,7 @@ class InvoiceSelector(BaseSelector[Invoice]):
         document_type: str | None = None,
         status: str | None = None,
         is_active: bool | None = None,
+        purchase: int | None = None,
     ) -> QuerySet[Invoice]:
         queryset = InvoiceSelector().get_queryset()
 
@@ -76,7 +77,9 @@ class InvoiceSelector(BaseSelector[Invoice]):
 
         if is_active is not None:
             queryset = queryset.filter(is_active=is_active)
+            
+        if purchase is not None:
+            queryset = queryset.filter(purchase_id=purchase)
 
         return queryset
-
 

@@ -40,7 +40,7 @@ class PurchaseViewSet(BaseViewSet):
 
     permission_classes = [IsAuthenticatedAndActive]
     filter_backends = [SearchFilter, OrderingFilter]
-    search_fields = ["observations", "supplier__name"]
+    search_fields = ["notes", "supplier__business_name", "supplier__first_name", "supplier__last_name", "supplier__document_number"]
 
     def get_permissions(self):
         """
@@ -205,7 +205,7 @@ class PurchaseViewSet(BaseViewSet):
 
         try:
             purchase = PurchaseService.create_purchase(
-                serializer.validated_data,
+                serializer.to_dto(),
             )
 
             response_serializer = PurchaseRetrieveSerializer(
@@ -247,7 +247,7 @@ class PurchaseViewSet(BaseViewSet):
         try:
             purchase = PurchaseService.update_purchase(
                 purchase,
-                serializer.validated_data,
+                serializer.to_dto(),
             )
 
             response_serializer = PurchaseRetrieveSerializer(
@@ -290,7 +290,7 @@ class PurchaseViewSet(BaseViewSet):
         try:
             purchase = PurchaseService.update_purchase(
                 purchase,
-                serializer.validated_data,
+                serializer.to_dto(),
             )
 
             response_serializer = PurchaseRetrieveSerializer(
