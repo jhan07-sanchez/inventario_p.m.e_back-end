@@ -3,7 +3,7 @@ from rest_framework import serializers
 
 from apps.invoices.dto.invoice_dto import InvoiceCreateDTO, InvoiceItemCreateDTO, InvoiceUpdateDTO
 from apps.invoices.models import Invoice, InvoiceItem
-from apps.invoices.serializers.invoice_template_serializer import InvoiceTemplateListSerializer
+from apps.invoices.serializers.invoice_template_serializer import InvoiceTemplateListSerializer, InvoiceTemplateRetrieveSerializer
 
 
 class InvoiceItemSerializer(serializers.ModelSerializer):
@@ -48,7 +48,7 @@ class InvoiceListSerializer(serializers.ModelSerializer):
 
 
 class InvoiceRetrieveSerializer(serializers.ModelSerializer):
-    template = InvoiceTemplateListSerializer(read_only=True)
+    template = InvoiceTemplateRetrieveSerializer(read_only=True)
     items = InvoiceItemSerializer(many=True, read_only=True)
 
     class Meta:

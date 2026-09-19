@@ -172,12 +172,58 @@ class PurchaseService(BaseService[Purchase]):
     def complete_purchase(purchase: Purchase) -> Purchase:
         """
         Transición de RECEIVED a COMPLETED.
+        Además genera y emite automáticamente la factura de compra asociada.
         """
         if purchase.status != Purchase.Status.RECEIVED:
             raise InvalidPurchaseTransitionException("Solo las compras Recibidas pueden ser completadas.")
             
         purchase.status = Purchase.Status.COMPLETED
         purchase.save(update_fields=["status", "updated_at"])
+        
+        # --- Generación de Factura Automática ---
+        from apps.invoices.services.invoice_service import InvoiceService
+        from apps.invoices.dto.invoice_dto import InvoiceCreateDTO, InvoiceItemCreateDTO
+        from apps.invoices.models import InvoiceTemplate, Invoice
+        from django.utils import timezone
+        
+        # Buscar plantilla por defecto
+        template = InvoiceTemplate.objects.filter(
+            document_type=InvoiceTemplate.DocumentType.PURCHASE_INVOICE,
+            is_active=True
+        ).order_by("-is_default").first()
+        
+        if not template:
+            # Si no existe, crear una al vuelo para que no falle el proceso
+            template = InvoiceTemplate.objects.create(
+                name="Plantilla Factura Compra (Auto)",
+                document_type=InvoiceTemplate.DocumentType.PURCHASE_INVOICE,
+                is_default=True
+            )
+            
+        # Preparar DTO para la factura
+        items_dto = [
+            InvoiceItemCreateDTO(
+                product_id=detail.product_id,
+                quantity=detail.quantity,
+                unit_price=detail.unit_price,
+            )
+            for detail in purchase.details.all()
+        ]
+        
+        invoice_dto = InvoiceCreateDTO(
+            document_type=Invoice.DocumentType.PURCHASE_INVOICE,
+            template_id=template.id,
+            invoice_number=f"FAC-CMP-{purchase.id_purchase:06d}",
+            issue_date=timezone.now().date(),
+            purchase_id=purchase.pk,
+            notes=f"Factura generada automáticamente por compra #{purchase.id_purchase}",
+            items=items_dto
+        )
+        
+        # Crear y emitir la factura
+        invoice = InvoiceService.create_invoice(invoice_dto)
+        InvoiceService.issue_invoice(invoice)
+        
         return purchase
 
     @staticmethod
