@@ -292,6 +292,30 @@ inventory_delete_schema = extend_schema(
     },
 )
 
+inventory_restore_schema = extend_schema(
+    tags=["Inventory"],
+    summary="Restaurar Inventario",
+    description="Restaura un registro de inventario desactivado lógicamente.",
+    parameters=[
+        OpenApiParameter(
+            name="id",
+            type=OpenApiTypes.INT,
+            location=OpenApiParameter.PATH,
+            required=True,
+        )
+    ],
+    responses={
+        200: OpenApiResponse(
+            response=build_api_response_schema(name="InventoryRestoreApiResponse"),
+            description="Inventario restaurado correctamente.",
+        ),
+        400: OpenApiResponse(response=ValidationErrorResponseSerializer),
+        401: OpenApiResponse(response=ApiErrorResponseSerializer),
+        403: OpenApiResponse(response=ApiErrorResponseSerializer),
+        404: OpenApiResponse(response=ApiErrorResponseSerializer),
+    },
+)
+
 
 inventory_thresholds_schema = extend_schema(
     tags=["Inventory"],

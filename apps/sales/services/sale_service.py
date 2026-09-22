@@ -2,6 +2,7 @@ from decimal import Decimal
 
 from django.core.exceptions import ValidationError
 from django.db import transaction
+from django.utils import timezone
 
 from apps.core.exceptions.custom_exceptions import (
     CustomerInactiveException,
@@ -13,6 +14,8 @@ from apps.core.exceptions.custom_exceptions import (
 from apps.core.services.base_service import BaseService
 from apps.customers.models import Customer
 from apps.inventory.services.inventory_service import InventoryService
+from apps.inventory.models import InventoryMovement
+from apps.invoices.models import Invoice
 from apps.products.models import Product
 from apps.sales.dto.sale_detail_dto import SaleDetailDto
 from apps.sales.dto.sale_dto import SaleCreateDto
@@ -258,6 +261,8 @@ class SaleService(BaseService[Sale]):
                 user=user,
             )
 
+        SaleService._create_sale_invoice(sale, details)
+
         sale.status = Sale.SaleStatus.COMPLETED
 
         sale.save(
@@ -268,6 +273,57 @@ class SaleService(BaseService[Sale]):
         )
 
         return sale
+
+    @staticmethod
+    def _create_sale_invoice(sale: Sale, details) -> None:
+        """
+        Crea y emite la factura histórica de una venta completada.
+        """
+
+        from apps.invoices.dto.invoice_dto import (
+            InvoiceCreateDTO,
+            InvoiceItemCreateDTO,
+        )
+        from apps.invoices.models import Invoice, InvoiceTemplate
+        from apps.invoices.services.invoice_service import InvoiceService
+
+        template = InvoiceTemplate.objects.filter(
+            document_type=InvoiceTemplate.DocumentType.SALE_INVOICE,
+            is_active=True,
+        ).order_by("-is_default").first()
+
+        if template is None:
+            template = InvoiceTemplate.objects.create(
+                name="Plantilla Factura Venta (Auto)",
+                document_type=InvoiceTemplate.DocumentType.SALE_INVOICE,
+                is_default=True,
+            )
+
+        items = [
+            InvoiceItemCreateDTO(
+                product_id=detail.product_id,
+                quantity=detail.quantity,
+                unit_price=detail.unit_price,
+                discount=detail.discount,
+            )
+            for detail in details
+        ]
+
+        invoice = InvoiceService.create_invoice(
+            InvoiceCreateDTO(
+                document_type=Invoice.DocumentType.SALE_INVOICE,
+                template_id=template.id,
+                invoice_number=f"FAC-VTA-{sale.id_sale:06d}",
+                issue_date=timezone.now().date(),
+                sale_id=sale.id_sale,
+                discount=sale.discount,
+                tax=sale.tax,
+                notes=f"Factura generada automáticamente por venta #{sale.id_sale}",
+                items=items,
+            )
+        )
+
+        InvoiceService.issue_invoice(invoice)
 
     @staticmethod
     @transaction.atomic
@@ -281,6 +337,12 @@ class SaleService(BaseService[Sale]):
         Si la venta ya estaba completada, se revierten las
         salidas de inventario mediante movimientos ENTRY.
         """
+
+        sale = (
+            Sale.objects.select_for_update()
+            .prefetch_related("details__product__inventory")
+            .get(pk=sale.pk)
+        )
 
         if sale.status == Sale.SaleStatus.CANCELLED:
             raise InvalidSaleTransitionException("La venta ya se encuentra cancelada.")
@@ -318,20 +380,38 @@ class SaleService(BaseService[Sale]):
 
             inventory = detail.product.inventory
 
-            entry_data = {
-                "quantity": detail.quantity,
-                "reference": (f"Cancelación venta #{sale.id_sale}"),
-                "notes": (
-                    "Reversión de salida de inventario "
-                    f"por cancelación de venta #{sale.id_sale}"
-                ),
-            }
-
-            InventoryService.register_entry(
+            reversal_reference = f"Cancelación venta #{sale.id_sale}"
+            reversal_exists = InventoryMovement.objects.filter(
                 inventory=inventory,
-                data=entry_data,
-                user=user,
-            )
+                movement_type=InventoryMovement.MovementType.ENTRY,
+                reference=reversal_reference,
+            ).exists()
+
+            if not reversal_exists:
+                entry_data = {
+                    "quantity": detail.quantity,
+                    "reference": reversal_reference,
+                    "notes": (
+                        "Reversión de salida de inventario "
+                        f"por cancelación de venta #{sale.id_sale}"
+                    ),
+                }
+
+                InventoryService.register_entry(
+                    inventory=inventory,
+                    data=entry_data,
+                    user=user,
+                )
+
+        sale_invoices = Invoice.objects.select_for_update().filter(
+            sale=sale,
+            document_type=Invoice.DocumentType.SALE_INVOICE,
+        )
+
+        for invoice in sale_invoices:
+            from apps.invoices.services.invoice_service import InvoiceService
+
+            InvoiceService.cancel_invoice(invoice)
 
         sale.status = Sale.SaleStatus.CANCELLED
 
@@ -368,6 +448,6 @@ class SaleService(BaseService[Sale]):
         """
 
         if sale.is_active:
-            raise ValidationError("La venta ya se encuentra activa.")
+            return sale
 
         return SaleService().restore(sale)

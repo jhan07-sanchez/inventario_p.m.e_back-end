@@ -15,6 +15,7 @@ from apps.invoices.docs.invoice_docs import (
     invoice_retrieve_schema,
     invoice_put_schema,
     invoice_patch_schema,
+    invoice_restore_schema,
 )
 from apps.invoices.selectors.invoice_selector import InvoiceSelector
 from apps.invoices.serializers.invoice_serializer import (
@@ -76,6 +77,10 @@ class InvoiceViewSet(BaseViewSet):
                 IsAuthenticatedAndActive,
                 HasPermission("invoices.update"),
             ),
+            "restore": (
+                IsAuthenticatedAndActive,
+                HasPermission("invoices.update"),
+            ),
         }
 
         classes = permission_map.get(
@@ -96,6 +101,8 @@ class InvoiceViewSet(BaseViewSet):
         document_type = self.request.query_params.get("document_type")
         invoice_status = self.request.query_params.get("status")
         purchase = self.request.query_params.get("purchase")
+        sale = self.request.query_params.get("sale")
+        invoice_number = self.request.query_params.get("invoice_number")
 
         is_active_param = self.request.query_params.get("is_active")
         is_active = None
@@ -107,6 +114,8 @@ class InvoiceViewSet(BaseViewSet):
             status=invoice_status,
             is_active=is_active,
             purchase=purchase,
+            sale=sale,
+            invoice_number=invoice_number,
         )
 
     def get_serializer_class(self):
@@ -287,6 +296,35 @@ class InvoiceViewSet(BaseViewSet):
             return self.handle_validation_error(
                 exception,
                 message="No fue posible desactivar la factura.",
+            )
+
+    @invoice_restore_schema
+    @action(
+        detail=True,
+        methods=["post"],
+        url_path="restore",
+    )
+    def restore(self, request, pk=None):
+        """
+        Restaura una factura previamente desactivada.
+        """
+        invoice = InvoiceSelector.get_by_id(pk)
+
+        try:
+            InvoiceService.restore_invoice(invoice)
+            serializer = InvoiceRetrieveSerializer(invoice)
+
+            return self.success_response(
+                message="Factura restaurada correctamente.",
+                code="INVOICE_RESTORED",
+                data=serializer.data,
+                status_code=status.HTTP_200_OK,
+            )
+
+        except ValidationError as exception:
+            return self.handle_validation_error(
+                exception,
+                message="No fue posible restaurar la factura.",
             )
 
     @invoice_issue_schema

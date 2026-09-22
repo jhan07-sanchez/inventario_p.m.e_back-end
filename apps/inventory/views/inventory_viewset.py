@@ -29,6 +29,7 @@ from apps.inventory.docs.inventory_docs import (
     inventory_exit_schema,
     inventory_list_schema,
     inventory_movements_schema,
+    inventory_restore_schema,
     inventory_partial_update_schema,
     inventory_thresholds_schema,
     inventory_update_schema,
@@ -78,6 +79,10 @@ class InventoryViewSet(BaseViewSet):
             "destroy": (
                 IsAuthenticatedAndActive,
                 HasPermission("inventory.delete"),
+            ),
+            "restore": (
+                IsAuthenticatedAndActive,
+                HasPermission("inventory.update"),
             ),
             "thresholds": (
                 IsAuthenticatedAndActive,
@@ -361,6 +366,35 @@ class InventoryViewSet(BaseViewSet):
             return self.handle_validation_error(
                 exception,
                 message="No fue posible desactivar el inventario.",
+            )
+
+    @inventory_restore_schema
+    @action(
+        detail=True,
+        methods=["post"],
+        url_path="restore",
+    )
+    def restore(self, request, pk=None):
+        """
+        Restaura un registro de inventario previamente desactivado.
+        """
+
+        inventory = InventorySelector.get_by_id(pk)
+
+        try:
+            InventoryService.restore_inventory(inventory)
+            serializer = InventoryDetailSerializer(inventory)
+
+            return self.success_response(
+                message="Inventario restaurado correctamente.",
+                code="INVENTORY_RESTORED",
+                data=serializer.data,
+                status_code=status.HTTP_200_OK,
+            )
+        except ValidationError as exception:
+            return self.handle_validation_error(
+                exception,
+                message="No fue posible restaurar el inventario.",
             )
 
     @inventory_thresholds_schema

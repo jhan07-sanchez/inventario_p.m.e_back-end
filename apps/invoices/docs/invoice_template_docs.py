@@ -261,3 +261,29 @@ invoice_template_delete_schema = extend_schema(
         ),
     },
 )
+
+invoice_template_restore_schema = extend_schema(
+    tags=["Invoice Templates"],
+    summary="Restaurar Plantilla",
+    description="Restaura una plantilla de factura desactivada lógicamente.",
+    parameters=[
+        OpenApiParameter(
+            name="id",
+            type=OpenApiTypes.INT,
+            location=OpenApiParameter.PATH,
+            required=True,
+        )
+    ],
+    responses={
+        200: OpenApiResponse(
+            response=build_api_response_schema(
+                name="InvoiceTemplateRestoreApiResponse",
+            ),
+            description="Plantilla restaurada correctamente.",
+        ),
+        400: OpenApiResponse(response=ValidationErrorResponseSerializer),
+        401: OpenApiResponse(response=ApiErrorResponseSerializer),
+        403: OpenApiResponse(response=ApiErrorResponseSerializer),
+        404: OpenApiResponse(response=ApiErrorResponseSerializer),
+    },
+)

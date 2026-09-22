@@ -15,12 +15,12 @@ class InvoiceSelector(BaseSelector[Invoice]):
 
     def get_queryset(self) -> QuerySet[Invoice]:
         """
-        Retorna el queryset optimizando relaciones de plantilla, compra y detalle.
+        Retorna el queryset optimizando relaciones de plantilla, origen y detalle.
         """
         return (
             super()
             .get_queryset()
-            .select_related("template", "purchase")
+            .select_related("template", "purchase", "sale")
             .prefetch_related("items", "items__product")
             .order_by("-created_at")
         )
@@ -66,6 +66,8 @@ class InvoiceSelector(BaseSelector[Invoice]):
         status: str | None = None,
         is_active: bool | None = None,
         purchase: int | None = None,
+        sale: int | None = None,
+        invoice_number: str | None = None,
     ) -> QuerySet[Invoice]:
         queryset = InvoiceSelector().get_queryset()
 
@@ -81,5 +83,24 @@ class InvoiceSelector(BaseSelector[Invoice]):
         if purchase is not None:
             queryset = queryset.filter(purchase_id=purchase)
 
+        if sale is not None:
+            queryset = queryset.filter(sale_id=sale)
+
+        if invoice_number:
+            queryset = queryset.filter(
+                invoice_number__icontains=invoice_number,
+            )
+
         return queryset
 
+    @staticmethod
+    def get_for_sale(sale_id: int) -> QuerySet[Invoice]:
+        """Retorna las facturas asociadas a una venta."""
+
+        return InvoiceSelector.filter_invoices(sale=sale_id)
+
+    @staticmethod
+    def get_for_purchase(purchase_id: int) -> QuerySet[Invoice]:
+        """Retorna las facturas asociadas a una compra."""
+
+        return InvoiceSelector.filter_invoices(purchase=purchase_id)

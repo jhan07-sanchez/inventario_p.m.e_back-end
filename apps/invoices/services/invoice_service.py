@@ -15,6 +15,7 @@ from apps.invoices.dto.invoice_dto import InvoiceCreateDTO, InvoiceUpdateDTO
 from apps.invoices.models import Invoice, InvoiceItem, InvoiceTemplate
 from apps.products.models import Product
 from apps.purchases.models import Purchase
+from apps.sales.models import Sale
 
 
 class InvoiceService(BaseService[Invoice]):
@@ -28,6 +29,8 @@ class InvoiceService(BaseService[Invoice]):
     @staticmethod
     @transaction.atomic
     def create_invoice(dto: InvoiceCreateDTO) -> Invoice:
+        purchase, sale = InvoiceService._resolve_origin(dto)
+
         # Validar plantilla
         try:
             template = InvoiceTemplate.objects.get(pk=dto.template_id)
@@ -36,14 +39,6 @@ class InvoiceService(BaseService[Invoice]):
 
         if not template.is_active:
             raise ValidationError("La plantilla seleccionada se encuentra inactiva.")
-
-        # Validar compra relacionada (si aplica)
-        purchase = None
-        if dto.purchase_id:
-            try:
-                purchase = Purchase.objects.get(pk=dto.purchase_id)
-            except Purchase.DoesNotExist:
-                raise ValidationError("La compra relacionada no existe.")
 
         # Validar items
         if not dto.items:
@@ -59,6 +54,7 @@ class InvoiceService(BaseService[Invoice]):
             document_type=dto.document_type,
             template=template,
             purchase=purchase,
+            sale=sale,
             issue_date=dto.issue_date or timezone.now().date(),
             due_date=dto.due_date,
             notes=dto.notes,
@@ -106,6 +102,23 @@ class InvoiceService(BaseService[Invoice]):
             tax_sum += item_dto.tax
             total_sum += (line_subtotal - item_dto.discount + item_dto.tax)
 
+        if dto.discount < Decimal("0.00") or dto.tax < Decimal("0.00"):
+            raise ValidationError(
+                "El descuento y los impuestos de la factura no pueden ser negativos."
+            )
+
+        if dto.discount > subtotal_sum - discount_sum:
+            raise ValidationError(
+                "El descuento de la factura no puede superar el subtotal neto."
+            )
+
+        discount_sum += dto.discount
+        tax_sum += dto.tax
+        total_sum += dto.tax - dto.discount
+
+        if total_sum < Decimal("0.00"):
+            raise ValidationError("El total de la factura no puede ser negativo.")
+
         invoice.subtotal = subtotal_sum
         invoice.discount = discount_sum
         invoice.tax = tax_sum
@@ -113,6 +126,49 @@ class InvoiceService(BaseService[Invoice]):
         invoice.save(update_fields=["subtotal", "discount", "tax", "total", "updated_at"])
 
         return invoice
+
+    @staticmethod
+    def _resolve_origin(dto: InvoiceCreateDTO) -> tuple[Purchase | None, Sale | None]:
+        """
+        Resuelve y valida el único origen empresarial de la factura.
+        """
+
+        has_purchase = dto.purchase_id is not None
+        has_sale = dto.sale_id is not None
+
+        if has_purchase == has_sale:
+            raise ValidationError(
+                "La factura debe estar relacionada exactamente con una compra o una venta."
+            )
+
+        if has_purchase:
+            try:
+                purchase = Purchase.objects.get(pk=dto.purchase_id)
+            except Purchase.DoesNotExist as exception:
+                raise ValidationError(
+                    "La compra relacionada no existe."
+                ) from exception
+
+            if dto.document_type != Invoice.DocumentType.PURCHASE_INVOICE:
+                raise ValidationError(
+                    "Las compras solo pueden generar facturas de compra."
+                )
+
+            return purchase, None
+
+        try:
+            sale = Sale.objects.get(pk=dto.sale_id)
+        except Sale.DoesNotExist as exception:
+            raise ValidationError(
+                "La venta relacionada no existe."
+            ) from exception
+
+        if dto.document_type != Invoice.DocumentType.SALE_INVOICE:
+            raise ValidationError(
+                "Las ventas solo pueden generar facturas de venta."
+            )
+
+        return None, sale
 
     @staticmethod
     @transaction.atomic
@@ -150,10 +206,15 @@ class InvoiceService(BaseService[Invoice]):
     @transaction.atomic
     def cancel_invoice(invoice: Invoice) -> Invoice:
         """
-        Transita a CANCELLED.
+        Transita una factura emitida a CANCELLED.
         """
         if invoice.status == Invoice.Status.CANCELLED:
             raise InvalidInvoiceTransitionException("La factura ya se encuentra anulada.")
+
+        if invoice.status != Invoice.Status.ISSUED:
+            raise InvalidInvoiceTransitionException(
+                "Solo las facturas emitidas pueden ser anuladas."
+            )
 
         invoice.status = Invoice.Status.CANCELLED
         invoice.save(update_fields=["status", "updated_at"])
@@ -169,3 +230,15 @@ class InvoiceService(BaseService[Invoice]):
             raise ValidationError("La factura ya se encuentra desactivada.")
         
         InvoiceService().delete(invoice)
+
+    @staticmethod
+    @transaction.atomic
+    def restore_invoice(invoice: Invoice) -> Invoice:
+        """
+        Restaura una factura previamente desactivada.
+        """
+
+        if invoice.is_active:
+            return invoice
+
+        return InvoiceService().restore(invoice)

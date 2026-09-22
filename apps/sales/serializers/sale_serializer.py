@@ -1,7 +1,9 @@
 from decimal import Decimal
 
 from rest_framework import serializers
+from drf_spectacular.utils import extend_schema_field
 
+from apps.invoices.models import Invoice
 from apps.sales.dto.sale_dto import (
     SaleCreateDto,
     SaleUpdateDto,
@@ -12,6 +14,19 @@ from apps.sales.serializers.sale_detail_serializer import (
     SaleDetailCreateSerializer,
     SaleDetailSerializer
 )
+
+
+class SaleInvoiceSummarySerializer(serializers.ModelSerializer):
+    """Serializer compacto de la factura asociada a una venta."""
+
+    class Meta:
+        model = Invoice
+        fields = (
+            "id",
+            "invoice_number",
+            "status",
+            "document_type",
+        )
 
 
 class SaleListSerializer(serializers.ModelSerializer):
@@ -31,6 +46,7 @@ class SaleListSerializer(serializers.ModelSerializer):
         source="customer.document_number",
         read_only=True,
     )
+    invoices_summary = serializers.SerializerMethodField()
 
     class Meta:
         model = Sale
@@ -44,9 +60,23 @@ class SaleListSerializer(serializers.ModelSerializer):
             "sale_date",
             "subtotal",
             "total",
+            "invoices_summary",
             "is_active",
             "created_at",
         )
+
+    @extend_schema_field(
+        SaleInvoiceSummarySerializer(many=True),
+    )
+    def get_invoices_summary(self, obj):
+        invoices = getattr(obj, "prefetched_invoices", None)
+        if invoices is None:
+            invoices = obj.invoices.filter(is_active=True)
+
+        return [
+            SaleInvoiceSummarySerializer(invoice).data
+            for invoice in invoices
+        ]
 
 
 class SaleRetrieveSerializer(serializers.ModelSerializer):
@@ -59,6 +89,7 @@ class SaleRetrieveSerializer(serializers.ModelSerializer):
         many=True,
         read_only=True,
     )
+    invoices_summary = serializers.SerializerMethodField()
 
     class Meta:
         model = Sale
@@ -76,10 +107,24 @@ class SaleRetrieveSerializer(serializers.ModelSerializer):
             "payment_method",
             "notes",
             "details",
+            "invoices_summary",
             "is_active",
             "created_at",
             "updated_at",
         )
+
+    @extend_schema_field(
+        SaleInvoiceSummarySerializer(many=True),
+    )
+    def get_invoices_summary(self, obj):
+        invoices = getattr(obj, "prefetched_invoices", None)
+        if invoices is None:
+            invoices = obj.invoices.filter(is_active=True)
+
+        return [
+            SaleInvoiceSummarySerializer(invoice).data
+            for invoice in invoices
+        ]
 
 
 class SaleCreateSerializer(serializers.Serializer):

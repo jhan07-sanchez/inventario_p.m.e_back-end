@@ -257,6 +257,6 @@ class PurchaseService(BaseService[Purchase]):
         Restauración lógica de la compra.
         """
         if purchase.is_active:
-            raise ValidationError("La compra ya se encuentra activa.")
+            return purchase
 
         return PurchaseService().restore(purchase)

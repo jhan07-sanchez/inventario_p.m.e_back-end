@@ -15,6 +15,7 @@ from apps.sales.docs.sale_docs import (
     sale_detail_schema,
     sale_list_schema,
     sale_partial_update_schema,
+    sale_restore_schema,
     sale_update_schema,
 )
 from apps.sales.serializers.sale_serializer import (
@@ -76,9 +77,25 @@ class SaleViewSet(BaseViewSet):
             ),
             "complete": (
                 IsAuthenticatedAndActive,
-                HasPermission("sales.update"),
+                (
+                    HasPermission("sales.complete")
+                    | HasPermission("sales.approve")
+                    | HasPermission("sales.update")
+                )
+                & (
+                    HasPermission("sales.invoice")
+                    | HasPermission("sales.approve")
+                    | HasPermission("sales.update")
+                ),
             ),
             "cancel": (
+                IsAuthenticatedAndActive,
+                (
+                    HasPermission("sales.cancel")
+                    | HasPermission("sales.update")
+                ),
+            ),
+            "restore": (
                 IsAuthenticatedAndActive,
                 HasPermission("sales.update"),
             ),
@@ -101,7 +118,23 @@ class SaleViewSet(BaseViewSet):
         Las consultas son delegadas al SaleSelector.
         """
 
-        return SaleSelector.get_all()
+        customer_id = self.request.query_params.get("customer_id")
+        sale_status = self.request.query_params.get("status")
+        invoice_number = self.request.query_params.get("invoice_number")
+        invoice_status = self.request.query_params.get("invoice_status")
+
+        is_active_param = self.request.query_params.get("is_active")
+        is_active = True
+        if is_active_param is not None:
+            is_active = is_active_param.lower() == "true"
+
+        return SaleSelector.filter_sales(
+            customer_id=customer_id,
+            status=sale_status,
+            invoice_number=invoice_number,
+            invoice_status=invoice_status,
+            is_active=is_active,
+        )
 
     def get_serializer_class(self):
         """
@@ -269,6 +302,35 @@ class SaleViewSet(BaseViewSet):
             return self.handle_validation_error(
                 exception,
                 message="No fue posible desactivar la venta.",
+            )
+
+    @sale_restore_schema
+    @action(
+        detail=True,
+        methods=["post"],
+        url_path="restore",
+    )
+    def restore(self, request, pk=None):
+        """
+        Restaura una venta previamente desactivada.
+        """
+
+        sale = SaleSelector.get_by_id(pk)
+
+        try:
+            SaleService.restore_sale(sale)
+            serializer = SaleRetrieveSerializer(sale)
+
+            return self.success_response(
+                message="Venta restaurada correctamente.",
+                code="SALE_RESTORED",
+                data=serializer.data,
+                status_code=status.HTTP_200_OK,
+            )
+        except ValidationError as exception:
+            return self.handle_validation_error(
+                exception,
+                message="No fue posible restaurar la venta.",
             )
 
     @sale_complete_schema

@@ -33,12 +33,50 @@ pagination_parameters = [
         description="Cantidad de resultados por página.",
         required=False,
     ),
+    OpenApiParameter(
+        name="customer_id",
+        type=OpenApiTypes.INT,
+        location=OpenApiParameter.QUERY,
+        description="Filtrar por identificador del cliente.",
+        required=False,
+    ),
+    OpenApiParameter(
+        name="status",
+        type=OpenApiTypes.STR,
+        location=OpenApiParameter.QUERY,
+        description="Filtrar por estado de la venta (PENDING, COMPLETED, CANCELLED).",
+        required=False,
+    ),
+    OpenApiParameter(
+        name="invoice_number",
+        type=OpenApiTypes.STR,
+        location=OpenApiParameter.QUERY,
+        description="Filtrar por número de factura asociada.",
+        required=False,
+    ),
+    OpenApiParameter(
+        name="invoice_status",
+        type=OpenApiTypes.STR,
+        location=OpenApiParameter.QUERY,
+        description="Filtrar por estado de la factura asociada.",
+        required=False,
+    ),
+    OpenApiParameter(
+        name="is_active",
+        type=OpenApiTypes.BOOL,
+        location=OpenApiParameter.QUERY,
+        description="Filtrar por ventas activas o inactivas.",
+        required=False,
+    ),
 ]
 
 sale_list_schema = extend_schema(
     tags=["Sales"],
     summary="Listar Ventas",
-    description="Obtiene una lista paginada de todas las ventas registradas en el sistema.",
+    description=(
+        "Obtiene una lista paginada de ventas registradas en el sistema. "
+        "Cada venta incluye el resumen de sus facturas asociadas."
+    ),
     parameters=pagination_parameters,
     responses={
         200: OpenApiResponse(
@@ -63,7 +101,10 @@ sale_list_schema = extend_schema(
 sale_detail_schema = extend_schema(
     tags=["Sales"],
     summary="Obtener Venta",
-    description="Obtiene los detalles completos de una venta por su ID, incluyendo sus líneas de detalle.",
+    description=(
+        "Obtiene los detalles completos de una venta por su ID, incluyendo "
+        "sus líneas de detalle y el resumen de sus facturas asociadas."
+    ),
     parameters=[
         OpenApiParameter(
             name="id",
@@ -264,6 +305,32 @@ sale_delete_schema = extend_schema(
             response=ApiErrorResponseSerializer,
             description="Venta no encontrada.",
         ),
+    },
+)
+
+sale_restore_schema = extend_schema(
+    tags=["Sales"],
+    summary="Restaurar Venta",
+    description="Restaura una venta desactivada lógicamente.",
+    parameters=[
+        OpenApiParameter(
+            name="id",
+            type=OpenApiTypes.INT,
+            location=OpenApiParameter.PATH,
+            required=True,
+        )
+    ],
+    responses={
+        200: OpenApiResponse(
+            response=build_api_response_schema(
+                name="SaleRestoreApiResponse",
+            ),
+            description="Venta restaurada correctamente.",
+        ),
+        400: OpenApiResponse(response=ValidationErrorResponseSerializer),
+        401: OpenApiResponse(response=ApiErrorResponseSerializer),
+        403: OpenApiResponse(response=ApiErrorResponseSerializer),
+        404: OpenApiResponse(response=ApiErrorResponseSerializer),
     },
 )
 

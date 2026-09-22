@@ -3,7 +3,10 @@ from rest_framework import serializers
 
 from apps.invoices.dto.invoice_dto import InvoiceCreateDTO, InvoiceItemCreateDTO, InvoiceUpdateDTO
 from apps.invoices.models import Invoice, InvoiceItem
-from apps.invoices.serializers.invoice_template_serializer import InvoiceTemplateListSerializer, InvoiceTemplateRetrieveSerializer
+from apps.invoices.serializers.invoice_template_serializer import (
+    InvoiceTemplateListSerializer,
+    InvoiceTemplateRetrieveSerializer,
+)
 
 
 class InvoiceItemSerializer(serializers.ModelSerializer):
@@ -40,6 +43,7 @@ class InvoiceListSerializer(serializers.ModelSerializer):
             "template",
             "template_name",
             "purchase",
+            "sale",
             "subtotal",
             "total",
             "is_active",
@@ -62,6 +66,7 @@ class InvoiceRetrieveSerializer(serializers.ModelSerializer):
             "due_date",
             "template",
             "purchase",
+            "sale",
             "subtotal",
             "discount",
             "tax",
@@ -89,6 +94,21 @@ class InvoiceCreateSerializer(serializers.Serializer):
     issue_date = serializers.DateField(required=False, allow_null=True)
     due_date = serializers.DateField(required=False, allow_null=True)
     purchase_id = serializers.IntegerField(required=False, allow_null=True)
+    sale_id = serializers.IntegerField(required=False, allow_null=True)
+    discount = serializers.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        required=False,
+        default=Decimal("0.00"),
+        min_value=Decimal("0.00"),
+    )
+    tax = serializers.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        required=False,
+        default=Decimal("0.00"),
+        min_value=Decimal("0.00"),
+    )
     notes = serializers.CharField(required=False, allow_null=True, allow_blank=True)
     items = InvoiceItemCreateSerializer(many=True, required=True, allow_empty=False)
 
@@ -114,6 +134,9 @@ class InvoiceCreateSerializer(serializers.Serializer):
             issue_date=validated_data.get("issue_date"),
             due_date=validated_data.get("due_date"),
             purchase_id=validated_data.get("purchase_id"),
+            sale_id=validated_data.get("sale_id"),
+            discount=validated_data.get("discount", Decimal("0.00")),
+            tax=validated_data.get("tax", Decimal("0.00")),
             notes=validated_data.get("notes"),
             items=items_dto
         )

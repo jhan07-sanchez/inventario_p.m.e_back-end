@@ -58,3 +58,15 @@ class InvoiceTemplateService(BaseService[InvoiceTemplate]):
             raise ValidationError("La plantilla ya se encuentra inactiva.")
         
         InvoiceTemplateService().delete(template)
+
+    @staticmethod
+    @transaction.atomic
+    def restore_template(template: InvoiceTemplate) -> InvoiceTemplate:
+        """
+        Restaura una plantilla de factura previamente desactivada.
+        """
+
+        if template.is_active:
+            return template
+
+        return InvoiceTemplateService().restore(template)

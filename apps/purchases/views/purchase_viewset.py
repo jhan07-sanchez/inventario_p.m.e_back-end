@@ -21,6 +21,7 @@ from apps.purchases.docs.purchase_docs import (
     purchase_receive_schema,
     purchase_complete_schema,
     purchase_cancel_schema,
+    purchase_restore_schema,
 )
 from apps.purchases.services.purchase_service import PurchaseService
 from apps.core.security import HasPermission
@@ -85,6 +86,10 @@ class PurchaseViewSet(BaseViewSet):
                 HasPermission("purchases.update"),
             ),
             "cancel": (
+                IsAuthenticatedAndActive,
+                HasPermission("purchases.update"),
+            ),
+            "restore": (
                 IsAuthenticatedAndActive,
                 HasPermission("purchases.update"),
             ),
@@ -335,6 +340,35 @@ class PurchaseViewSet(BaseViewSet):
             return self.handle_validation_error(
                 exception,
                 message="No fue posible desactivar la compra.",
+            )
+
+    @purchase_restore_schema
+    @action(
+        detail=True,
+        methods=["post"],
+        url_path="restore",
+    )
+    def restore(self, request, pk=None):
+        """
+        Restaura una compra previamente desactivada.
+        """
+
+        purchase = PurchaseSelector.get_purchase_by_id(pk)
+
+        try:
+            PurchaseService.restore_purchase(purchase)
+            serializer = PurchaseRetrieveSerializer(purchase)
+
+            return self.success_response(
+                message="Compra restaurada correctamente.",
+                code="PURCHASE_RESTORED",
+                data=serializer.data,
+                status_code=status.HTTP_200_OK,
+            )
+        except ValidationError as exception:
+            return self.handle_validation_error(
+                exception,
+                message="No fue posible restaurar la compra.",
             )
 
     @purchase_confirm_schema

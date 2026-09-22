@@ -66,6 +66,15 @@ class Invoice(ActiveModel):
         related_name="invoices",
         verbose_name="Compra relacionada",
     )
+
+    sale = models.ForeignKey(
+        "sales.Sale",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="invoices",
+        verbose_name="Venta relacionada",
+    )
     
     subtotal = models.DecimalField(
         max_digits=12,
@@ -116,6 +125,17 @@ class Invoice(ActiveModel):
             models.Index(fields=["status"], name="invoice_status_idx"),
             models.Index(fields=["document_type", "status"], name="invoice_type_status_idx"),
             models.Index(fields=["purchase"], name="invoice_purchase_idx"),
+            models.Index(fields=["sale"], name="invoice_sale_idx"),
+        ]
+
+        constraints = [
+            models.CheckConstraint(
+                condition=(
+                    models.Q(purchase__isnull=False, sale__isnull=True)
+                    | models.Q(purchase__isnull=True, sale__isnull=False)
+                ),
+                name="invoice_exactly_one_origin",
+            ),
         ]
 
     def __str__(self) -> str:

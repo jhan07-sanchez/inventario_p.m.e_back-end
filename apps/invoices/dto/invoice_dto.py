@@ -23,6 +23,9 @@ class InvoiceCreateDTO:
     issue_date: Optional[date] = None
     due_date: Optional[date] = None
     purchase_id: Optional[int] = None
+    sale_id: Optional[int] = None
+    discount: Decimal = Decimal("0.00")
+    tax: Decimal = Decimal("0.00")
     notes: Optional[str] = None
     items: list[InvoiceItemCreateDTO] = None
 

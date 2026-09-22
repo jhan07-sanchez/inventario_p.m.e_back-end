@@ -49,6 +49,27 @@ pagination_parameters = [
         description="Filtrar por estado activo/inactivo.",
         required=False,
     ),
+    OpenApiParameter(
+        name="invoice_number",
+        type=OpenApiTypes.STR,
+        location=OpenApiParameter.QUERY,
+        description="Filtrar por número de factura.",
+        required=False,
+    ),
+    OpenApiParameter(
+        name="purchase",
+        type=OpenApiTypes.INT,
+        location=OpenApiParameter.QUERY,
+        description="Filtrar por identificador de la compra asociada.",
+        required=False,
+    ),
+    OpenApiParameter(
+        name="sale",
+        type=OpenApiTypes.INT,
+        location=OpenApiParameter.QUERY,
+        description="Filtrar por identificador de la venta asociada.",
+        required=False,
+    ),
 ]
 
 
@@ -56,7 +77,9 @@ invoice_list_schema = extend_schema(
     tags=["Invoices"],
     summary="Listar facturas",
     description=(
-        "Obtiene el listado paginado de todas las facturas en el sistema, con opciones de filtrado."
+        "Obtiene el listado paginado de todas las facturas en el sistema, "
+        "incluyendo su compra o venta de origen y opciones de filtrado por "
+        "tipo, estado, número y origen."
     ),
     parameters=pagination_parameters,
     responses={
@@ -358,5 +381,29 @@ invoice_delete_schema = extend_schema(
             response=ApiErrorResponseSerializer,
             description="Factura no encontrada.",
         ),
+    },
+)
+
+invoice_restore_schema = extend_schema(
+    tags=["Invoices"],
+    summary="Restaurar Factura",
+    description="Restaura una factura desactivada lógicamente.",
+    parameters=[
+        OpenApiParameter(
+            name="id",
+            type=OpenApiTypes.INT,
+            location=OpenApiParameter.PATH,
+            required=True,
+        )
+    ],
+    responses={
+        200: OpenApiResponse(
+            response=build_api_response_schema(name="InvoiceRestoreApiResponse"),
+            description="Factura restaurada correctamente.",
+        ),
+        400: OpenApiResponse(response=ValidationErrorResponseSerializer),
+        401: OpenApiResponse(response=ApiErrorResponseSerializer),
+        403: OpenApiResponse(response=ApiErrorResponseSerializer),
+        404: OpenApiResponse(response=ApiErrorResponseSerializer),
     },
 )

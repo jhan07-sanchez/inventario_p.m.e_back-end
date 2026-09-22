@@ -269,6 +269,32 @@ purchase_delete_schema = extend_schema(
     },
 )
 
+purchase_restore_schema = extend_schema(
+    tags=["Purchases"],
+    summary="Restaurar Compra",
+    description="Restaura una compra desactivada lógicamente.",
+    parameters=[
+        OpenApiParameter(
+            name="id",
+            type=OpenApiTypes.INT,
+            location=OpenApiParameter.PATH,
+            required=True,
+        )
+    ],
+    responses={
+        200: OpenApiResponse(
+            response=build_api_response_schema(
+                name="PurchaseRestoreApiResponse",
+            ),
+            description="Compra restaurada correctamente.",
+        ),
+        400: OpenApiResponse(response=ValidationErrorResponseSerializer),
+        401: OpenApiResponse(response=ApiErrorResponseSerializer),
+        403: OpenApiResponse(response=ApiErrorResponseSerializer),
+        404: OpenApiResponse(response=ApiErrorResponseSerializer),
+    },
+)
+
 purchase_confirm_schema = extend_schema(
     tags=["Purchases"],
     summary="Confirmar Compra",

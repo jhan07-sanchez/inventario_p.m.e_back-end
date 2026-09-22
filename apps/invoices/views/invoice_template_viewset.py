@@ -1,5 +1,6 @@
 from django.core.exceptions import ValidationError
 from rest_framework import status
+from rest_framework.decorators import action
 from rest_framework.filters import SearchFilter, OrderingFilter
 
 from apps.core.security import HasPermission
@@ -12,6 +13,7 @@ from apps.invoices.docs.invoice_template_docs import (
     invoice_template_retrieve_schema,
     invoice_template_put_schema,
     invoice_template_patch_schema,
+    invoice_template_restore_schema,
 )
 from apps.invoices.selectors.invoice_template_selector import InvoiceTemplateSelector
 from apps.invoices.serializers.invoice_template_serializer import (
@@ -63,6 +65,10 @@ class InvoiceTemplateViewSet(BaseViewSet):
             "destroy": (
                 IsAuthenticatedAndActive,
                 HasPermission("invoices.delete"),
+            ),
+            "restore": (
+                IsAuthenticatedAndActive,
+                HasPermission("invoices.update"),
             ),
         }
 
@@ -260,4 +266,33 @@ class InvoiceTemplateViewSet(BaseViewSet):
             return self.handle_validation_error(
                 exception,
                 message="No fue posible desactivar la plantilla.",
+            )
+
+    @invoice_template_restore_schema
+    @action(
+        detail=True,
+        methods=["post"],
+        url_path="restore",
+    )
+    def restore(self, request, pk=None):
+        """
+        Restaura una plantilla de factura previamente desactivada.
+        """
+        template = InvoiceTemplateSelector.get_by_id(pk)
+
+        try:
+            InvoiceTemplateService.restore_template(template)
+            serializer = InvoiceTemplateRetrieveSerializer(template)
+
+            return self.success_response(
+                message="Plantilla restaurada correctamente.",
+                code="INVOICE_TEMPLATE_RESTORED",
+                data=serializer.data,
+                status_code=status.HTTP_200_OK,
+            )
+
+        except ValidationError as exception:
+            return self.handle_validation_error(
+                exception,
+                message="No fue posible restaurar la plantilla.",
             )

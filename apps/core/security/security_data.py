@@ -214,7 +214,9 @@ SECURITY_MODULES = [
         },
         "actions": {
             "sales.approve": "Aprobar ventas",
+            "sales.complete": "Completar ventas",
             "sales.cancel": "Cancelar ventas",
+            "sales.invoice": "Facturar ventas",
             "sales.print": "Imprimir ventas",
             "sales.duplicate": "Duplicar ventas",
         },

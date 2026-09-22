@@ -249,6 +249,6 @@ class InventoryService(BaseService[Inventory]):
         """
 
         if inventory.is_active:
-            raise ValidationError("El inventario ya se encuentra activo.")
+            return inventory
 
         return InventoryService().restore(inventory)
