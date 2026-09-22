@@ -223,3 +223,16 @@ class InvoiceHasNoItemsException(BusinessException):
 class InvalidInvoiceTransitionException(BusinessException):
     default_detail = "La transición de estado solicitada no es válida para esta factura."
     default_code = ErrorCodes.INVALID_INVOICE_TRANSITION
+
+
+class InvalidSaleStateException(BusinessException):
+    default_detail = "El estado actual de la venta no permite realizar esta operacion."
+    default_code = ErrorCodes.INVALID_SALE_STATE
+
+class InvalidSaleTransitionException(BusinessException):
+    default_detail = "La transacion de estado solicitada no es valida para esta venta."
+    default_code = ErrorCodes.INVALID_SALE_TRANSITION
+
+class SaleHasNoDetailsException(BusinessException):
+    default_detail = "La venta no tiene detalles asociados. No puede ser procesada."
+    default_code = ErrorCodes.SALE_HAS_NO_DETAILS

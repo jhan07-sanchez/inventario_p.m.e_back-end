@@ -1,5 +1,4 @@
 from decimal import Decimal
-from typing import Any
 
 from django.db import transaction
 from django.core.exceptions import ValidationError
@@ -35,15 +34,15 @@ class PurchaseService(BaseService[Purchase]):
         """
         Crea una nueva compra y sus detalles a partir del DTO.
         """
-        
+
         try:
             supplier = Supplier.objects.get(pk=dto.supplier_id)
         except Supplier.DoesNotExist:
             raise ValidationError("El proveedor seleccionado no existe.")
-            
+
         if not supplier.is_active:
             raise SupplierInactiveException()
-            
+
         # Crear la cabecera
         purchase = Purchase.objects.create(
             supplier=supplier,
@@ -53,28 +52,28 @@ class PurchaseService(BaseService[Purchase]):
             subtotal=Decimal("0.00"),
             total=Decimal("0.00")
         )
-        
+
         subtotal_sum = Decimal("0.00")
         total_sum = Decimal("0.00")
-        
+
         # Crear los detalles
         for detail_dto in dto.details:
             try:
                 product = Product.objects.get(pk=detail_dto.product_id)
             except Product.DoesNotExist:
                 raise ValidationError(f"El producto con ID {detail_dto.product_id} no existe.")
-                
+
             if not product.is_active:
                 raise ProductInactiveException(f"El producto {product.name} se encuentra inactivo.")
-                
+
             if detail_dto.quantity <= Decimal("0.00"):
                 raise ValidationError("La cantidad del detalle debe ser mayor a cero.")
-                
+
             if detail_dto.unit_price < Decimal("0.00"):
                 raise ValidationError("El precio unitario no puede ser negativo.")
-                
+
             subtotal_line = detail_dto.quantity * detail_dto.unit_price
-            
+
             PurchaseDetail.objects.create(
                 purchase=purchase,
                 product=product,
@@ -82,15 +81,15 @@ class PurchaseService(BaseService[Purchase]):
                 unit_price=detail_dto.unit_price,
                 subtotal=subtotal_line,
             )
-            
+
             subtotal_sum += subtotal_line
             total_sum += subtotal_line
-            
+
         # Actualizar totales
         purchase.subtotal = subtotal_sum
         purchase.total = total_sum
         purchase.save(update_fields=["subtotal", "total", "updated_at"])
-        
+
         return purchase
 
     @staticmethod
@@ -102,13 +101,13 @@ class PurchaseService(BaseService[Purchase]):
         """
         if purchase.status != Purchase.Status.DRAFT:
             raise InvalidPurchaseStateException("Solo se pueden actualizar compras en estado Borrador (DRAFT).")
-            
+
         if dto.issue_date is not None:
             purchase.issue_date = dto.issue_date
-            
+
         if dto.notes is not None:
             purchase.notes = dto.notes
-            
+
         purchase.save(update_fields=["issue_date", "notes", "updated_at"])
         return purchase
 
@@ -120,10 +119,10 @@ class PurchaseService(BaseService[Purchase]):
         """
         if purchase.status != Purchase.Status.DRAFT:
             raise InvalidPurchaseTransitionException("Solo las compras en Borrador pueden ser confirmadas.")
-            
+
         if not purchase.details.exists():
             raise PurchaseHasNoDetailsException()
-            
+
         purchase.status = Purchase.Status.PENDING
         purchase.save(update_fields=["status", "updated_at"])
         return purchase
@@ -137,18 +136,18 @@ class PurchaseService(BaseService[Purchase]):
         """
         if purchase.status != Purchase.Status.PENDING:
             raise InvalidPurchaseTransitionException("Solo las compras Pendientes pueden ser recibidas.")
-            
+
         details = purchase.details.select_related("product__inventory").all()
         if not details:
             raise PurchaseHasNoDetailsException()
-            
+
         for detail in details:
             # Obtener el inventario del producto
             if not hasattr(detail.product, "inventory"):
                 raise ValidationError(f"El producto {detail.product.code} no tiene un registro de inventario configurado.")
-                
+
             inventory = detail.product.inventory
-            
+
             # Registrar entrada en el inventario
             entry_data = {
                 "quantity": detail.quantity,
@@ -156,13 +155,13 @@ class PurchaseService(BaseService[Purchase]):
                 "notes": f"Entrada por recepción de orden de compra #{purchase.id_purchase}",
                 "supplier_id": purchase.supplier_id,
             }
-            
+
             InventoryService.register_entry(
                 inventory=inventory,
                 data=entry_data,
                 user=user
             )
-            
+
         purchase.status = Purchase.Status.RECEIVED
         purchase.save(update_fields=["status", "updated_at"])
         return purchase
@@ -176,22 +175,22 @@ class PurchaseService(BaseService[Purchase]):
         """
         if purchase.status != Purchase.Status.RECEIVED:
             raise InvalidPurchaseTransitionException("Solo las compras Recibidas pueden ser completadas.")
-            
+
         purchase.status = Purchase.Status.COMPLETED
         purchase.save(update_fields=["status", "updated_at"])
-        
+
         # --- Generación de Factura Automática ---
         from apps.invoices.services.invoice_service import InvoiceService
         from apps.invoices.dto.invoice_dto import InvoiceCreateDTO, InvoiceItemCreateDTO
         from apps.invoices.models import InvoiceTemplate, Invoice
         from django.utils import timezone
-        
+
         # Buscar plantilla por defecto
         template = InvoiceTemplate.objects.filter(
             document_type=InvoiceTemplate.DocumentType.PURCHASE_INVOICE,
             is_active=True
         ).order_by("-is_default").first()
-        
+
         if not template:
             # Si no existe, crear una al vuelo para que no falle el proceso
             template = InvoiceTemplate.objects.create(
@@ -199,7 +198,7 @@ class PurchaseService(BaseService[Purchase]):
                 document_type=InvoiceTemplate.DocumentType.PURCHASE_INVOICE,
                 is_default=True
             )
-            
+
         # Preparar DTO para la factura
         items_dto = [
             InvoiceItemCreateDTO(
@@ -209,7 +208,7 @@ class PurchaseService(BaseService[Purchase]):
             )
             for detail in purchase.details.all()
         ]
-        
+
         invoice_dto = InvoiceCreateDTO(
             document_type=Invoice.DocumentType.PURCHASE_INVOICE,
             template_id=template.id,
@@ -219,11 +218,11 @@ class PurchaseService(BaseService[Purchase]):
             notes=f"Factura generada automáticamente por compra #{purchase.id_purchase}",
             items=items_dto
         )
-        
+
         # Crear y emitir la factura
         invoice = InvoiceService.create_invoice(invoice_dto)
         InvoiceService.issue_invoice(invoice)
-        
+
         return purchase
 
     @staticmethod
@@ -235,7 +234,7 @@ class PurchaseService(BaseService[Purchase]):
         """
         if purchase.status not in [Purchase.Status.DRAFT, Purchase.Status.PENDING]:
             raise InvalidPurchaseTransitionException("No se puede cancelar una compra que ya ha sido recibida o completada.")
-            
+
         purchase.status = Purchase.Status.CANCELLED
         purchase.save(update_fields=["status", "updated_at"])
         return purchase
@@ -248,7 +247,7 @@ class PurchaseService(BaseService[Purchase]):
         """
         if not purchase.is_active:
             raise ValidationError("La compra ya se encuentra desactivada.")
-            
+
         PurchaseService().delete(purchase)
 
     @staticmethod
@@ -259,5 +258,5 @@ class PurchaseService(BaseService[Purchase]):
         """
         if purchase.is_active:
             raise ValidationError("La compra ya se encuentra activa.")
-            
+
         return PurchaseService().restore(purchase)
