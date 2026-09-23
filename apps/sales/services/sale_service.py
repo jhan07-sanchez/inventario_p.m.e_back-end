@@ -45,17 +45,19 @@ class SaleService(BaseService[Sale]):
 
         La venta se crea inicialmente en estado PENDING.
         El inventario no se modifica hasta completar la venta.
+        customer_id == None indica Consumidor Final (venta POS sin cliente).
         """
 
-        try:
-            customer = Customer.objects.get(
-                pk=dto.customer_id,
-            )
-        except Customer.DoesNotExist:
-            raise ValidationError("El cliente seleccionado no existe.")
+        # --- Cliente (opcional) ---
+        customer = None
+        if dto.customer_id is not None:
+            try:
+                customer = Customer.objects.get(pk=dto.customer_id)
+            except Customer.DoesNotExist:
+                raise ValidationError("El cliente seleccionado no existe.")
 
-        if not customer.is_active:
-            raise CustomerInactiveException()
+            if not customer.is_active:
+                raise CustomerInactiveException()
 
         if not user or not user.is_active:
             raise ValidationError("El usuario que registra la venta no está activo.")
@@ -74,6 +76,9 @@ class SaleService(BaseService[Sale]):
             total=Decimal("0.00"),
             payment_method=dto.payment_method,
             notes=dto.notes,
+            sale_type=dto.sale_type,
+            amount_received=dto.amount_received,
+            change_amount=dto.change_amount,
         )
 
         sale.sale_number = f"VTA-{sale.id_sale:06d}"
@@ -81,9 +86,7 @@ class SaleService(BaseService[Sale]):
         subtotal_sum = Decimal("0.00")
 
         for detail_dto in dto.details:
-            product = SaleService._get_active_product(
-                detail_dto,
-            )
+            product = SaleService._get_active_product(detail_dto)
 
             unit_price = (
                 detail_dto.unit_price
@@ -186,6 +189,8 @@ class SaleService(BaseService[Sale]):
                 "Solo se pueden actualizar ventas en estado Pendiente (PENDING)."
             )
 
+        update_fields = ["updated_at"]
+
         if dto.customer_id is not None:
             try:
                 customer = Customer.objects.get(
@@ -198,21 +203,17 @@ class SaleService(BaseService[Sale]):
                 raise CustomerInactiveException()
 
             sale.customer = customer
+            update_fields.append("customer")
 
         if dto.payment_method is not None:
             sale.payment_method = dto.payment_method
+            update_fields.append("payment_method")
 
         if dto.notes is not None:
             sale.notes = dto.notes
+            update_fields.append("notes")
 
-        sale.save(
-            update_fields=[
-                "customer",
-                "payment_method",
-                "notes",
-                "updated_at",
-            ]
-        )
+        sale.save(update_fields=update_fields)
 
         return sale
 
@@ -275,10 +276,85 @@ class SaleService(BaseService[Sale]):
         return sale
 
     @staticmethod
-    def _create_sale_invoice(sale: Sale, details) -> None:
+    @transaction.atomic
+    def quick_sale(
+        dto: SaleCreateDto,
+        user,
+    ) -> Sale:
+        """
+        Crea y completa una venta en una única operación atómica (flujo POS).
+
+        Ejecuta en una sola transacción:
+          1. Validación de productos y cantidades.
+          2. Validación de stock disponible.
+          3. Creación de la venta y sus detalles.
+          4. Cálculo de totales.
+          5. Descuento del inventario.
+          6. Registro del movimiento de inventario.
+          7. Completado de la venta.
+          8. Generación de ticket POS.
+          9. Generación de factura (solo si dto.generate_invoice es True).
+
+        Si cualquier paso falla se hace rollback completo.
+        """
+
+        # Forzamos sale_type=POS
+        from dataclasses import replace as dc_replace
+        dto = dc_replace(dto, sale_type=Sale.SaleType.POS)
+
+        sale = SaleService.create_sale(dto, user)
+        details = sale.details.select_related("product__inventory").filter(is_active=True)
+
+        for detail in details:
+            if not hasattr(detail.product, "inventory"):
+                raise ValidationError(
+                    f"El producto {detail.product.code} "
+                    "no tiene un registro de inventario configurado."
+                )
+
+            inventory = detail.product.inventory
+
+            # Validar stock disponible antes de descontar
+            if inventory.current_stock < detail.quantity:
+                raise ValidationError(
+                    f"Stock insuficiente para '{detail.product.name}'. "
+                    f"Disponible: {inventory.current_stock}, "
+                    f"Solicitado: {detail.quantity}."
+                )
+
+            InventoryService.register_exit(
+                inventory=inventory,
+                data={
+                    "quantity": detail.quantity,
+                    "reference": f"Venta POS #{sale.id_sale}",
+                    "notes": f"Salida de inventario por venta POS #{sale.id_sale}",
+                },
+                user=user,
+            )
+
+        if dto.generate_invoice:
+            SaleService._create_sale_invoice(sale, details)
+
+        sale.status = Sale.SaleStatus.COMPLETED
+        sale.save(update_fields=["status", "updated_at"])
+
+        return sale
+
+    @staticmethod
+    def _create_sale_invoice(
+        sale: Sale,
+        details,
+        generate_invoice: bool = True,
+    ) -> None:
         """
         Crea y emite la factura histórica de una venta completada.
+
+        Si generate_invoice es False, no se genera ninguna factura
+        (flujo POS ticket sin factura formal).
         """
+
+        if not generate_invoice:
+            return
 
         from apps.invoices.dto.invoice_dto import (
             InvoiceCreateDTO,

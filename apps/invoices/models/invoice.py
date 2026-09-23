@@ -114,6 +114,44 @@ class Invoice(ActiveModel):
         verbose_name="Observaciones",
     )
 
+    # --- Snapshots Históricos de Empresa ---
+    # Para cumplir requerimientos legales, la factura congela los datos 
+    # de la empresa al momento de su emisión.
+    company_name_snapshot = models.CharField(
+        max_length=200,
+        blank=True,
+        default="",
+        verbose_name="Nombre Empresa (Snapshot)",
+    )
+    
+    company_tax_id_snapshot = models.CharField(
+        max_length=30,
+        blank=True,
+        default="",
+        verbose_name="NIT Empresa (Snapshot)",
+    )
+    
+    company_address_snapshot = models.CharField(
+        max_length=255,
+        blank=True,
+        default="",
+        verbose_name="Dirección Empresa (Snapshot)",
+    )
+    
+    company_phone_snapshot = models.CharField(
+        max_length=30,
+        blank=True,
+        default="",
+        verbose_name="Teléfono Empresa (Snapshot)",
+    )
+    
+    company_email_snapshot = models.EmailField(
+        max_length=254,
+        blank=True,
+        default="",
+        verbose_name="Correo Empresa (Snapshot)",
+    )
+
     class Meta:
         db_table = "invoices"
         verbose_name = "Factura"

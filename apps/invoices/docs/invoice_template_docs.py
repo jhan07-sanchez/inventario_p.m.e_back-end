@@ -32,7 +32,10 @@ pagination_parameters = [
         name="document_type",
         type=OpenApiTypes.STR,
         location=OpenApiParameter.QUERY,
-        description="Filtrar por tipo de documento (e.g., PURCHASE_INVOICE).",
+        description=(
+            "Filtrar por tipo de documento: PURCHASE_INVOICE, "
+            "SALE_INVOICE o POS_TICKET."
+        ),
         required=False,
     ),
     OpenApiParameter(
@@ -49,7 +52,8 @@ invoice_template_list_schema = extend_schema(
     tags=["Invoice Templates"],
     summary="Listar plantillas de factura",
     description=(
-        "Obtiene el listado paginado de todas las plantillas de factura configuradas en el sistema."
+        "Obtiene el listado paginado de todas las plantillas documentales "
+        "configuradas para facturas de compra, facturas de venta y tickets POS."
     ),
     parameters=pagination_parameters,
     responses={
@@ -113,7 +117,11 @@ invoice_template_retrieve_schema = extend_schema(
 invoice_template_create_schema = extend_schema(
     tags=["Invoice Templates"],
     summary="Crear plantilla de factura",
-    description="Crea una nueva plantilla documental para facturas en el sistema.",
+    description=(
+        "Crea una nueva plantilla documental para facturas de compra, "
+        "facturas de venta o tickets POS. POS_TICKET solo configura la "
+        "presentación futura del comprobante POS."
+    ),
     request=InvoiceTemplateCreateSerializer,
     responses={
         201: OpenApiResponse(

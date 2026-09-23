@@ -5,20 +5,21 @@ from apps.core.models.active_model import ActiveModel
 
 class InvoiceTemplate(ActiveModel):
     """
-    Modelo que representa una plantilla documental para 
+    Modelo que representa una plantilla documental para
     la generación de facturas u otros documentos empresariales.
     """
 
     class DocumentType(models.TextChoices):
         PURCHASE_INVOICE = "PURCHASE_INVOICE", "Factura de Compra"
         SALE_INVOICE = "SALE_INVOICE", "Factura de Venta"
+        POS_TICKET = "POS_TICKET", "Ticket POS"
 
     name = models.CharField(
         max_length=150,
         verbose_name="Nombre de la plantilla",
         help_text="Ej: Plantilla estándar de Factura de Venta",
     )
-    
+
     document_type = models.CharField(
         max_length=50,
         choices=DocumentType.choices,
@@ -38,7 +39,7 @@ class InvoiceTemplate(ActiveModel):
         verbose_name="Contenido del pie de página",
         help_text="Contenido en formato texto o HTML para el pie de página.",
     )
-    
+
     is_default = models.BooleanField(
         default=False,
         verbose_name="Plantilla por defecto",

@@ -40,6 +40,7 @@ LOCAL_APPS = [
     "apps.purchases.apps.PurchasesConfig",
     "apps.invoices.apps.InvoicesConfig",
     "apps.sales.apps.SalesConfig",
+    "apps.company_info.apps.CompanyInfoConfig",
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
@@ -122,6 +123,14 @@ STATIC_ROOT = BASE_DIR / "staticfiles"
 STATICFILES_DIRS = [
     BASE_DIR / "static",
 ]
+
+# ======================================
+# Configuración de Archivos de Medios
+# ======================================
+
+MEDIA_URL = "/media/"
+
+MEDIA_ROOT = BASE_DIR / "media"
 
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"

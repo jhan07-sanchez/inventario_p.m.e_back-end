@@ -38,6 +38,7 @@ class SaleViewSet(BaseViewSet):
     permission_classes = [IsAuthenticatedAndActive]
     filter_backends = [SearchFilter, OrderingFilter]
     search_fields = [
+        "sale_number",
         "notes",
         "customer__business_name",
         "customer__first_name",
@@ -98,6 +99,10 @@ class SaleViewSet(BaseViewSet):
             "restore": (
                 IsAuthenticatedAndActive,
                 HasPermission("sales.update"),
+            ),
+            "quick_sale": (
+                IsAuthenticatedAndActive,
+                HasPermission("sales.create"),
             ),
         }
 
@@ -391,4 +396,42 @@ class SaleViewSet(BaseViewSet):
             return self.handle_validation_error(
                 exception,
                 message="No fue posible cancelar la venta.",
+            )
+
+    @action(
+        detail=False,
+        methods=["post"],
+        url_path="quick-sale",
+    )
+    def quick_sale(self, request):
+        """
+        Crea y completa una venta en una única operación atómica (flujo POS).
+
+        Realiza en una sola transacción:
+        validación, creación, cálculo de totales, descuento de inventario,
+        completado de venta y generación de ticket POS (y factura opcional).
+        """
+
+        serializer = SaleCreateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        try:
+            sale = SaleService.quick_sale(
+                serializer.to_dto(),
+                request.user,
+            )
+
+            response_serializer = SaleRetrieveSerializer(sale)
+
+            return self.success_response(
+                message="Venta POS completada exitosamente.",
+                code="QUICK_SALE_COMPLETED",
+                data=response_serializer.data,
+                status_code=status.HTTP_201_CREATED,
+            )
+
+        except ValidationError as exception:
+            return self.handle_validation_error(
+                exception,
+                message="No fue posible completar la venta POS.",
             )

@@ -48,6 +48,16 @@ class InvoiceService(BaseService[Invoice]):
         if Invoice.objects.filter(invoice_number=dto.invoice_number).exists():
             raise ValidationError("El número de factura ya existe.")
 
+        # Obtener datos de la empresa activos
+        from apps.company_info.models import CompanyInfo
+        company = CompanyInfo.objects.filter(is_active=True).first()
+        
+        c_name = company.business_name if company else ""
+        c_tax_id = company.tax_id if company else ""
+        c_address = company.address if company else ""
+        c_phone = company.phone or company.mobile if company else ""
+        c_email = company.email if company else ""
+
         # Crear cabecera
         invoice = Invoice.objects.create(
             invoice_number=dto.invoice_number,
@@ -63,6 +73,11 @@ class InvoiceService(BaseService[Invoice]):
             discount=Decimal("0.00"),
             tax=Decimal("0.00"),
             total=Decimal("0.00"),
+            company_name_snapshot=c_name,
+            company_tax_id_snapshot=c_tax_id,
+            company_address_snapshot=c_address,
+            company_phone_snapshot=c_phone,
+            company_email_snapshot=c_email,
         )
 
         subtotal_sum = Decimal("0.00")

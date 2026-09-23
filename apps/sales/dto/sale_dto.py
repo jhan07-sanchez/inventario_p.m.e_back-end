@@ -13,12 +13,16 @@ class SaleCreateDto:
     del DTO porque deben ser determinados por el backend.
     """
 
-    customer_id: int
     details: tuple[SaleDetailDto, ...]
+    customer_id: int | None = None
     discount: Decimal = Decimal("0.00")
     tax: Decimal = Decimal("0.00")
     payment_method: str = "CASH"
     notes: str = ""
+    sale_type: str = "ADMIN"
+    amount_received: Decimal | None = None
+    change_amount: Decimal | None = None
+    generate_invoice: bool = True
 
 
 @dataclass(frozen=True)

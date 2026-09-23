@@ -37,15 +37,8 @@ class SaleListSerializer(serializers.ModelSerializer):
     y listados del sistema.
     """
 
-    customer_name = serializers.CharField(
-        source="customer.business_name",
-        read_only=True,
-        default="",
-    )
-    customer_document = serializers.CharField(
-        source="customer.document_number",
-        read_only=True,
-    )
+    customer_name = serializers.SerializerMethodField()
+    customer_document = serializers.SerializerMethodField()
     invoices_summary = serializers.SerializerMethodField()
 
     class Meta:
@@ -53,10 +46,12 @@ class SaleListSerializer(serializers.ModelSerializer):
         fields = (
             "id_sale",
             "sale_number",
+            "sale_type",
             "customer",
             "customer_name",
             "customer_document",
             "status",
+            "payment_method",
             "sale_date",
             "subtotal",
             "total",
@@ -64,6 +59,18 @@ class SaleListSerializer(serializers.ModelSerializer):
             "is_active",
             "created_at",
         )
+
+    def get_customer_name(self, obj) -> str:
+        """Retorna el nombre del cliente o 'Consumidor Final' si es NULL."""
+        if obj.customer_id is None:
+            return "Consumidor Final"
+        return obj.customer.business_name or ""
+
+    def get_customer_document(self, obj) -> str:
+        """Retorna el documento del cliente o cadena vacía si es NULL."""
+        if obj.customer_id is None:
+            return ""
+        return obj.customer.document_number or ""
 
     @extend_schema_field(
         SaleInvoiceSummarySerializer(many=True),
@@ -85,6 +92,9 @@ class SaleRetrieveSerializer(serializers.ModelSerializer):
     de una venta.
     """
 
+    customer_name = serializers.SerializerMethodField()
+    customer_document = serializers.SerializerMethodField()
+    customer_obj = serializers.SerializerMethodField()
     details = SaleDetailSerializer(
         many=True,
         read_only=True,
@@ -96,7 +106,11 @@ class SaleRetrieveSerializer(serializers.ModelSerializer):
         fields = (
             "id_sale",
             "sale_number",
+            "sale_type",
             "customer",
+            "customer_obj",
+            "customer_name",
+            "customer_document",
             "user",
             "status",
             "sale_date",
@@ -105,6 +119,8 @@ class SaleRetrieveSerializer(serializers.ModelSerializer):
             "tax",
             "total",
             "payment_method",
+            "amount_received",
+            "change_amount",
             "notes",
             "details",
             "invoices_summary",
@@ -112,6 +128,34 @@ class SaleRetrieveSerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
         )
+
+    def get_customer_name(self, obj) -> str:
+        """Retorna el nombre del cliente o 'Consumidor Final' si es NULL."""
+        if obj.customer_id is None:
+            return "Consumidor Final"
+        return obj.customer.business_name or ""
+
+    def get_customer_document(self, obj) -> str:
+        """Retorna el documento del cliente o cadena vacía si es NULL."""
+        if obj.customer_id is None:
+            return ""
+        return obj.customer.document_number or ""
+
+    def get_customer_obj(self, obj) -> dict:
+        """Retorna un objeto de cliente serializado manualmente si existe."""
+        if obj.customer_id is None:
+            return {}
+        return {
+            "id": obj.customer.id_customer,
+            "business_name": obj.customer.business_name,
+            "first_name": obj.customer.first_name,
+            "last_name": obj.customer.last_name,
+            "document_type": obj.customer.document_type,
+            "document_number": obj.customer.document_number,
+            "email": obj.customer.email,
+            "mobile": obj.customer.mobile,
+            "phone": obj.customer.phone
+        }
 
     @extend_schema_field(
         SaleInvoiceSummarySerializer(many=True),
@@ -135,7 +179,12 @@ class SaleCreateSerializer(serializers.Serializer):
     se realiza mediante to_dto().
     """
 
-    customer_id = serializers.IntegerField(required=True)
+    customer_id = serializers.IntegerField(
+        required=False,
+        allow_null=True,
+        default=None,
+        help_text="ID del cliente. NULL o ausente = Consumidor Final.",
+    )
 
     payment_method = serializers.ChoiceField(
         choices=Sale.PaymentMethod.choices,
@@ -157,6 +206,22 @@ class SaleCreateSerializer(serializers.Serializer):
         required=False,
         default=Decimal("0.00"),
         min_value=Decimal("0.00"),
+    )
+
+    amount_received = serializers.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        required=False,
+        allow_null=True,
+        default=None,
+        min_value=Decimal("0.00"),
+        help_text="Efectivo recibido del cliente (POS). Requerido cuando payment_method=CASH.",
+    )
+
+    generate_invoice = serializers.BooleanField(
+        required=False,
+        default=True,
+        help_text="True genera factura formal. False genera solo ticket POS.",
     )
 
     notes = serializers.CharField(
@@ -192,24 +257,26 @@ class SaleCreateSerializer(serializers.Serializer):
             for detail in details_data
         ]
 
+        amount_received = validated_data.get("amount_received")
+        total_approx = None  # se calculará en el servicio
+        change_amount = None
+        if amount_received is not None and total_approx is not None:
+            change_amount = max(Decimal("0.00"), amount_received - total_approx)
+
         return SaleCreateDto(
-            customer_id=validated_data["customer_id"],
+            customer_id=validated_data.get("customer_id"),
             details=tuple(details_dto),
-            discount=validated_data.get(
-                "discount",
-                Decimal("0.00"),
-            ),
-            tax=validated_data.get(
-                "tax",
-                Decimal("0.00"),
-            ),
+            discount=validated_data.get("discount", Decimal("0.00")),
+            tax=validated_data.get("tax", Decimal("0.00")),
             payment_method=validated_data.get(
                 "payment_method",
                 Sale.PaymentMethod.CASH,
             ),
             notes=validated_data.get("notes") or "",
+            amount_received=amount_received,
+            change_amount=change_amount,
+            generate_invoice=validated_data.get("generate_invoice", True),
         )
-
 
 
 class SaleUpdateSerializer(serializers.Serializer):

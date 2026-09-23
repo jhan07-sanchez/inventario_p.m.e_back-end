@@ -49,12 +49,25 @@ class Sale(ActiveModel):
         help_text="Número único que identifica la venta.",
     )
 
+    class SaleType(models.TextChoices):
+        """
+        Tipo de venta: flujo administrativo (dos pasos) o POS (quick_sale).
+        """
+
+        ADMIN = "ADMIN", "Administrativa"
+        POS = "POS", "Punto de Venta"
+
     customer = models.ForeignKey(
         Customer,
         on_delete=models.PROTECT,
         related_name="sales",
+        null=True,
+        blank=True,
         verbose_name="Cliente",
-        help_text="Cliente asociado a la venta.",
+        help_text=(
+            "Cliente asociado a la venta. "
+            "NULL indica venta a Consumidor Final (POS)."
+        ),
     )
 
     user = models.ForeignKey(
@@ -123,6 +136,39 @@ class Sale(ActiveModel):
         default=SaleStatus.PENDING,
         db_index=True,
         verbose_name="Estado",
+    )
+
+    sale_type = models.CharField(
+        max_length=10,
+        choices=SaleType.choices,
+        default=SaleType.ADMIN,
+        db_index=True,
+        verbose_name="Tipo de venta",
+        help_text="ADMIN: flujo dos pasos. POS: venta rápida desde caja.",
+    )
+
+    amount_received = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        validators=[
+            MinValueValidator(Decimal("0.00")),
+        ],
+        verbose_name="Monto recibido",
+        help_text="Efectivo recibido del cliente (POS efectivo).",
+    )
+
+    change_amount = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        validators=[
+            MinValueValidator(Decimal("0.00")),
+        ],
+        verbose_name="Cambio",
+        help_text="Vuelto/cambio entregado al cliente (POS efectivo).",
     )
 
     notes = models.TextField(
