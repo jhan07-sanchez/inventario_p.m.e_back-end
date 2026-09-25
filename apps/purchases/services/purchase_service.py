@@ -192,11 +192,10 @@ class PurchaseService(BaseService[Purchase]):
         ).order_by("-is_default").first()
 
         if not template:
-            # Si no existe, crear una al vuelo para que no falle el proceso
-            template = InvoiceTemplate.objects.create(
-                name="Plantilla Factura Compra (Auto)",
-                document_type=InvoiceTemplate.DocumentType.PURCHASE_INVOICE,
-                is_default=True
+            from django.core.exceptions import ValidationError
+            raise ValidationError(
+                "No existe una plantilla de factura de compra activa. "
+                "Por favor configure una plantilla en el módulo de facturación antes de procesar compras."
             )
 
         # Preparar DTO para la factura

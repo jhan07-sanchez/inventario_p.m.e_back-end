@@ -33,6 +33,13 @@ class InvoiceTemplate(ActiveModel):
         help_text="Contenido en formato texto o HTML para el encabezado.",
     )
 
+    body_content = models.TextField(
+        blank=True,
+        null=True,
+        verbose_name="Contenido del cuerpo",
+        help_text="Contenido HTML para el cuerpo (ej. tabla de productos con variables dinámicas).",
+    )
+
     footer_content = models.TextField(
         blank=True,
         null=True,

@@ -25,6 +25,7 @@ class InvoiceTemplateRetrieveSerializer(serializers.ModelSerializer):
             "name",
             "document_type",
             "header_content",
+            "body_content",
             "footer_content",
             "is_default",
             "is_active",
@@ -37,6 +38,7 @@ class InvoiceTemplateCreateSerializer(serializers.Serializer):
     name = serializers.CharField(max_length=150, required=True)
     document_type = serializers.ChoiceField(choices=InvoiceTemplate.DocumentType.choices, required=True)
     header_content = serializers.CharField(required=False, allow_null=True, allow_blank=True)
+    body_content = serializers.CharField(required=False, allow_null=True, allow_blank=True)
     footer_content = serializers.CharField(required=False, allow_null=True, allow_blank=True)
     is_default = serializers.BooleanField(required=False, default=False)
 
@@ -46,6 +48,7 @@ class InvoiceTemplateCreateSerializer(serializers.Serializer):
             name=validated_data["name"],
             document_type=validated_data["document_type"],
             header_content=validated_data.get("header_content"),
+            body_content=validated_data.get("body_content"),
             footer_content=validated_data.get("footer_content"),
             is_default=validated_data.get("is_default", False),
         )
@@ -54,6 +57,7 @@ class InvoiceTemplateCreateSerializer(serializers.Serializer):
 class InvoiceTemplateUpdateSerializer(serializers.Serializer):
     name = serializers.CharField(max_length=150, required=False)
     header_content = serializers.CharField(required=False, allow_null=True, allow_blank=True)
+    body_content = serializers.CharField(required=False, allow_null=True, allow_blank=True)
     footer_content = serializers.CharField(required=False, allow_null=True, allow_blank=True)
     is_default = serializers.BooleanField(required=False)
 
@@ -62,6 +66,7 @@ class InvoiceTemplateUpdateSerializer(serializers.Serializer):
         return InvoiceTemplateUpdateDTO(
             name=validated_data.get("name"),
             header_content=validated_data.get("header_content"),
+            body_content=validated_data.get("body_content"),
             footer_content=validated_data.get("footer_content"),
             is_default=validated_data.get("is_default"),
         )

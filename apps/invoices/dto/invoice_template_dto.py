@@ -8,6 +8,7 @@ class InvoiceTemplateCreateDTO:
     name: str
     document_type: str
     header_content: Optional[str] = None
+    body_content: Optional[str] = None
     footer_content: Optional[str] = None
     is_default: bool = False
 
@@ -17,5 +18,6 @@ class InvoiceTemplateUpdateDTO:
     """DTO para la actualización de plantillas de factura."""
     name: Optional[str] = None
     header_content: Optional[str] = None
+    body_content: Optional[str] = None
     footer_content: Optional[str] = None
     is_default: Optional[bool] = None

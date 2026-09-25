@@ -51,12 +51,14 @@ class InvoiceService(BaseService[Invoice]):
         # Obtener datos de la empresa activos
         from apps.company_info.models import CompanyInfo
         company = CompanyInfo.objects.filter(is_active=True).first()
-        
+
         c_name = company.business_name if company else ""
         c_tax_id = company.tax_id if company else ""
         c_address = company.address if company else ""
         c_phone = company.phone or company.mobile if company else ""
         c_email = company.email if company else ""
+        c_city = company.city if company and hasattr(company, "city") else ""
+        c_receipt_footer = company.receipt_footer if company and hasattr(company, "receipt_footer") else ""
 
         # Crear cabecera
         invoice = Invoice.objects.create(
@@ -78,6 +80,8 @@ class InvoiceService(BaseService[Invoice]):
             company_address_snapshot=c_address,
             company_phone_snapshot=c_phone,
             company_email_snapshot=c_email,
+            company_city_snapshot=c_city,
+            company_receipt_footer_snapshot=c_receipt_footer,
         )
 
         subtotal_sum = Decimal("0.00")
@@ -101,7 +105,7 @@ class InvoiceService(BaseService[Invoice]):
                 raise ValidationError("El precio unitario no puede ser negativo.")
 
             line_subtotal = item_dto.quantity * item_dto.unit_price
-            
+
             InvoiceItem.objects.create(
                 invoice=invoice,
                 product=product,
@@ -243,7 +247,7 @@ class InvoiceService(BaseService[Invoice]):
         """
         if not invoice.is_active:
             raise ValidationError("La factura ya se encuentra desactivada.")
-        
+
         InvoiceService().delete(invoice)
 
     @staticmethod

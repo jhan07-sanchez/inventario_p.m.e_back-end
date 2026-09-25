@@ -35,7 +35,7 @@ class InvoiceTemplateViewSet(BaseViewSet):
 
     permission_classes = [IsAuthenticatedAndActive]
     filter_backends = [SearchFilter, OrderingFilter]
-    search_fields = ["name", "code", "description"]
+    search_fields = ["name", "document_type"]
 
     def get_permissions(self):
         """

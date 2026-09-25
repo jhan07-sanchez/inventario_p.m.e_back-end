@@ -27,6 +27,7 @@ class InvoiceTemplateService(BaseService[InvoiceTemplate]):
             name=dto.name,
             document_type=dto.document_type,
             header_content=dto.header_content,
+            body_content=dto.body_content,
             footer_content=dto.footer_content,
             is_default=dto.is_default,
         )
@@ -38,6 +39,8 @@ class InvoiceTemplateService(BaseService[InvoiceTemplate]):
             template.name = dto.name
         if dto.header_content is not None:
             template.header_content = dto.header_content
+        if dto.body_content is not None:
+            template.body_content = dto.body_content
         if dto.footer_content is not None:
             template.footer_content = dto.footer_content
 
@@ -48,7 +51,7 @@ class InvoiceTemplateService(BaseService[InvoiceTemplate]):
                 ).exclude(pk=template.pk).update(is_default=False)
             template.is_default = dto.is_default
 
-        template.save(update_fields=["name", "header_content", "footer_content", "is_default", "updated_at"])
+        template.save(update_fields=["name", "header_content", "body_content", "footer_content", "is_default", "updated_at"])
         return template
 
     @staticmethod
@@ -56,7 +59,7 @@ class InvoiceTemplateService(BaseService[InvoiceTemplate]):
     def deactivate_template(template: InvoiceTemplate) -> None:
         if not template.is_active:
             raise ValidationError("La plantilla ya se encuentra inactiva.")
-        
+
         InvoiceTemplateService().delete(template)
 
     @staticmethod

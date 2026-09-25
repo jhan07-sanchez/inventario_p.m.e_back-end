@@ -262,7 +262,14 @@ class SaleService(BaseService[Sale]):
                 user=user,
             )
 
-        SaleService._create_sale_invoice(sale, details)
+        from apps.invoices.models import Invoice
+        invoice_exists = sale.invoices.filter(
+            document_type=Invoice.DocumentType.SALE_INVOICE,
+            is_active=True
+        ).exists()
+        
+        if not invoice_exists:
+            SaleService._create_sale_invoice(sale, details)
 
         sale.status = Sale.SaleStatus.COMPLETED
 
@@ -335,6 +342,8 @@ class SaleService(BaseService[Sale]):
         if dto.generate_invoice:
             SaleService._create_sale_invoice(sale, details)
 
+
+
         sale.status = Sale.SaleStatus.COMPLETED
         sale.save(update_fields=["status", "updated_at"])
 
@@ -369,10 +378,9 @@ class SaleService(BaseService[Sale]):
         ).order_by("-is_default").first()
 
         if template is None:
-            template = InvoiceTemplate.objects.create(
-                name="Plantilla Factura Venta (Auto)",
-                document_type=InvoiceTemplate.DocumentType.SALE_INVOICE,
-                is_default=True,
+            raise ValidationError(
+                "No existe una plantilla de factura de venta activa. "
+                "Por favor configure una plantilla en el módulo de facturación antes de procesar ventas."
             )
 
         items = [
