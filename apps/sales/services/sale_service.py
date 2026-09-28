@@ -83,10 +83,24 @@ class SaleService(BaseService[Sale]):
 
         sale.sale_number = f"VTA-{sale.id_sale:06d}"
 
+        # Fetch all products at once to avoid N+1 queries
+        product_ids = [d.product_id for d in dto.details]
+        products_map = {
+            p.id_product: p 
+            for p in Product.objects.filter(pk__in=product_ids)
+        }
+
         subtotal_sum = Decimal("0.00")
 
         for detail_dto in dto.details:
-            product = SaleService._get_active_product(detail_dto)
+            product = products_map.get(detail_dto.product_id)
+            if not product:
+                raise ValidationError(f"El producto con ID {detail_dto.product_id} no existe.")
+            
+            if not product.is_active:
+                raise ProductInactiveException(
+                    f"El producto {product.name} se encuentra inactivo."
+                )
 
             unit_price = (
                 detail_dto.unit_price
@@ -147,29 +161,7 @@ class SaleService(BaseService[Sale]):
 
         return sale
 
-    @staticmethod
-    def _get_active_product(
-        detail_dto: SaleDetailDto,
-    ) -> Product:
-        """
-        Obtiene y valida el producto asociado al detalle.
-        """
-
-        try:
-            product = Product.objects.get(
-                pk=detail_dto.product_id,
-            )
-        except Product.DoesNotExist:
-            raise ValidationError(
-                f"El producto con ID {detail_dto.product_id} no existe."
-            )
-
-        if not product.is_active:
-            raise ProductInactiveException(
-                f"El producto {product.name} se encuentra inactivo."
-            )
-
-        return product
+    # _get_active_product removed as it's no longer used and caused N+1 queries
 
     @staticmethod
     @transaction.atomic
@@ -241,6 +233,16 @@ class SaleService(BaseService[Sale]):
         if not details.exists():
             raise SaleHasNoDetailsException()
 
+        # Lock inventories in order to prevent deadlocks
+        inventory_ids = [
+            detail.product.inventory.pk 
+            for detail in details 
+            if hasattr(detail.product, "inventory")
+        ]
+        if inventory_ids:
+            from apps.inventory.models import Inventory
+            list(Inventory.objects.filter(pk__in=inventory_ids).select_for_update().order_by('pk'))
+
         for detail in details:
             if not hasattr(detail.product, "inventory"):
                 raise ValidationError(
@@ -311,6 +313,16 @@ class SaleService(BaseService[Sale]):
 
         sale = SaleService.create_sale(dto, user)
         details = sale.details.select_related("product__inventory").filter(is_active=True)
+
+        # Lock inventories in order to prevent deadlocks
+        inventory_ids = [
+            detail.product.inventory.pk 
+            for detail in details 
+            if hasattr(detail.product, "inventory")
+        ]
+        if inventory_ids:
+            from apps.inventory.models import Inventory
+            list(Inventory.objects.filter(pk__in=inventory_ids).select_for_update().order_by('pk'))
 
         for detail in details:
             if not hasattr(detail.product, "inventory"):
@@ -454,6 +466,16 @@ class SaleService(BaseService[Sale]):
 
         if not details.exists():
             raise SaleHasNoDetailsException()
+
+        # Lock inventories in order to prevent deadlocks
+        inventory_ids = [
+            detail.product.inventory.pk 
+            for detail in details 
+            if hasattr(detail.product, "inventory")
+        ]
+        if inventory_ids:
+            from apps.inventory.models import Inventory
+            list(Inventory.objects.filter(pk__in=inventory_ids).select_for_update().order_by('pk'))
 
         for detail in details:
             if not hasattr(detail.product, "inventory"):

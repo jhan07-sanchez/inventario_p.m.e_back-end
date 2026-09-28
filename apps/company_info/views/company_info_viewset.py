@@ -303,8 +303,10 @@ class CompanyInfoViewSet(BaseViewSet):
                 status_code=status.HTTP_200_OK,
             )
         except Exception as e:
+            import logging
+            logging.getLogger(__name__).error(f"Error al subir el logo: {e}", exc_info=True)
             return self.error_response(
-                message=f"Error al subir el logo: {str(e)}",
+                message="Error interno del servidor al procesar el logo.",
                 code="INTERNAL_SERVER_ERROR",
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
@@ -332,8 +334,10 @@ class CompanyInfoViewSet(BaseViewSet):
                 status_code=status.HTTP_200_OK,
             )
         except Exception as e:
+            import logging
+            logging.getLogger(__name__).error(f"Error al eliminar el logo: {e}", exc_info=True)
             return self.error_response(
-                message=f"Error al eliminar el logo: {str(e)}",
+                message="Error interno del servidor al procesar la eliminación del logo.",
                 code="INTERNAL_SERVER_ERROR",
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
