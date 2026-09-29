@@ -261,3 +261,42 @@ class ProductUpdateSerializer(serializers.ModelSerializer):
             product=instance,
             validated_data=validated_data,
         )
+
+
+
+class ProductSearchSerializer(serializers.ModelSerializer):
+    """
+    Serializer ligero para autocompletado en el POS.
+
+    Expone unicamente los campos requeridos por el select2 del punto de venta.
+    """
+
+    stock = serializers.SerializerMethodField()
+    unit_display = serializers.CharField(source="get_unit_display", read_only=True)
+
+    class Meta:
+        model = Product
+        fields = (
+            "id_product",
+            "code",
+            "barcode",
+            "name",
+            "sale_price",
+            "stock",
+            "unit",
+            "unit_display",
+        )
+        read_only_fields = fields
+
+    def get_stock(self, obj) -> float | None:
+        """
+        Retorna el stock actual desde la relacion de inventario.
+
+        Devuelve None si el producto no tiene inventario asociado lo que permite al frontend,
+        distinguir entre "sin control de stock" y "stock en 0".
+        """
+
+        inventory = getattr(obj, "inventory", None)
+        if inventory is None:
+            return None
+        return float(inventory.current_stock)

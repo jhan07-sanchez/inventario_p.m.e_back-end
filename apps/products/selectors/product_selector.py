@@ -1,5 +1,5 @@
 from django.db import models
-from django.db.models import QuerySet
+from django.db.models import QuerySet, Q
 from django.shortcuts import get_object_or_404
 
 from apps.core.selectors.base_selector import BaseSelector
@@ -140,3 +140,31 @@ class ProductSelector(BaseSelector[Product]):
             )
 
         return queryset.order_by("-created_at")
+
+
+
+    @staticmethod
+    def search_products(*, query: str = "", limit: int = 20,) -> QuerySet[Product]:
+        """
+        Busqueda optimizada para el POS.
+
+        Filtra productos activos por codigo, nombre o codigo de barras
+        (coincidencia exacta). Retorna como maximo 'limit' resultados.
+
+        Prioriza:
+            1. Coincidencia exacta por barcode o code (escaneo).
+            2. Coincidencia por nombre (busqueda manual).
+        """
+
+        queryset = (ProductSelector().get_active().select_related("category", "inventory"))
+
+        query = (query or "").strip()
+
+        if query:
+            queryset = queryset.filter(
+                Q(code__icontains=query)
+                | Q(name__icontains=query)
+                | Q(barcode__iexact=query)
+            )
+
+        return queryset.order_by("name")[:limit]

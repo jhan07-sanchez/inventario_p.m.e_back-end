@@ -14,6 +14,7 @@ from apps.products.serializers.product_serializer import (
     ProductDetailSerializer,
     ProductListSerializer,
     ProductUpdateSerializer,
+    ProductSearchSerializer,
 )
 from apps.products.docs.product_docs import (
     product_create_schema,
@@ -73,6 +74,10 @@ class ProductViewSet(BaseViewSet):
             "restore": (
                 IsAuthenticatedAndActive,
                 HasPermission("products.update"),
+            ),
+            "search": (
+                IsAuthenticatedAndActive,
+                HasPermission("products.view")
             ),
         }
 
@@ -363,3 +368,41 @@ class ProductViewSet(BaseViewSet):
                 exception,
                 message="No fue posible restaurar el producto.",
             )
+
+
+
+    @action(
+        detail=False,
+        methods=["get"],
+        url_path="search",
+        url_name="search",
+    )
+    def search(self, request, *args, **kwargs):
+        """
+            Busqueda de productos para autocompletado (POS).
+            Query params:
+                q (str): Término de búsqueda (código, nombre o barcode).
+                limit (int): Máximo de resultados. Default 20, tope 50.
+
+            Retorna una lista plana de productos activos.
+        """
+
+        query = request.query_params.get("q", "").strip()
+
+        try:
+            limit = int(request.query_params.get("limit", 20))
+        except (TypeError, ValueError):
+            limit = 20
+
+        limit = max(1, min(limit, 50))
+
+        products = ProductSelector.search_products(query=query, limit=limit,)
+
+        serializer = ProductSearchSerializer(products, many=True,)
+
+        return self.success_response(
+            message="Productos obtenidos correctamente.",
+            code="PRODUCTS_SEARCHED",
+            data=serializer.data,
+            status_code=status.HTTP_200_OK,
+        )
