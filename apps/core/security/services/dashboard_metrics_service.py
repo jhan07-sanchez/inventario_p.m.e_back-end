@@ -3,6 +3,7 @@ Servicio de métricas para el Dashboard.
 """
 
 import calendar
+import datetime
 from typing import Any
 from django.utils import timezone
 from django.db.models import Sum, F, Q, Case, When, Value, IntegerField
@@ -76,6 +77,14 @@ class DashboardMetricsService:
                         total=Sum(F('current_stock') * F('product__purchase_price'))
                     )['total']
                     cache[key] = val if val is not None else 0
+
+                elif key == "sales_summary":
+                    thirty_days_ago = timezone.now() - datetime.timedelta(days=30)
+                    total = Invoice.objects.filter(
+                        document_type=Invoice.DocumentType.SALE_INVOICE,
+                        issue_date__gte=thirty_days_ago,
+                    ).aggregate(total=Sum("total"))["total"]
+                    cache[key] = float(total) if total is not None else 0.0
             return cache.get(key)
 
         # Determine which counts are needed (erp_activity re-uses individual counts)
@@ -196,6 +205,9 @@ class DashboardMetricsService:
                 
                 metrics.append({"code": code, "value": items, "count": total_alerts_count})
                 continue
+
+            elif code == "sales_summary":
+                value = get_cached("sales_summary")
             else:
                 if code in list_widgets:
                     value = []
