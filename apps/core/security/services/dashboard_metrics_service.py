@@ -1,7 +1,7 @@
 """
 Servicio de métricas para el Dashboard.
 """
-
+from decimal import Decimal
 import calendar
 import datetime
 from typing import Any
@@ -15,7 +15,7 @@ from apps.suppliers.models import Supplier
 from apps.products.models import Product
 from apps.inventory.models import Inventory
 from apps.purchases.models import Purchase
-from apps.invoices.models import Invoice
+from apps.invoices.models import Invoice, InvoiceItem
 
 
 class DashboardMetricsService:
@@ -85,6 +85,129 @@ class DashboardMetricsService:
                         issue_date__gte=thirty_days_ago,
                     ).aggregate(total=Sum("total"))["total"]
                     cache[key] = float(total) if total is not None else 0.0
+
+                elif key == "inventory_stock_distribution":
+                    #Base: inventario activos de productos activos
+                    base_qs = Inventory.objects.filter(is_active=True, product__is_active=True,)
+
+                    #Stock critico: agotados
+                    critical = base_qs.filter(current_stock=0).count()
+
+                    #Bajo stock: Tiene algo pero por debajo o igual al minimo.
+                    low = base_qs.filter(current_stock__gt=0, current_stock__lte=F("minimum_stock"),).count()
+
+                    #Total con inventario registrado
+                    total_with_inventory = base_qs.count()
+
+                    #Normal = el resto (garantiza que 3 estados sumen el total)
+                    normal = max(0, total_with_inventory - critical - low)
+
+                    cache[key] = [
+                        {"label": "Stock Normal", "value": normal, "color": "#16A34A"},
+                        {"label": "Bajo Stock", "value": low, "color": "#F59E0B"},
+                        {"label": "Stock Critico", "value": critical, "color": "#DC2626"},
+                    ]
+
+                elif key == "payment_methods":
+                    thirty_days_ago = timezone.now() - datetime.timedelta(days=30)
+
+                    #Mapa de etiquetas legibles
+                    PAYMENT_LABELS = {
+                        "CASH": "Efectivo",
+                        "CARD": "Tarjeta",
+                        "TRANSFER": "Transferencia",
+                        "CREDIT": "Credito",
+                    }
+                    invoices = Invoice.objects.filter(
+                        document_type__in=[
+                            Invoice.DocumentType.SALE_INVOICE, 
+                            Invoice.DocumentType.POS_TICKET,
+                        ],
+                        created_at__gte=thirty_days_ago,
+                    ).select_related("sale")
+
+                    buckets: dict[str, float] = {}
+                    for inv in invoices:
+                        pm_raw = getattr(inv.sale, "payment_method", None) if inv.sale else None
+                        if not pm_raw:
+                            continue
+                        label = PAYMENT_LABELS.get(pm_raw, pm_raw)
+                        buckets[label] = buckets.get(label, Decimal('0')) + (inv.total or Decimal('0'))
+
+                    cache[key] = [
+                        {"label": label, "value": round(total, 2)}
+                        for label, total in sorted(buckets.items(), key=lambda x: -x[1])
+                    ]
+
+                elif key == "top_selling_products":
+                    thirty_days_ago = timezone.now() - datetime.timedelta(days=30)
+
+                    rows = (
+                        InvoiceItem.objects.filter(
+                            invoice__document_type__in=[
+                                Invoice.DocumentType.SALE_INVOICE,
+                                Invoice.DocumentType.POS_TICKET,
+                            ],
+                            invoice__created_at__gte=thirty_days_ago,
+                        )
+                        .values(
+                            "product__id_product",
+                            "product__code",
+                            "product__name",
+                        )
+                        .annotate(total_qty=Sum("quantity"))
+                        .order_by("-total_qty")[:5]
+                    )
+                    items = []
+                    for row in rows:
+                        qty = float(row["total_qty"] or 0)
+                        items.append({
+                            "label": row["product__name"] or "Producto",
+                            "subtitle": f"Codigo: {row['product__code'] or 'S/N'}",
+                            "value": f"{qty:g}",
+                            "icon": "fas fa-box",
+                            "color": "primary",
+                        })
+                    cache[key] = items
+
+
+                elif key == "latest_sales":
+                    invoices = (
+                        Invoice.objects.filter(
+                            document_type__in=[
+                                Invoice.DocumentType.SALE_INVOICE,
+                                Invoice.DocumentType.POS_TICKET,
+                            ],
+                        )
+                        .select_related("sale", "sale__customer")
+                        .order_by("-created_at")[:5]
+                    )
+                    items = []
+                    for inv in invoices:
+                        customer_name = "Consumidor Final"
+                        if inv.sale and getattr(inv.sale, "customer", None):
+                            c = inv.sale.customer
+                            customer_name = (
+                                getattr(c, "business_name", None)
+                                or f"{getattr(c, 'first_name', '') or ''} {getattr(c, 'last_name', '') or ''}".strip() or "Consumidor Final"
+                            )
+
+                        if inv.issue_date:
+                            date_str = inv.issue_date.strftime("%d/%m/%Y")
+                        elif inv.created_at:
+                            date_str = inv.created_at.strftime("%d/%m/%Y %H:%M")
+
+                        else:
+                            date_str = "-"
+
+                            items.append({
+                                "id": inv.invoice_number or f"#{inv.pk}",
+                                "cliente": customer_name,
+                                "monto": float(inv.total or 0),
+                                "fecha": date_str,
+                            })
+                    cache[key] = items         
+
             return cache.get(key)
 
         # Determine which counts are needed (erp_activity re-uses individual counts)
@@ -109,6 +232,7 @@ class DashboardMetricsService:
         list_widgets = {
             "roles_distribution", "sales_monthly", "purchases_monthly",
             "needs_attention", "top_selling_products", "latest_sales",
+            "inventory_stock_distribution",
         }
         
         now = timezone.now()
@@ -208,12 +332,42 @@ class DashboardMetricsService:
 
             elif code == "sales_summary":
                 value = get_cached("sales_summary")
+
+            elif code == "inventory_stock_distribution":
+                value = get_cached("inventory_stock_distribution")
+
+
+            elif code == "payment_methods":
+                value = get_cached("payment_methods")
+
+            elif code == "top_selling_products":
+                value = get_cached("top_selling_products")
+
+            elif code == "latest_sales":
+                value = get_cached("latest_sales")       
+
             else:
                 if code in list_widgets:
                     value = []
                 else:
                     value = 0
-
             metrics.append({"code": code, "value": value})
+
+
+            forced_widgets = [
+                "sale_summary",
+                "inventory_stock_distribution",
+                "payment_methods",
+                "top_selling_products",
+                "lastest_sales",
+            ]
+
+            existing_codes = {m["code"] for m in metrics}
+            for code in forced_widgets:
+                if code not in existing_codes:
+                    metrics.append({
+                        "code": code,
+                        "value": get_cached(code),
+                    })
 
         return metrics
