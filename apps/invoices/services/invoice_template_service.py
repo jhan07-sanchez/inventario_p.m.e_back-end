@@ -1,4 +1,5 @@
 from django.db import transaction
+from django.core.cache import cache
 from django.core.exceptions import ValidationError
 
 from apps.core.services.base_service import BaseService
@@ -23,7 +24,7 @@ class InvoiceTemplateService(BaseService[InvoiceTemplate]):
                 document_type=dto.document_type, is_default=True
             ).update(is_default=False)
 
-        return InvoiceTemplate.objects.create(
+        template = InvoiceTemplate.objects.create(
             name=dto.name,
             document_type=dto.document_type,
             header_content=dto.header_content,
@@ -31,6 +32,9 @@ class InvoiceTemplateService(BaseService[InvoiceTemplate]):
             footer_content=dto.footer_content,
             is_default=dto.is_default,
         )
+
+        cache.delete(f"invoice_default_template_{dto.document_type}")
+        return template
 
     @staticmethod
     @transaction.atomic
@@ -52,6 +56,8 @@ class InvoiceTemplateService(BaseService[InvoiceTemplate]):
             template.is_default = dto.is_default
 
         template.save(update_fields=["name", "header_content", "body_content", "footer_content", "is_default", "updated_at"])
+
+        cache.delete(f"invoice_default_template_{template.document_type}")
         return template
 
     @staticmethod

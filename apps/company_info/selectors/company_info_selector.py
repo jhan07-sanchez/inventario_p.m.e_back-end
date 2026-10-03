@@ -3,6 +3,8 @@ from django.db.models import QuerySet
 from apps.company_info.models import CompanyInfo
 
 
+from django.core.cache import cache
+
 class CompanyInfoSelector:
     """
     Selector encargado de realizar consultas de lectura relacionadas
@@ -19,12 +21,21 @@ class CompanyInfoSelector:
 
         Retorna la primera empresa activa registrada (singleton).
         """
-
-        return (
+        
+        cache_key = "company_info_current"
+        cached_val = cache.get(cache_key)
+        
+        if cached_val is not None:
+            return cached_val
+            
+        val = (
             CompanyInfo.objects.filter(is_active=True)
             .order_by("id_company")
             .first()
         )
+        
+        cache.set(cache_key, val, timeout=3600)  # 1 hora
+        return val
 
     @staticmethod
     def get_by_id(company_id: int) -> CompanyInfo | None:

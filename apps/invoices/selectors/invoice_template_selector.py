@@ -1,5 +1,6 @@
 from django.db.models import QuerySet
 from django.shortcuts import get_object_or_404
+from django.core.cache import cache
 
 from apps.core.selectors.base_selector import BaseSelector
 from apps.invoices.models import InvoiceTemplate
@@ -32,9 +33,18 @@ class InvoiceTemplateSelector(BaseSelector[InvoiceTemplate]):
         """
         Retorna la plantilla por defecto para un tipo de documento.
         """
-        return (
+        cache_key = f"invoice_default_template_{document_type}"
+        cached_val = cache.get(cache_key)
+
+        if cached_val is not None:
+            return cached_val
+
+        val = (
             InvoiceTemplateSelector()
             .get_queryset()
             .filter(document_type=document_type, is_active=True, is_default=True)
             .first()
         )
+
+        cache.set(cache_key, val, timeout=3600)  # 1 hora
+        return val

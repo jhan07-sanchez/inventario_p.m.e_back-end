@@ -6,8 +6,10 @@ import calendar
 import datetime
 from typing import Any
 from django.utils import timezone
+from django.core.cache import cache as django_cache
 from django.db.models import Sum, F, Q, Case, When, Value, IntegerField
-from django.db.models.functions import TruncMonth
+from django.db.models.functions import TruncMonth, Coalesce, Cast
+from django.db.models import DateField
 
 from apps.users.models import User, Role
 from apps.customers.models import Customer
@@ -16,6 +18,8 @@ from apps.products.models import Product
 from apps.inventory.models import Inventory
 from apps.purchases.models import Purchase
 from apps.invoices.models import Invoice, InvoiceItem
+from apps.sales.models.sale import Sale
+from apps.sales.models.sale_detail import SaleDetail
 
 
 class DashboardMetricsService:
@@ -43,6 +47,12 @@ class DashboardMetricsService:
         cache: dict[str, Any] = {}
 
         def get_cached(key: str):
+            cache_key = f"dashboard_metric_{key}"
+            cached_val = django_cache.get(cache_key)
+            if cached_val is not None:
+                cache[key] = cached_val
+                return cached_val
+
             if key not in cache:
                 if key == "users_total":
                     cache[key] = User.objects.count()
@@ -62,11 +72,24 @@ class DashboardMetricsService:
                 elif key == "products_total":
                     cache[key] = Product.objects.count()
                 elif key == "products_low_stock":
-                    cache[key] = Inventory.objects.filter(current_stock__lte=F('minimum_stock')).count()
+                    cache[key] = Inventory.objects.filter(
+                        is_active=True,
+                        product__is_active=True,
+                        current_stock__gt=0,
+                        current_stock__lte=F('minimum_stock')
+                    ).count()
+                elif key == "products_critical":
+                    cache[key] = Inventory.objects.filter(
+                        is_active=True,
+                        product__is_active=True,
+                        current_stock=0
+                    ).count()
                 elif key == "inventory_alerts":
                     cache[key] = Inventory.objects.filter(
-                        Q(current_stock=0) | 
-                        (Q(maximum_stock__isnull=False) & Q(current_stock__gt=F('maximum_stock')))
+                        Q(is_active=True, product__is_active=True) & (
+                            Q(current_stock=0) | 
+                            (Q(maximum_stock__isnull=False) & Q(current_stock__gt=F('maximum_stock')))
+                        )
                     ).count()
                 elif key == "purchases_summary":
                     cache[key] = Purchase.objects.count()
@@ -79,12 +102,24 @@ class DashboardMetricsService:
                     cache[key] = val if val is not None else 0
 
                 elif key == "sales_summary":
-                    thirty_days_ago = timezone.now() - datetime.timedelta(days=30)
-                    total = Invoice.objects.filter(
-                        document_type=Invoice.DocumentType.SALE_INVOICE,
-                        issue_date__gte=thirty_days_ago,
+                    now = timezone.now()
+                    start_of_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+                    start_of_day = now.replace(hour=0, minute=0, second=0, microsecond=0)
+                    
+                    total_month = Sale.objects.filter(
+                        status=Sale.SaleStatus.COMPLETED,
+                        updated_at__gte=start_of_month
                     ).aggregate(total=Sum("total"))["total"]
-                    cache[key] = float(total) if total is not None else 0.0
+                    
+                    sales_today_count = Sale.objects.filter(
+                        status=Sale.SaleStatus.COMPLETED,
+                        updated_at__gte=start_of_day
+                    ).count()
+                    
+                    cache[key] = {
+                        "total_month": float(total_month) if total_month is not None else 0.0,
+                        "sales_today_count": sales_today_count
+                    }
 
                 elif key == "inventory_stock_distribution":
                     #Base: inventario activos de productos activos
@@ -94,16 +129,20 @@ class DashboardMetricsService:
                     critical = base_qs.filter(current_stock=0).count()
 
                     #Bajo stock: Tiene algo pero por debajo o igual al minimo.
-                    low = base_qs.filter(current_stock__gt=0, current_stock__lte=F("minimum_stock"),).count()
+                    low = base_qs.filter(current_stock__gt=0, current_stock__lte=F("minimum_stock")).count()
+
+                    #Casi bajo stock: por encima del minimo pero hasta 5 unidades mas.
+                    almost_low = base_qs.filter(current_stock__gt=F("minimum_stock"), current_stock__lte=F("minimum_stock") + 5).count()
 
                     #Total con inventario registrado
                     total_with_inventory = base_qs.count()
 
-                    #Normal = el resto (garantiza que 3 estados sumen el total)
-                    normal = max(0, total_with_inventory - critical - low)
+                    #Normal = el resto (garantiza que todos los estados sumen el total)
+                    normal = max(0, total_with_inventory - critical - low - almost_low)
 
                     cache[key] = [
                         {"label": "Stock Normal", "value": normal, "color": "#16A34A"},
+                        {"label": "Casi Bajo Stock", "value": almost_low, "color": "#3B82F6"},
                         {"label": "Bajo Stock", "value": low, "color": "#F59E0B"},
                         {"label": "Stock Critico", "value": critical, "color": "#DC2626"},
                     ]
@@ -118,21 +157,18 @@ class DashboardMetricsService:
                         "TRANSFER": "Transferencia",
                         "CREDIT": "Credito",
                     }
-                    invoices = Invoice.objects.filter(
-                        document_type__in=[
-                            Invoice.DocumentType.SALE_INVOICE, 
-                            Invoice.DocumentType.POS_TICKET,
-                        ],
-                        created_at__gte=thirty_days_ago,
-                    ).select_related("sale")
+                    invoices = Sale.objects.filter(
+                        status=Sale.SaleStatus.COMPLETED,
+                        updated_at__gte=thirty_days_ago,
+                    )
 
                     buckets: dict[str, float] = {}
-                    for inv in invoices:
-                        pm_raw = getattr(inv.sale, "payment_method", None) if inv.sale else None
+                    for sale_obj in invoices:
+                        pm_raw = sale_obj.payment_method
                         if not pm_raw:
                             continue
                         label = PAYMENT_LABELS.get(pm_raw, pm_raw)
-                        buckets[label] = buckets.get(label, Decimal('0')) + (inv.total or Decimal('0'))
+                        buckets[label] = buckets.get(label, Decimal('0')) + (sale_obj.total or Decimal('0'))
 
                     cache[key] = [
                         {"label": label, "value": round(total, 2)}
@@ -143,12 +179,9 @@ class DashboardMetricsService:
                     thirty_days_ago = timezone.now() - datetime.timedelta(days=30)
 
                     rows = (
-                        InvoiceItem.objects.filter(
-                            invoice__document_type__in=[
-                                Invoice.DocumentType.SALE_INVOICE,
-                                Invoice.DocumentType.POS_TICKET,
-                            ],
-                            invoice__created_at__gte=thirty_days_ago,
+                        SaleDetail.objects.filter(
+                            sale__status=Sale.SaleStatus.COMPLETED,
+                            sale__updated_at__gte=thirty_days_ago
                         )
                         .values(
                             "product__id_product",
@@ -172,42 +205,40 @@ class DashboardMetricsService:
 
 
                 elif key == "latest_sales":
-                    invoices = (
-                        Invoice.objects.filter(
-                            document_type__in=[
-                                Invoice.DocumentType.SALE_INVOICE,
-                                Invoice.DocumentType.POS_TICKET,
-                            ],
+                    sales = (
+                        Sale.objects.filter(
+                            status=Sale.SaleStatus.COMPLETED
                         )
-                        .select_related("sale", "sale__customer")
-                        .order_by("-created_at")[:5]
+                        .select_related("customer")
+                        .order_by("-updated_at")[:5]
                     )
                     items = []
-                    for inv in invoices:
+                    for sale_obj in sales:
                         customer_name = "Consumidor Final"
-                        if inv.sale and getattr(inv.sale, "customer", None):
-                            c = inv.sale.customer
+                        if sale_obj.customer:
+                            c = sale_obj.customer
                             customer_name = (
                                 getattr(c, "business_name", None)
                                 or f"{getattr(c, 'first_name', '') or ''} {getattr(c, 'last_name', '') or ''}".strip() or "Consumidor Final"
                             )
 
-                        if inv.issue_date:
-                            date_str = inv.issue_date.strftime("%d/%m/%Y")
-                        elif inv.created_at:
-                            date_str = inv.created_at.strftime("%d/%m/%Y %H:%M")
-
+                        if sale_obj.updated_at:
+                            date_str = sale_obj.updated_at.strftime("%d/%m/%Y %H:%M")
                         else:
                             date_str = "-"
 
-                            items.append({
-                                "id": inv.invoice_number or f"#{inv.pk}",
-                                "cliente": customer_name,
-                                "monto": float(inv.total or 0),
-                                "fecha": date_str,
-                            })
+                        doc_prefix = "Factura" if sale_obj.sale_type == Sale.SaleType.ADMIN else "POS"
+
+                        items.append({
+                            "id": sale_obj.sale_number or f"#{sale_obj.pk}",
+                            "cliente": customer_name,
+                            "monto": float(sale_obj.total or 0),
+                            "fecha": date_str,
+                            "tipo": doc_prefix,
+                        })
                     cache[key] = items         
 
+            django_cache.set(cache_key, cache.get(key), timeout=300)
             return cache.get(key)
 
         # Determine which counts are needed (erp_activity re-uses individual counts)
@@ -264,10 +295,16 @@ class DashboardMetricsService:
                 value = get_cached("purchases_pending")
             elif code == "purchases_monthly":
                 # Ventas vs Compras del año actual por meses
-                sales_by_month = list(Invoice.objects.filter(
-                    document_type=Invoice.DocumentType.SALE_INVOICE,
-                    issue_date__year=now.year
-                ).annotate(month=TruncMonth('issue_date')).values('month').annotate(total_sales=Sum('total')).order_by('month'))
+                sales_by_month = list(
+                    Sale.objects.filter(
+                        status=Sale.SaleStatus.COMPLETED,
+                        updated_at__year=now.year
+                    ).annotate(
+                        month=TruncMonth('updated_at')
+                    ).values('month').annotate(
+                        total_sales=Sum('total')
+                    ).order_by('month')
+                )
                 
                 purchases_by_month = list(Purchase.objects.filter(
                     issue_date__year=now.year
@@ -295,18 +332,22 @@ class DashboardMetricsService:
                     {"label": "Valor inventario actual", "value": formatted_inventory_val, "icon": "fas fa-boxes", "color": "primary"},
                 ]
             elif code == "needs_attention":
-                alerts_query = Inventory.objects.annotate(
+                alerts_query = Inventory.objects.filter(
+                    is_active=True, 
+                    product__is_active=True
+                ).annotate(
                     alert_priority=Case(
                         When(current_stock=0, then=Value(1)),
                         When(current_stock__lte=F('minimum_stock'), then=Value(2)),
-                        When(Q(maximum_stock__isnull=False) & Q(current_stock__gt=F('maximum_stock')), then=Value(3)),
+                        When(current_stock__lte=F('minimum_stock') + 5, then=Value(3)),
+                        When(Q(maximum_stock__isnull=False) & Q(current_stock__gt=F('maximum_stock')), then=Value(4)),
                         default=Value(0),
                         output_field=IntegerField()
                     )
                 ).filter(alert_priority__gt=0).select_related('product')
                 
                 total_alerts_count = alerts_query.count()
-                top_alerts = alerts_query.order_by('alert_priority', 'product__name')[:5]
+                top_alerts = alerts_query.order_by('alert_priority', 'product__name')[:8]
                 
                 items = []
                 for inv in top_alerts:
@@ -316,15 +357,19 @@ class DashboardMetricsService:
                     elif inv.alert_priority == 2:
                         lbl = "Bajo stock"
                         clr = "warning"
+                    elif inv.alert_priority == 3:
+                        lbl = "Casi bajo"
+                        clr = "primary"
                     else:
                         lbl = "Sobrestock"
-                        clr = "warning" # o text-warning si se requiere
+                        clr = "info"
                         
                     items.append({
                         "label": inv.product.name,
+                        "subtitle": f"Stock actual: {inv.current_stock}",
                         "value": lbl,
                         "color": clr,
-                        "icon": "fas fa-circle"
+                        "icon": "fas fa-exclamation-circle" if inv.alert_priority <= 2 else "fas fa-info-circle"
                     })
                 
                 metrics.append({"code": code, "value": items, "count": total_alerts_count})
@@ -346,6 +391,9 @@ class DashboardMetricsService:
             elif code == "latest_sales":
                 value = get_cached("latest_sales")       
 
+            elif code == "products_critical":
+                value = get_cached("products_critical")
+
             else:
                 if code in list_widgets:
                     value = []
@@ -360,6 +408,7 @@ class DashboardMetricsService:
                 "payment_methods",
                 "top_selling_products",
                 "lastest_sales",
+                "products_critical",
             ]
 
             existing_codes = {m["code"] for m in metrics}

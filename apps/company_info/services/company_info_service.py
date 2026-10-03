@@ -1,4 +1,5 @@
 from django.core.exceptions import ValidationError
+from django.core.cache import cache
 from django.db import transaction
 
 from apps.company_info.dto.company_info_dto import (
@@ -59,6 +60,7 @@ class CompanyInfoService(BaseService[CompanyInfo]):
             receipt_footer=dto.receipt_footer,
         )
 
+        cache.delete("company_info_current")
         return company
 
     @staticmethod
@@ -137,6 +139,7 @@ class CompanyInfoService(BaseService[CompanyInfo]):
 
         company.save(update_fields=update_fields)
 
+        cache.delete("company_info_current")
         return company
 
     @staticmethod
@@ -157,6 +160,7 @@ class CompanyInfoService(BaseService[CompanyInfo]):
         company.logo = logo_file
         company.save(update_fields=["logo", "updated_at"])
 
+        cache.delete("company_info_current")
         return company
 
     @staticmethod

@@ -24,6 +24,8 @@ if TYPE_CHECKING:
     from apps.users.models import Role, User
 
 
+from django.core.cache import cache
+
 class PermissionService:
     """
     Servicio centralizado para la resolución de permisos
@@ -65,9 +67,17 @@ class PermissionService:
             Diccionario ``{código_permiso: bool}`` con todos los
             permisos registrados en ``SecurityRegistry``.
         """
+        
+        cache_key = f"user_permissions_{user.pk}"
+        cached_permissions = cache.get(cache_key)
+        
+        if cached_permissions is not None:
+            return cached_permissions
 
         if user.is_superuser:
-            return {code: True for code in SecurityRegistry.get_all_security_codes()}
+            val = {code: True for code in SecurityRegistry.get_all_security_codes()}
+            cache.set(cache_key, val, timeout=300)
+            return val
 
         all_codes = SecurityRegistry.get_all_security_codes()
         effective: dict[str, bool] = {code: False for code in all_codes}
@@ -79,6 +89,7 @@ class PermissionService:
                 if PermissionService.role_grants_permission(role, code):
                     effective[code] = True
 
+        cache.set(cache_key, effective, timeout=300)
         return effective
 
     @staticmethod

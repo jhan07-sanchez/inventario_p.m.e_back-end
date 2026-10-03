@@ -204,6 +204,14 @@ class Sale(ActiveModel):
                 fields=["created_at"],
                 name="sale_created_at_idx",
             ),
+            models.Index(
+                fields=["status", "updated_at"],
+                name="sale_status_updated_idx",
+            ),
+            models.Index(
+                fields=["-updated_at"],
+                name="sale_updated_desc_idx",
+            ),
         ]
 
     def __str__(self) -> str:

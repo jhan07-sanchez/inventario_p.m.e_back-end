@@ -48,9 +48,9 @@ class InvoiceService(BaseService[Invoice]):
         if Invoice.objects.filter(invoice_number=dto.invoice_number).exists():
             raise ValidationError("El número de factura ya existe.")
 
-        # Obtener datos de la empresa activos
-        from apps.company_info.models import CompanyInfo
-        company = CompanyInfo.objects.filter(is_active=True).first()
+        # Obtener datos de la empresa activos (usa selector cacheado)
+        from apps.company_info.selectors.company_info_selector import CompanyInfoSelector
+        company = CompanyInfoSelector.get_current()
 
         c_name = company.business_name if company else ""
         c_tax_id = company.tax_id if company else ""

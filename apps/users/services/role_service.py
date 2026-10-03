@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from django.core.cache import cache
 from django.db import transaction
 
 from apps.core.exceptions.custom_exceptions import (
@@ -243,10 +244,12 @@ class RoleService(BaseService[Role]):
         Actualiza un rol aplicando las reglas de negocio.
         """
 
-        return RoleService().update(
+        role = RoleService().update(
             role,
             **validated_data,
         )
+        cache.clear()
+        return role
 
     @staticmethod
     @transaction.atomic
@@ -263,7 +266,7 @@ class RoleService(BaseService[Role]):
             role,
             soft_delete=False,
         )
-
+        cache.clear()
         return role
 
     @staticmethod
@@ -285,5 +288,5 @@ class RoleService(BaseService[Role]):
         )
 
         role.restore()
-
+        cache.clear()
         return role

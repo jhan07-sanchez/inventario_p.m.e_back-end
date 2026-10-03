@@ -1,4 +1,5 @@
 from django.db import transaction
+from django.core.cache import cache
 
 from apps.core.exceptions.custom_exceptions import (
     RoleInactiveException,
@@ -88,7 +89,9 @@ class UserRoleService(BaseService[UserRole]):
         """
         Asigna un rol a un usuario.
         """
-        return UserRoleService().create(**validated_data)
+        user_role = UserRoleService().create(**validated_data)
+        cache.delete(f"user_permissions_{user_role.user_id}")
+        return user_role
 
     @staticmethod
     @transaction.atomic
@@ -99,7 +102,9 @@ class UserRoleService(BaseService[UserRole]):
         """
         Actualiza una asignación de rol.
         """
-        return UserRoleService().update(user_role, **validated_data)
+        user_role = UserRoleService().update(user_role, **validated_data)
+        cache.delete(f"user_permissions_{user_role.user_id}")
+        return user_role
 
     @staticmethod
     @transaction.atomic
@@ -110,6 +115,7 @@ class UserRoleService(BaseService[UserRole]):
         Desactiva una asignación.
         """
         UserRoleService().delete(user_role)
+        cache.delete(f"user_permissions_{user_role.user_id}")
         return user_role
 
     @staticmethod
@@ -121,4 +127,5 @@ class UserRoleService(BaseService[UserRole]):
         Restaura una asignación.
         """
         user_role.restore()
+        cache.delete(f"user_permissions_{user_role.user_id}")
         return user_role
