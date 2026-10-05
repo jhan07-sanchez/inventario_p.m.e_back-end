@@ -11,6 +11,9 @@ from apps.core.exceptions.custom_exceptions import (
     ProductInactiveException,
     SaleHasNoDetailsException,
 )
+from apps.core.security.services.dashboard_metrics_service import (
+    DashboardMetricsService,
+)
 from apps.core.services.base_service import BaseService
 from apps.customers.models import Customer
 from apps.inventory.services.inventory_service import InventoryService
@@ -282,6 +285,8 @@ class SaleService(BaseService[Sale]):
             ]
         )
 
+        DashboardMetricsService.invalidate_sales_cache()
+
         return sale
 
     @staticmethod
@@ -358,6 +363,8 @@ class SaleService(BaseService[Sale]):
 
         sale.status = Sale.SaleStatus.COMPLETED
         sale.save(update_fields=["status", "updated_at"])
+
+        DashboardMetricsService.invalidate_sales_cache()
 
         return sale
 
@@ -527,6 +534,8 @@ class SaleService(BaseService[Sale]):
                 "updated_at",
             ]
         )
+
+        DashboardMetricsService.invalidate_sales_cache()
 
         return sale
 

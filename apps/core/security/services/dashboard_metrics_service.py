@@ -8,8 +8,7 @@ from typing import Any
 from django.utils import timezone
 from django.core.cache import cache as django_cache
 from django.db.models import Sum, F, Q, Case, When, Value, IntegerField
-from django.db.models.functions import TruncMonth, Coalesce, Cast
-from django.db.models import DateField
+from django.db.models.functions import TruncMonth, TruncDate
 
 from apps.users.models import User, Role
 from apps.customers.models import Customer
@@ -17,9 +16,17 @@ from apps.suppliers.models import Supplier
 from apps.products.models import Product
 from apps.inventory.models import Inventory
 from apps.purchases.models import Purchase
-from apps.invoices.models import Invoice, InvoiceItem
 from apps.sales.models.sale import Sale
 from apps.sales.models.sale_detail import SaleDetail
+
+
+# Claves de cache del dashboard que están relacionadas con ventas.
+_SALES_CACHE_KEYS = [
+    "dashboard_metric_sales_summary",
+    "dashboard_metric_latest_sales",
+    "dashboard_metric_payment_methods",
+    "dashboard_metric_top_selling_products",
+]
 
 
 class DashboardMetricsService:
@@ -30,6 +37,17 @@ class DashboardMetricsService:
     entre widgets que necesiten el mismo dato (ej. erp_activity reutiliza
     users_active, customers_total, suppliers_active).
     """
+
+    @staticmethod
+    def invalidate_sales_cache() -> None:
+        """
+        Invalida las claves de cache del dashboard relacionadas con ventas.
+
+        Debe llamarse después de crear, completar o cancelar una venta
+        para que el dashboard refleje los datos actualizados al instante.
+        """
+        for key in _SALES_CACHE_KEYS:
+            django_cache.delete(key)
 
     @staticmethod
     def get_metrics(visible_widgets: list[str]) -> list[dict[str, Any]]:
@@ -87,7 +105,7 @@ class DashboardMetricsService:
                 elif key == "inventory_alerts":
                     cache[key] = Inventory.objects.filter(
                         Q(is_active=True, product__is_active=True) & (
-                            Q(current_stock=0) | 
+                            Q(current_stock=0) |
                             (Q(maximum_stock__isnull=False) & Q(current_stock__gt=F('maximum_stock')))
                         )
                     ).count()
@@ -102,20 +120,20 @@ class DashboardMetricsService:
                     cache[key] = val if val is not None else 0
 
                 elif key == "sales_summary":
-                    now = timezone.now()
+                    now = timezone.localtime(timezone.now())
                     start_of_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
                     start_of_day = now.replace(hour=0, minute=0, second=0, microsecond=0)
-                    
+
                     total_month = Sale.objects.filter(
                         status=Sale.SaleStatus.COMPLETED,
                         updated_at__gte=start_of_month
                     ).aggregate(total=Sum("total"))["total"]
-                    
+
                     sales_today_count = Sale.objects.filter(
                         status=Sale.SaleStatus.COMPLETED,
                         updated_at__gte=start_of_day
                     ).count()
-                    
+
                     cache[key] = {
                         "total_month": float(total_month) if total_month is not None else 0.0,
                         "sales_today_count": sales_today_count
@@ -223,7 +241,8 @@ class DashboardMetricsService:
                             )
 
                         if sale_obj.updated_at:
-                            date_str = sale_obj.updated_at.strftime("%d/%m/%Y %H:%M")
+                            local_dt = timezone.localtime(sale_obj.updated_at)
+                            date_str = local_dt.strftime("%d/%m/%Y %H:%M")
                         else:
                             date_str = "-"
 
@@ -236,7 +255,7 @@ class DashboardMetricsService:
                             "fecha": date_str,
                             "tipo": doc_prefix,
                         })
-                    cache[key] = items         
+                    cache[key] = items
 
             django_cache.set(cache_key, cache.get(key), timeout=300)
             return cache.get(key)
@@ -265,7 +284,7 @@ class DashboardMetricsService:
             "needs_attention", "top_selling_products", "latest_sales",
             "inventory_stock_distribution",
         }
-        
+
         now = timezone.now()
 
         for code in visible_widgets:
@@ -305,11 +324,11 @@ class DashboardMetricsService:
                         total_sales=Sum('total')
                     ).order_by('month')
                 )
-                
+
                 purchases_by_month = list(Purchase.objects.filter(
                     issue_date__year=now.year
                 ).annotate(month=TruncMonth('issue_date')).values('month').annotate(total_purchases=Sum('total')).order_by('month'))
-                
+
                 monthly_data = []
                 for i in range(1, 13):
                     month_label = calendar.month_abbr[i]
@@ -321,10 +340,42 @@ class DashboardMetricsService:
                         "compras": float(purchases_val)
                     })
                 value = monthly_data
+
+            elif code == "sales_monthly":
+                # Ventas diarias de los últimos 30 días (gráfica de línea)
+                now_local = timezone.localtime(timezone.now())
+                thirty_days_ago = now_local - datetime.timedelta(days=30)
+                start_of_30_days = thirty_days_ago.replace(hour=0, minute=0, second=0, microsecond=0)
+
+                daily_sales = list(
+                    Sale.objects.filter(
+                        status=Sale.SaleStatus.COMPLETED,
+                        updated_at__gte=start_of_30_days,
+                    )
+                    .annotate(day=TruncDate("updated_at"))
+                    .values("day")
+                    .annotate(total=Sum("total"))
+                    .order_by("day")
+                )
+
+                # Mapa de totales por día
+                sales_map = {
+                    item["day"]: float(item["total"] or 0)
+                    for item in daily_sales
+                }
+
+                # Generar 30 puntos (uno por día) para la gráfica usando la fecha local
+                value = []
+                for offset in range(30, -1, -1):
+                    day = (now_local - datetime.timedelta(days=offset)).date()
+                    value.append({
+                        "label": day.strftime("%d/%m"),
+                        "value": sales_map.get(day, 0),
+                    })
             elif code == "erp_activity":
                 inventory_val = cache.get("inventory_total_value", 0)
                 formatted_inventory_val = f"${inventory_val:,.0f}".replace(",", ".")
-                
+
                 value = [
                     {"label": "Usuarios activos", "value": cache["users_active"], "icon": "fas fa-user-check", "color": "success"},
                     {"label": "Clientes", "value": cache["customers_total"], "icon": "fas fa-user-tie", "color": "info"},
@@ -333,7 +384,7 @@ class DashboardMetricsService:
                 ]
             elif code == "needs_attention":
                 alerts_query = Inventory.objects.filter(
-                    is_active=True, 
+                    is_active=True,
                     product__is_active=True
                 ).annotate(
                     alert_priority=Case(
@@ -345,10 +396,10 @@ class DashboardMetricsService:
                         output_field=IntegerField()
                     )
                 ).filter(alert_priority__gt=0).select_related('product')
-                
+
                 total_alerts_count = alerts_query.count()
                 top_alerts = alerts_query.order_by('alert_priority', 'product__name')[:8]
-                
+
                 items = []
                 for inv in top_alerts:
                     if inv.alert_priority == 1:
@@ -363,7 +414,7 @@ class DashboardMetricsService:
                     else:
                         lbl = "Sobrestock"
                         clr = "info"
-                        
+
                     items.append({
                         "label": inv.product.name,
                         "subtitle": f"Stock actual: {inv.current_stock}",
@@ -371,7 +422,7 @@ class DashboardMetricsService:
                         "color": clr,
                         "icon": "fas fa-exclamation-circle" if inv.alert_priority <= 2 else "fas fa-info-circle"
                     })
-                
+
                 metrics.append({"code": code, "value": items, "count": total_alerts_count})
                 continue
 
@@ -389,7 +440,7 @@ class DashboardMetricsService:
                 value = get_cached("top_selling_products")
 
             elif code == "latest_sales":
-                value = get_cached("latest_sales")       
+                value = get_cached("latest_sales")
 
             elif code == "products_critical":
                 value = get_cached("products_critical")
@@ -401,22 +452,22 @@ class DashboardMetricsService:
                     value = 0
             metrics.append({"code": code, "value": value})
 
+        # ── Widgets forzados (fuera del loop, una sola vez) ──
+        forced_widgets = [
+            "sales_summary",
+            "inventory_stock_distribution",
+            "payment_methods",
+            "top_selling_products",
+            "latest_sales",
+            "products_critical",
+        ]
 
-            forced_widgets = [
-                "sale_summary",
-                "inventory_stock_distribution",
-                "payment_methods",
-                "top_selling_products",
-                "lastest_sales",
-                "products_critical",
-            ]
-
-            existing_codes = {m["code"] for m in metrics}
-            for code in forced_widgets:
-                if code not in existing_codes:
-                    metrics.append({
-                        "code": code,
-                        "value": get_cached(code),
-                    })
+        existing_codes = {m["code"] for m in metrics}
+        for forced_code in forced_widgets:
+            if forced_code not in existing_codes:
+                metrics.append({
+                    "code": forced_code,
+                    "value": get_cached(forced_code),
+                })
 
         return metrics
