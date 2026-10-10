@@ -276,6 +276,8 @@ class SaleService(BaseService[Sale]):
         if not invoice_exists:
             SaleService._create_sale_invoice(sale, details)
 
+        SaleService._process_sale_payment(sale, user)
+
         sale.status = Sale.SaleStatus.COMPLETED
 
         sale.save(
@@ -359,7 +361,7 @@ class SaleService(BaseService[Sale]):
         if dto.generate_invoice:
             SaleService._create_sale_invoice(sale, details)
 
-
+        SaleService._process_sale_payment(sale, user)
 
         sale.status = Sale.SaleStatus.COMPLETED
         sale.save(update_fields=["status", "updated_at"])
@@ -443,7 +445,7 @@ class SaleService(BaseService[Sale]):
 
         sale = (
             Sale.objects.select_for_update()
-            .prefetch_related("details__product__inventory")
+            .prefetch_related("details__product__inventory", "payments")
             .get(pk=sale.pk)
         )
 
@@ -526,6 +528,8 @@ class SaleService(BaseService[Sale]):
 
             InvoiceService.cancel_invoice(invoice)
 
+        SaleService._reverse_sale_payment(sale, user)
+
         sale.status = Sale.SaleStatus.CANCELLED
 
         sale.save(
@@ -566,3 +570,81 @@ class SaleService(BaseService[Sale]):
             return sale
 
         return SaleService().restore(sale)
+
+    @staticmethod
+    def _process_sale_payment(sale: Sale, user):
+        """
+        Registra el pago de la venta y el movimiento de caja correspondiente.
+        """
+        from apps.cash.models.cash_session import CashSession
+        from apps.cash.dto.payment_dto import PaymentCreateDto
+        from apps.cash.services.payment_service import PaymentService
+        from apps.cash.dto.cash_movement_dto import CashMovementCreateDto
+        from apps.cash.services.cash_movement_service import CashMovementService
+        from apps.cash.models.cash_movement import CashMovement
+
+        session = CashSession.objects.filter(
+            user=user, 
+            status=CashSession.SessionStatus.OPEN
+        ).first()
+
+        if sale.sale_type == sale.SaleType.POS and not session:
+            raise ValidationError("Para realizar ventas POS debe tener una sesión de caja abierta.")
+
+        # Generar el pago siempre (para mantener registro financiero)
+        payment_dto = PaymentCreateDto(
+            sale_id=sale.pk,
+            amount=sale.total,
+            payment_method=sale.payment_method,
+            reference=f"Venta #{sale.sale_number}"
+        )
+        payment = PaymentService.create_payment(payment_dto)
+
+        # Solo si hay sesión abierta se genera impacto en caja
+        if session:
+            is_cash = payment.payment_method == "CASH"
+            movement_dto = CashMovementCreateDto(
+                cash_session_id=session.pk,
+                payment_id=payment.pk,
+                amount=payment.amount,
+                movement_type=CashMovement.MovementType.IN,
+                is_cash=is_cash,
+                reference=f"Cobro venta #{sale.sale_number}",
+                description=f"Pago por venta {sale.sale_number}"
+            )
+            CashMovementService.create_movement(movement_dto)
+
+    @staticmethod
+    def _reverse_sale_payment(sale: Sale, user):
+        """
+        Revierte los pagos de una venta cancelada y genera la salida de caja.
+        """
+        from apps.cash.models.cash_session import CashSession
+        from apps.cash.dto.cash_movement_dto import CashMovementCreateDto
+        from apps.cash.services.cash_movement_service import CashMovementService
+        from apps.cash.models.cash_movement import CashMovement
+
+        session = CashSession.objects.filter(
+            user=user, 
+            status=CashSession.SessionStatus.OPEN
+        ).first()
+
+        payments = sale.payments.filter(status="COMPLETED")
+        for payment in payments:
+            payment.status = "CANCELLED"
+            payment.save(update_fields=["status", "updated_at"])
+
+            if session:
+                # Revertir el ingreso de caja con un egreso
+                is_cash = payment.payment_method == "CASH"
+                movement_dto = CashMovementCreateDto(
+                    cash_session_id=session.pk,
+                    payment_id=payment.pk,
+                    amount=payment.amount,
+                    movement_type=CashMovement.MovementType.OUT,
+                    is_cash=is_cash,
+                    reference=f"Reverso venta #{sale.sale_number}",
+                    description=f"Reverso de pago por cancelación de venta {sale.sale_number}"
+                )
+                CashMovementService.create_movement(movement_dto)
+

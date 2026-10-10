@@ -224,6 +224,23 @@ SECURITY_MODULES = [
         "order": 2,
     },
     {
+        "module_id": "cash",
+        "label": "Caja",
+        "icon": "fas fa-cash-register",
+        "route": "views/pages/caja/index.php",
+        "parent": "operations",
+        "permissions": {
+            "cash.view": "Ver caja",
+            "cash.create": "Crear caja",
+            "cash.open": "Abrir caja",
+            "cash.close": "Cerrar caja",
+            "cash.movement": "Movimientos de caja",
+        },
+        "actions": {},
+        "widgets": [],
+        "order": 3,
+    },
+    {
         "module_id": "reports",
         "label": "Reportes",
         "icon": "fas fa-chart-bar",
