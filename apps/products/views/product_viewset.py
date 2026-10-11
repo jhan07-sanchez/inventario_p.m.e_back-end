@@ -23,6 +23,7 @@ from apps.products.docs.product_docs import (
     product_list_schema,
     product_partial_update_schema,
     product_restore_schema,
+    product_search_schema,
     product_update_schema,
 )
 from apps.products.services.product_service import ProductService
@@ -371,6 +372,7 @@ class ProductViewSet(BaseViewSet):
 
 
 
+    @product_search_schema
     @action(
         detail=False,
         methods=["get"],

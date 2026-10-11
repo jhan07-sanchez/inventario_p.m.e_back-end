@@ -2,7 +2,11 @@ from rest_framework import status
 from rest_framework.filters import SearchFilter, OrderingFilter
 
 from apps.core.security import HasPermission
-from apps.core.views.base_viewset import BaseViewSet
+from apps.core.views.base_viewset import BaseGenericViewSet
+from apps.inventory.docs.movement_docs import (
+    movement_detail_schema,
+    movement_list_schema,
+)
 from apps.inventory.models.inventory_movement import InventoryMovement
 from apps.inventory.selectors.inventory_movement_selector import InventoryMovementSelector
 from apps.inventory.serializers.inventory_serializer import (
@@ -12,13 +16,13 @@ from apps.inventory.serializers.inventory_serializer import (
 from apps.users.permissions import IsAuthenticatedAndActive
 
 
-class InventoryMovementViewSet(BaseViewSet):
+class InventoryMovementViewSet(BaseGenericViewSet):
     """
     ViewSet encargado de consultar el historial
     global de movimientos de inventario.
     Solo lectura.
     """
-
+    http_method_names = ["get", "head", "options"]
     queryset = InventoryMovement.objects.none()
 
     permission_classes = [IsAuthenticatedAndActive]
@@ -71,6 +75,7 @@ class InventoryMovementViewSet(BaseViewSet):
         
         return InventoryMovementDetailSerializer
 
+    @movement_list_schema
     def list(self, request, *args, **kwargs):
         """
         Lista todos los movimientos globalmente.
@@ -90,6 +95,7 @@ class InventoryMovementViewSet(BaseViewSet):
             status_code=status.HTTP_200_OK,
         )
 
+    @movement_detail_schema
     def retrieve(self, request, *args, **kwargs):
         """
         Obtiene el detalle de un movimiento.

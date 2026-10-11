@@ -8,6 +8,7 @@ from apps.core.views.base_viewset import BaseViewSet
 from apps.sales.models import Sale
 from apps.sales.selectors.sale_selector import SaleSelector
 from apps.sales.docs.sale_docs import (
+    quick_sale_schema,
     sale_cancel_schema,
     sale_complete_schema,
     sale_create_schema,
@@ -398,6 +399,7 @@ class SaleViewSet(BaseViewSet):
                 message="No fue posible cancelar la venta.",
             )
 
+    @quick_sale_schema
     @action(
         detail=False,
         methods=["post"],

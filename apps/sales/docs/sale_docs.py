@@ -407,3 +407,76 @@ sale_cancel_schema = extend_schema(
         ),
     },
 )
+
+quick_sale_schema = extend_schema(
+    tags=["Sales"],
+    summary="Venta Rápida (Flujo POS)",
+    description=(
+        "Crea y completa una venta en una única operación atómica (flujo POS directo). "
+        "Realiza en una sola transacción: validación, creación, cálculo de totales, "
+        "descuento de inventario, completado de la venta y generación de comprobante."
+    ),
+    request=SaleCreateSerializer,
+    responses={
+        201: OpenApiResponse(
+            response=build_api_response_schema(
+                name="QuickSaleApiResponse",
+                data_serializer=SaleRetrieveSerializer,
+            ),
+            description="Venta POS completada exitosamente.",
+        ),
+        400: OpenApiResponse(
+            response=ValidationErrorResponseSerializer,
+            description="Error en la validación de los datos o stock insuficiente.",
+        ),
+        401: OpenApiResponse(
+            response=ApiErrorResponseSerializer,
+            description="Token inválido, expirado o usuario no autenticado.",
+        ),
+        403: OpenApiResponse(
+            response=ApiErrorResponseSerializer,
+            description="El usuario no tiene permiso para realizar ventas.",
+        ),
+    },
+    examples=[
+        OpenApiExample(
+            "Venta Rápida en Efectivo",
+            request_only=True,
+            value={
+                "customer_id": 1,
+                "payment_method": "CASH",
+                "discount": "0.00",
+                "tax": "0.00",
+                "notes": "Venta directa en mostrador.",
+                "details": [
+                    {
+                        "product_id": 1,
+                        "quantity": "2.00",
+                        "unit_price": "15000.00",
+                        "discount": "0.00",
+                    }
+                ],
+            },
+        ),
+        OpenApiExample(
+            "Venta Rápida con Tarjeta",
+            request_only=True,
+            value={
+                "customer_id": 1,
+                "payment_method": "CARD",
+                "discount": "500.00",
+                "tax": "19.00",
+                "notes": "Pago con tarjeta de débito.",
+                "details": [
+                    {
+                        "product_id": 2,
+                        "quantity": "1.00",
+                        "unit_price": "45000.00",
+                        "discount": "500.00",
+                    }
+                ],
+            },
+        ),
+    ],
+)
+

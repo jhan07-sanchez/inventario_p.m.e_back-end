@@ -15,6 +15,7 @@ from apps.products.serializers.product_serializer import (
     ProductCreateSerializer,
     ProductDetailSerializer,
     ProductListSerializer,
+    ProductSearchSerializer,
     ProductUpdateSerializer,
 )
 
@@ -342,3 +343,47 @@ product_restore_schema = extend_schema(
         ),
     },
 )
+
+product_search_schema = extend_schema(
+    tags=["Products"],
+    summary="Buscar productos para autocompletado (POS)",
+    description=(
+        "Búsqueda rápida de productos activos optimizada para autocompletado "
+        "en mostrador/POS. Busca por código, nombre o código de barras."
+    ),
+    parameters=[
+        OpenApiParameter(
+            name="q",
+            type=OpenApiTypes.STR,
+            location=OpenApiParameter.QUERY,
+            description="Término de búsqueda (código, nombre o código de barras).",
+            required=False,
+        ),
+        OpenApiParameter(
+            name="limit",
+            type=OpenApiTypes.INT,
+            location=OpenApiParameter.QUERY,
+            description="Cantidad máxima de resultados (por defecto 20, máx 50).",
+            required=False,
+        ),
+    ],
+    responses={
+        200: OpenApiResponse(
+            response=build_api_response_schema(
+                name="ProductSearchResponse",
+                data_serializer=ProductSearchSerializer,
+                is_list=True,
+            ),
+            description="Productos obtenidos correctamente.",
+        ),
+        401: OpenApiResponse(
+            response=ApiErrorResponseSerializer,
+            description="Token inválido, expirado o usuario no autenticado.",
+        ),
+        403: OpenApiResponse(
+            response=ApiErrorResponseSerializer,
+            description="El usuario no tiene permiso para consultar productos.",
+        ),
+    },
+)
+

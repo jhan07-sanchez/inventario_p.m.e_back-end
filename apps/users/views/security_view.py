@@ -1,4 +1,3 @@
-from drf_spectacular.utils import extend_schema
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
@@ -22,14 +21,7 @@ from apps.users.serializers.auth.security_context_serializer import (
     SecurityContextResponseSerializer,
 )
 
-@extend_schema(
-    tags=["Security"],
-    summary="Contexto de autorización",
-    description=(
-        "Retorna roles, permisos efectivos y acciones del usuario autenticado."
-    ),
-    responses={status.HTTP_200_OK: SecurityContextResponseSerializer},
-)
+
 class SecurityContextView(APIView):
     """Endpoint del contexto completo de autorización."""
 
@@ -50,12 +42,6 @@ class SecurityContextView(APIView):
         )
 
 
-@extend_schema(
-    tags=["Security"],
-    summary="Navegación dinámica",
-    description="Retorna el árbol de navegación filtrado por permisos.",
-    responses={status.HTTP_200_OK: NavigationResponseSerializer},
-)
 class SecurityNavigationView(APIView):
     """Endpoint del árbol de navegación del usuario autenticado."""
 
@@ -77,12 +63,6 @@ class SecurityNavigationView(APIView):
         )
 
 
-@extend_schema(
-    tags=["Security"],
-    summary="Dashboard dinámico",
-    description="Retorna los widgets del dashboard según permisos del usuario.",
-    responses={status.HTTP_200_OK: DashboardResponseSerializer},
-)
 class SecurityDashboardView(APIView):
     """Endpoint de configuración del dashboard del usuario autenticado."""
 

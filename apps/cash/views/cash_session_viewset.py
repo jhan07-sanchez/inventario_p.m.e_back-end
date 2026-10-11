@@ -3,9 +3,18 @@ from rest_framework import status
 from rest_framework.decorators import action
 
 from apps.core.security import HasPermission
-from apps.core.views.base_viewset import BaseViewSet
+from apps.core.views.base_viewset import BaseGenericViewSet
 from apps.users.permissions import IsAuthenticatedAndActive
 
+from apps.cash.docs.cash_docs import (
+    cash_session_add_movement_schema,
+    cash_session_close_schema,
+    cash_session_current_schema,
+    cash_session_detail_schema,
+    cash_session_list_schema,
+    cash_session_movements_schema,
+    cash_session_open_schema,
+)
 from apps.cash.models.cash_session import CashSession
 from apps.cash.selectors.cash_session_selector import CashSessionSelector
 from apps.cash.serializers.cash_session_serializer import (
@@ -21,10 +30,11 @@ from apps.cash.services.cash_session_service import CashSessionService
 from apps.cash.services.cash_movement_service import CashMovementService
 
 
-class CashSessionViewSet(BaseViewSet):
+class CashSessionViewSet(BaseGenericViewSet):
     """
     ViewSet para manejar la apertura, cierre y movimientos manuales de caja.
     """
+    http_method_names = ["get", "post", "head", "options"]
     queryset = CashSession.objects.none()
     permission_classes = [IsAuthenticatedAndActive]
 
@@ -53,6 +63,7 @@ class CashSessionViewSet(BaseViewSet):
             return CashMovementCreateSerializer
         return CashSessionRetrieveSerializer
 
+    @cash_session_list_schema
     def list(self, request, *args, **kwargs):
         queryset = self.filter_queryset(self.get_queryset())
         page = self.paginate_queryset(queryset)
@@ -69,6 +80,7 @@ class CashSessionViewSet(BaseViewSet):
             status_code=status.HTTP_200_OK
         )
 
+    @cash_session_detail_schema
     def retrieve(self, request, *args, **kwargs):
         session = CashSessionSelector.get_by_id(kwargs["pk"])
         serializer = self.get_serializer(session)
@@ -79,6 +91,7 @@ class CashSessionViewSet(BaseViewSet):
             status_code=status.HTTP_200_OK
         )
 
+    @cash_session_current_schema
     @action(detail=False, methods=["get"], url_path="current")
     def current(self, request):
         session = CashSessionSelector.get_current_session(request.user)
@@ -96,6 +109,7 @@ class CashSessionViewSet(BaseViewSet):
             status_code=status.HTTP_200_OK
         )
 
+    @cash_session_open_schema
     @action(detail=False, methods=["post"], url_path="open")
     def open(self, request):
         serializer = self.get_serializer(data=request.data)
@@ -113,6 +127,7 @@ class CashSessionViewSet(BaseViewSet):
         except ValidationError as e:
             return self.handle_validation_error(e, "Error al abrir sesión de caja.")
 
+    @cash_session_close_schema
     @action(detail=True, methods=["post"], url_path="close")
     def close(self, request, pk=None):
         session = CashSessionSelector.get_by_id(pk)
@@ -131,6 +146,7 @@ class CashSessionViewSet(BaseViewSet):
         except ValidationError as e:
             return self.handle_validation_error(e, "Error al cerrar sesión de caja.")
 
+    @cash_session_add_movement_schema
     @action(detail=True, methods=["post"], url_path="movements")
     def add_movement(self, request, pk=None):
         session = CashSessionSelector.get_by_id(pk)
@@ -149,6 +165,7 @@ class CashSessionViewSet(BaseViewSet):
         except ValidationError as e:
             return self.handle_validation_error(e, "Error al registrar movimiento.")
 
+    @cash_session_movements_schema
     @action(detail=True, methods=["get"], url_path="movements/list")
     def movements(self, request, pk=None):
         session = CashSessionSelector.get_by_id(pk)

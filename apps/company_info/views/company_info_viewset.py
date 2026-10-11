@@ -10,6 +10,7 @@ from apps.company_info.docs.company_info_docs import (
     company_info_detail_schema,
     company_info_list_schema,
     company_info_partial_update_schema,
+    company_info_remove_logo_schema,
     company_info_update_schema,
     company_info_upload_logo_schema,
 )
@@ -311,6 +312,7 @@ class CompanyInfoViewSet(BaseViewSet):
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
+    @company_info_remove_logo_schema
     @action(detail=True, methods=["delete"], url_path="remove-logo")
     def remove_logo(self, request, pk=None):
         """

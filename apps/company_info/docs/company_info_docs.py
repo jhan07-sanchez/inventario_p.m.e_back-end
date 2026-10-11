@@ -324,3 +324,40 @@ company_info_upload_logo_schema = extend_schema(
         ),
     },
 )
+
+company_info_remove_logo_schema = extend_schema(
+    tags=["Company Info"],
+    summary="Eliminar Logo de Empresa",
+    description="Elimina el archivo del logo asignado a la empresa.",
+    parameters=[
+        OpenApiParameter(
+            name="id",
+            type=OpenApiTypes.INT,
+            location=OpenApiParameter.PATH,
+            description="Identificador único de la empresa.",
+            required=True,
+        )
+    ],
+    responses={
+        200: OpenApiResponse(
+            response=build_api_response_schema(
+                name="CompanyInfoRemoveLogoApiResponse",
+                data_serializer=CompanyInfoSerializer,
+            ),
+            description="Logo eliminado correctamente.",
+        ),
+        401: OpenApiResponse(
+            response=ApiErrorResponseSerializer,
+            description="Token inválido, expirado o usuario no autenticado.",
+        ),
+        403: OpenApiResponse(
+            response=ApiErrorResponseSerializer,
+            description="El usuario no tiene permiso para modificar la empresa.",
+        ),
+        404: OpenApiResponse(
+            response=ApiErrorResponseSerializer,
+            description="Empresa no encontrada.",
+        ),
+    },
+)
+

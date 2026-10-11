@@ -1,17 +1,13 @@
 from django.core.exceptions import ValidationError
 from rest_framework import status
-from rest_framework.viewsets import ModelViewSet
+from rest_framework.viewsets import GenericViewSet, ModelViewSet
 
 from apps.core.utils.api_response import ApiResponse
 
 
-class BaseViewSet(ModelViewSet):
+class BaseResponseMixin:
     """
-    ViewSet base para todos los modulos de inventario-pme.
-
-    Centraliza la logica comun utilizada para todos los ViewSets,
-    evitando duplicacion de codigo y garantizando respuestas
-    standarizadas en todas las API.
+    Mixin con helpers de respuestas estandarizadas para la API.
     """
 
     @staticmethod
@@ -25,7 +21,6 @@ class BaseViewSet(ModelViewSet):
         """
         Retorna una respuesta exitosa estandarizada.
         """
-
         return ApiResponse.success(
             data=data,
             code=code,
@@ -44,7 +39,6 @@ class BaseViewSet(ModelViewSet):
         """
         Retorna una respuesta de error estandarizada.
         """
-
         return ApiResponse.error(
             message=message,
             code=code,
@@ -60,15 +54,13 @@ class BaseViewSet(ModelViewSet):
     ):
         """
         Convierte un ValidationError de Django en una respuesta
-        uniforme para toda la API
+        uniforme para toda la API.
         """
-
         errors = (
             exception.message_dict
             if hasattr(exception, "message_dict")
             else exception.messages
         )
-
         return ApiResponse.error(
             message=message,
             errors=errors,
@@ -76,3 +68,18 @@ class BaseViewSet(ModelViewSet):
         )
 
     handle_validation_error = handler_validation_error
+
+
+class BaseViewSet(BaseResponseMixin, ModelViewSet):
+    """
+    ViewSet base para todos los modulos de inventario-pme (CRUD completo).
+    """
+    pass
+
+
+class BaseGenericViewSet(BaseResponseMixin, GenericViewSet):
+    """
+    ViewSet base no opinado para modulos con acciones personalizadas sin CRUD forzado.
+    """
+    pass
+
