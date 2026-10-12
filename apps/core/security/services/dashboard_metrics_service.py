@@ -168,13 +168,10 @@ class DashboardMetricsService:
                 elif key == "payment_methods":
                     thirty_days_ago = timezone.now() - datetime.timedelta(days=30)
 
-                    #Mapa de etiquetas legibles
-                    PAYMENT_LABELS = {
-                        "CASH": "Efectivo",
-                        "CARD": "Tarjeta",
-                        "TRANSFER": "Transferencia",
-                        "CREDIT": "Credito",
-                    }
+                    from apps.core.enums import PaymentMethod
+
+                    # Mapa de etiquetas legibles desde el enum canónico
+                    PAYMENT_LABELS = {choice.value: choice.label for choice in PaymentMethod}
                     invoices = Sale.objects.filter(
                         status=Sale.SaleStatus.COMPLETED,
                         updated_at__gte=thirty_days_ago,

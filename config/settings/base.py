@@ -100,8 +100,22 @@ DATABASES = {
             default=True,
             cast=bool,
         ),
+        "OPTIONS": {
+            "connect_timeout": 10,
+            "keepalives": 1,
+            "keepalives_idle": 30,
+            "keepalives_interval": 10,
+            "keepalives_count": 5,
+        },
     }
 }
+
+import sys
+if any(cmd in sys.argv for cmd in ["test", "pytest"]):
+    DATABASES["default"]["CONN_MAX_AGE"] = 0
+    PASSWORD_HASHERS = [
+        "django.contrib.auth.hashers.MD5PasswordHasher",
+    ]
 
 
 LANGUAGE_CODE = "es-co"

@@ -1,6 +1,7 @@
 from decimal import Decimal
 
 from django.conf import settings
+from django.core.validators import MinValueValidator
 from django.db import models
 
 from apps.core.models.active_model import ActiveModel
@@ -52,6 +53,7 @@ class CashSession(ActiveModel):
         max_digits=12,
         decimal_places=2,
         default=Decimal("0.00"),
+        validators=[MinValueValidator(Decimal("0.00"))],
         verbose_name="Efectivo Inicial",
     )
 
@@ -103,6 +105,23 @@ class CashSession(ActiveModel):
         indexes = [
             models.Index(fields=["status"]),
             models.Index(fields=["user", "status"]),
+            models.Index(fields=["cash_register", "status"]),
+        ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["user"],
+                condition=models.Q(status="OPEN", is_active=True),
+                name="unique_open_session_per_user",
+            ),
+            models.UniqueConstraint(
+                fields=["cash_register"],
+                condition=models.Q(status="OPEN", is_active=True),
+                name="unique_open_session_per_register",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(opening_balance__gte=Decimal("0.00")),
+                name="check_opening_balance_non_negative",
+            ),
         ]
 
     def __str__(self) -> str:

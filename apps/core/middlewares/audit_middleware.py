@@ -1,16 +1,16 @@
 import json
 import logging
+import sys
 from concurrent.futures import ThreadPoolExecutor
 
+from django.conf import settings
 from django.utils.deprecation import MiddlewareMixin
 from django.db import connection
 
 from apps.core.models.audit_log import AuditLog
 
-# Executor global para evitar thread exhaustion
+# Executor global para evitar thread exhaustion en producción/desarrollo
 audit_executor = ThreadPoolExecutor(max_workers=5)
-
-
 
 logger = logging.getLogger(__name__)
 
@@ -21,6 +21,25 @@ class AuditMiddleware(MiddlewareMixin):
     """
 
     SENSITIVE_KEYS = frozenset(["password", "token", "access", "refresh", "secret"])
+
+    @staticmethod
+    def _is_testing():
+        return "test" in sys.argv or getattr(settings, "TESTING", False)
+
+    @staticmethod
+    def _save_audit_log_sync(user_id, method, path, ip_address, user_agent, status_code, payload):
+        try:
+            AuditLog.objects.create(
+                user_id=user_id,
+                method=method,
+                path=path,
+                ip_address=ip_address,
+                user_agent=user_agent,
+                status_code=status_code,
+                payload=payload,
+            )
+        except Exception as e:  # noqa: BLE001
+            logger.debug(f"No se pudo guardar auditoría sincrónica en test: {e!s}")
 
     @staticmethod
     def _save_audit_log_async(user_id, method, path, ip_address, user_agent, status_code, payload):
@@ -74,10 +93,12 @@ class AuditMiddleware(MiddlewareMixin):
 
             ip_address = self._get_client_ip(request)
 
-            try:
-                user_id = user.id_user if user else None
-                audit_executor.submit(
-                    self._save_audit_log_async,
+            user_id = user.id_user if user else None
+
+            if self._is_testing():
+                # En pruebas ejecutamos en el mismo hilo/conexión para evitar violaciones
+                # de clave foránea por transacciones no confirmadas y conexiones colgadas a test_postgres.
+                self._save_audit_log_sync(
                     user_id,
                     request.method,
                     request.path,
@@ -86,8 +107,20 @@ class AuditMiddleware(MiddlewareMixin):
                     response.status_code,
                     masked_payload,
                 )
-            except Exception as e:  # noqa: BLE001
-                logger.error(f"No se pudo encolar la tarea de auditoría: {e!s}")
+            else:
+                try:
+                    audit_executor.submit(
+                        self._save_audit_log_async,
+                        user_id,
+                        request.method,
+                        request.path,
+                        ip_address,
+                        request.META.get("HTTP_USER_AGENT", ""),
+                        response.status_code,
+                        masked_payload,
+                    )
+                except Exception as e:  # noqa: BLE001
+                    logger.error(f"No se pudo encolar la tarea de auditoría: {e!s}")
 
         return response
 

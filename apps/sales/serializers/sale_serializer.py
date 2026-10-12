@@ -258,10 +258,6 @@ class SaleCreateSerializer(serializers.Serializer):
         ]
 
         amount_received = validated_data.get("amount_received")
-        total_approx = None  # se calculará en el servicio
-        change_amount = None
-        if amount_received is not None and total_approx is not None:
-            change_amount = max(Decimal("0.00"), amount_received - total_approx)
 
         return SaleCreateDto(
             customer_id=validated_data.get("customer_id"),
@@ -274,7 +270,7 @@ class SaleCreateSerializer(serializers.Serializer):
             ),
             notes=validated_data.get("notes") or "",
             amount_received=amount_received,
-            change_amount=change_amount,
+            change_amount=None,  # Calculado exactamente en SaleService con el total final de la venta
             generate_invoice=validated_data.get("generate_invoice", True),
         )
 

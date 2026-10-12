@@ -10,5 +10,6 @@ class PaymentCreateDto:
     amount: Decimal
     payment_method: str
     sale_id: int | None = None
+    status: str = "COMPLETED"
     reference: str = ""
     notes: str = ""

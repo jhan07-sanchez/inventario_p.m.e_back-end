@@ -153,11 +153,20 @@ class SaleService(BaseService[Sale]):
         sale.subtotal = subtotal_sum
         sale.total = total
 
+        # Calcular cambio si es efectivo y se especificó monto recibido
+        from apps.core.enums import PaymentMethod
+        if PaymentMethod.is_cash(sale.payment_method) and sale.amount_received is not None:
+            if sale.amount_received >= sale.total:
+                sale.change_amount = sale.amount_received - sale.total
+            else:
+                sale.change_amount = Decimal("0.00")
+
         sale.save(
             update_fields=[
                 "sale_number",
                 "subtotal",
                 "total",
+                "change_amount",
                 "updated_at",
             ]
         )
@@ -582,27 +591,43 @@ class SaleService(BaseService[Sale]):
         from apps.cash.dto.cash_movement_dto import CashMovementCreateDto
         from apps.cash.services.cash_movement_service import CashMovementService
         from apps.cash.models.cash_movement import CashMovement
+        from apps.cash.models.payment import Payment
+        from apps.core.enums import PaymentMethod, PaymentStatus
 
         session = CashSession.objects.filter(
             user=user, 
-            status=CashSession.SessionStatus.OPEN
+            status=CashSession.SessionStatus.OPEN,
+            is_active=True
         ).first()
 
         if sale.sale_type == sale.SaleType.POS and not session:
             raise ValidationError("Para realizar ventas POS debe tener una sesión de caja abierta.")
 
-        # Generar el pago siempre (para mantener registro financiero)
+        # Venta a crédito: genera registro de pago PENDING para cartera y NO afecta la caja
+        if sale.payment_method == PaymentMethod.CREDIT:
+            Payment.objects.create(
+                sale=sale,
+                amount=sale.total,
+                payment_method=PaymentMethod.CREDIT,
+                status=PaymentStatus.PENDING,
+                reference=f"Crédito venta #{sale.sale_number}",
+                notes="Venta a crédito pendiente de cobro",
+            )
+            return
+
+        # Para contado (CASH, CARD, TRANSFER, OTHER), generar el pago completado
         payment_dto = PaymentCreateDto(
             sale_id=sale.pk,
             amount=sale.total,
             payment_method=sale.payment_method,
+            status=PaymentStatus.COMPLETED,
             reference=f"Venta #{sale.sale_number}"
         )
         payment = PaymentService.create_payment(payment_dto)
 
         # Solo si hay sesión abierta se genera impacto en caja
         if session:
-            is_cash = payment.payment_method == "CASH"
+            is_cash = PaymentMethod.is_cash(payment.payment_method)
             movement_dto = CashMovementCreateDto(
                 cash_session_id=session.pk,
                 payment_id=payment.pk,
@@ -623,20 +648,22 @@ class SaleService(BaseService[Sale]):
         from apps.cash.dto.cash_movement_dto import CashMovementCreateDto
         from apps.cash.services.cash_movement_service import CashMovementService
         from apps.cash.models.cash_movement import CashMovement
+        from apps.core.enums import PaymentMethod, PaymentStatus
 
         session = CashSession.objects.filter(
             user=user, 
-            status=CashSession.SessionStatus.OPEN
+            status=CashSession.SessionStatus.OPEN,
+            is_active=True
         ).first()
 
-        payments = sale.payments.filter(status="COMPLETED")
+        payments = sale.payments.exclude(status=PaymentStatus.CANCELLED)
         for payment in payments:
-            payment.status = "CANCELLED"
+            was_completed = (payment.status == PaymentStatus.COMPLETED)
+            payment.status = PaymentStatus.CANCELLED
             payment.save(update_fields=["status", "updated_at"])
 
-            if session:
-                # Revertir el ingreso de caja con un egreso
-                is_cash = payment.payment_method == "CASH"
+            if was_completed and session:
+                is_cash = PaymentMethod.is_cash(payment.payment_method)
                 movement_dto = CashMovementCreateDto(
                     cash_session_id=session.pk,
                     payment_id=payment.pk,

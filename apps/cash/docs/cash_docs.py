@@ -385,7 +385,7 @@ cash_session_add_movement_schema = extend_schema(
             request_only=True,
             value={
                 "amount": "20000.00",
-                "movement_type": "INFLOW",
+                "movement_type": "IN",
                 "is_cash": True,
                 "reference": "SENCILLO-01",
                 "description": "Ingreso de sencillo para cambio.",
@@ -396,7 +396,7 @@ cash_session_add_movement_schema = extend_schema(
             request_only=True,
             value={
                 "amount": "15000.00",
-                "movement_type": "OUTFLOW",
+                "movement_type": "OUT",
                 "is_cash": True,
                 "reference": "GASTO-MENOR-45",
                 "description": "Pago de mensajería urgente.",

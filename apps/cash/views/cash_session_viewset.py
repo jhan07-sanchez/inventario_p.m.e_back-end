@@ -131,6 +131,14 @@ class CashSessionViewSet(BaseGenericViewSet):
     @action(detail=True, methods=["post"], url_path="close")
     def close(self, request, pk=None):
         session = CashSessionSelector.get_by_id(pk)
+
+        if session.user != request.user and not (request.user.is_staff or request.user.is_superuser):
+            return self.error_response(
+                message="No tienes permiso para cerrar la sesión de caja de otro usuario.",
+                code="FORBIDDEN_SESSION_CLOSE",
+                status_code=status.HTTP_403_FORBIDDEN
+            )
+
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
@@ -150,6 +158,14 @@ class CashSessionViewSet(BaseGenericViewSet):
     @action(detail=True, methods=["post"], url_path="movements")
     def add_movement(self, request, pk=None):
         session = CashSessionSelector.get_by_id(pk)
+
+        if session.user != request.user and not (request.user.is_staff or request.user.is_superuser):
+            return self.error_response(
+                message="No tienes permiso para registrar movimientos en la sesión de otro usuario.",
+                code="FORBIDDEN_SESSION_MOVEMENT",
+                status_code=status.HTTP_403_FORBIDDEN
+            )
+
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 

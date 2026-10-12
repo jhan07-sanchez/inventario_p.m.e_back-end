@@ -1,7 +1,9 @@
 from decimal import Decimal
 
+from django.core.validators import MinValueValidator
 from django.db import models
 
+from apps.core.enums import PaymentMethod, PaymentStatus
 from apps.core.models.active_model import ActiveModel
 from apps.sales.models.sale import Sale
 
@@ -12,17 +14,9 @@ class Payment(ActiveModel):
     Permite pagos divididos (varios Payments por Sale) y diferentes métodos de pago.
     """
 
-    class PaymentMethod(models.TextChoices):
-        CASH = "CASH", "Efectivo"
-        CARD = "CARD", "Tarjeta"
-        TRANSFER = "TRANSFER", "Transferencia"
-        CREDIT = "CREDIT", "Crédito"
-        OTHER = "OTHER", "Otro"
-
-    class PaymentStatus(models.TextChoices):
-        COMPLETED = "COMPLETED", "Completado"
-        CANCELLED = "CANCELLED", "Cancelado"
-        REFUNDED = "REFUNDED", "Reembolsado"
+    # Fuente única de verdad centralizada en apps.core.enums
+    PaymentMethod = PaymentMethod
+    PaymentStatus = PaymentStatus
 
     id_payment = models.BigAutoField(
         primary_key=True,
@@ -41,6 +35,7 @@ class Payment(ActiveModel):
     amount = models.DecimalField(
         max_digits=12,
         decimal_places=2,
+        validators=[MinValueValidator(Decimal("0.01"))],
         verbose_name="Monto",
     )
 
@@ -82,6 +77,12 @@ class Payment(ActiveModel):
             models.Index(fields=["sale"]),
             models.Index(fields=["payment_method"]),
             models.Index(fields=["status"]),
+        ]
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(amount__gt=Decimal("0.00")),
+                name="check_payment_amount_positive",
+            ),
         ]
 
     def __str__(self) -> str:

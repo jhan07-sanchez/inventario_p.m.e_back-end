@@ -1,5 +1,6 @@
 from decimal import Decimal
 
+from django.core.validators import MinValueValidator
 from django.db import models
 
 from apps.core.models.active_model import ActiveModel
@@ -41,6 +42,7 @@ class CashMovement(ActiveModel):
     amount = models.DecimalField(
         max_digits=12,
         decimal_places=2,
+        validators=[MinValueValidator(Decimal("0.01"))],
         verbose_name="Monto",
     )
 
@@ -78,6 +80,13 @@ class CashMovement(ActiveModel):
             models.Index(fields=["cash_session"]),
             models.Index(fields=["movement_type"]),
             models.Index(fields=["is_cash"]),
+            models.Index(fields=["cash_session", "created_at"]),
+        ]
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(amount__gt=Decimal("0.00")),
+                name="check_movement_amount_positive",
+            ),
         ]
 
     def __str__(self) -> str:

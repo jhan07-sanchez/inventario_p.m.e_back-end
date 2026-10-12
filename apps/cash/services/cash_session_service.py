@@ -19,15 +19,15 @@ class CashSessionService(BaseService[CashSession]):
     @staticmethod
     @transaction.atomic
     def open_session(dto: CashSessionOpenDto, user) -> CashSession:
-        if CashSession.objects.filter(user=user, status=CashSession.SessionStatus.OPEN).exists():
+        if CashSession.objects.filter(user=user, status=CashSession.SessionStatus.OPEN, is_active=True).exists():
             raise ValidationError("El usuario ya tiene una sesión de caja abierta.")
 
         try:
-            register = CashRegister.objects.get(pk=dto.cash_register_id, is_active=True)
+            register = CashRegister.objects.select_for_update().get(pk=dto.cash_register_id, is_active=True)
         except CashRegister.DoesNotExist:
             raise ValidationError("La caja seleccionada no existe o está inactiva.")
 
-        if CashSession.objects.filter(cash_register=register, status=CashSession.SessionStatus.OPEN).exists():
+        if CashSession.objects.filter(cash_register=register, status=CashSession.SessionStatus.OPEN, is_active=True).exists():
             raise ValidationError("La caja seleccionada ya está abierta por otro usuario.")
 
         if dto.opening_balance < Decimal("0.00"):
@@ -47,6 +47,9 @@ class CashSessionService(BaseService[CashSession]):
     @staticmethod
     @transaction.atomic
     def close_session(session: CashSession, dto: CashSessionCloseDto) -> CashSession:
+        # Bloqueo pesimista para sincronizar con movimientos concurrentes de venta
+        session = CashSession.objects.select_for_update().get(pk=session.pk)
+
         if session.status != CashSession.SessionStatus.OPEN:
             raise ValidationError("La sesión ya se encuentra cerrada.")
 

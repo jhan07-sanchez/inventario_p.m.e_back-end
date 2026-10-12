@@ -5,6 +5,7 @@ from django.core.validators import MinValueValidator
 from django.db import models
 
 from apps.core.models.active_model import ActiveModel
+from apps.core.enums import PaymentMethod
 from apps.customers.models.customer import Customer
 
 
@@ -25,16 +26,8 @@ class Sale(ActiveModel):
         COMPLETED = "COMPLETED", "Completada"
         CANCELLED = "CANCELLED", "Cancelada"
 
-    class PaymentMethod(models.TextChoices):
-        """
-        Métodos de pago disponibles para una venta.
-        """
-
-        CASH = "CASH", "Efectivo"
-        CARD = "CARD", "Tarjeta"
-        TRANSFER = "TRANSFER", "Transferencia"
-        CREDIT = "CREDIT", "Crédito"
-        OTHER = "OTHER", "Otro"
+    # Fuente única de verdad centralizada en apps.core.enums.PaymentMethod
+    PaymentMethod = PaymentMethod
 
     id_sale = models.BigAutoField(
         primary_key=True,
