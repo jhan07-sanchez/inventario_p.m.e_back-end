@@ -3,13 +3,18 @@ from apps.cash.models.cash_movement import CashMovement
 from apps.cash.dto.cash_movement_dto import CashMovementCreateDto
 
 class CashMovementRetrieveSerializer(serializers.ModelSerializer):
-    payment_method = serializers.CharField(source="payment.payment_method", read_only=True)
-    payment_reference = serializers.CharField(source="payment.reference", read_only=True)
+    payment_method = serializers.CharField(
+        source="payment.payment_method", read_only=True, allow_null=True, default=None
+    )
+    payment_reference = serializers.CharField(
+        source="payment.reference", read_only=True, allow_null=True, default=None
+    )
+    payment = serializers.PrimaryKeyRelatedField(read_only=True, allow_null=True)
 
     class Meta:
         model = CashMovement
         fields = [
-            "id_cash_movement", "cash_session", "amount", "movement_type",
+            "id_cash_movement", "cash_session", "payment", "amount", "movement_type",
             "is_cash", "reference", "description", "payment_method", "payment_reference", "created_at"
         ]
 
