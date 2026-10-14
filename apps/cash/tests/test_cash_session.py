@@ -644,6 +644,9 @@ class CashSessionApiTests(TestCase):
         movements_data = response_list.data.get("data", [])
         self.assertEqual(len(movements_data), 1)
         self.assertEqual(movements_data[0]["movement_type"], "IN")
+        self.assertIsNone(movements_data[0]["payment"])
+        self.assertIsNone(movements_data[0]["payment_method"])
+        self.assertIsNone(movements_data[0]["payment_reference"])
 
     def test_horizontal_security_prevent_other_user_modifying_session(self):
         """
