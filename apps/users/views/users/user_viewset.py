@@ -1,9 +1,8 @@
 from django.core.exceptions import ValidationError
 from rest_framework import status
-from rest_framework.exceptions import PermissionDenied
 from rest_framework.decorators import action
-from rest_framework.filters import SearchFilter, OrderingFilter
-from rest_framework.permissions import AllowAny  # <--- Importante para acceso libre en desarrollo
+from rest_framework.exceptions import PermissionDenied
+from rest_framework.filters import OrderingFilter, SearchFilter
 
 from apps.core.security import HasPermission
 from apps.core.security.services.permission_service import PermissionService
@@ -104,7 +103,8 @@ class UserViewSet(BaseViewSet):
 
         permission_classes = {
             "list": (
-                AllowAny,  # <--- Permitimos listar públicamente para que DataTables cargue sin token por ahora
+                IsAuthenticatedAndActive,
+                HasPermission("users.view"),
             ),
             "retrieve": (
                 IsAuthenticatedAndActive,
@@ -187,8 +187,13 @@ class UserViewSet(BaseViewSet):
         """
 
         if "roles" in request.data:
-            if not PermissionService.user_has_permission(request.user, "user_roles.create"):
-                raise PermissionDenied(detail="No tiene permisos para asignar roles.", code="PERMISSION_DENIED")
+            if not PermissionService.user_has_permission(
+                request.user, "user_roles.create"
+            ):
+                raise PermissionDenied(
+                    detail="No tiene permisos para asignar roles.",
+                    code="PERMISSION_DENIED",
+                )
 
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -211,8 +216,13 @@ class UserViewSet(BaseViewSet):
         """
 
         if "roles" in request.data:
-            if not PermissionService.user_has_permission(request.user, "user_roles.update"):
-                raise PermissionDenied(detail="No tiene permisos para actualizar roles.", code="PERMISSION_DENIED")
+            if not PermissionService.user_has_permission(
+                request.user, "user_roles.update"
+            ):
+                raise PermissionDenied(
+                    detail="No tiene permisos para actualizar roles.",
+                    code="PERMISSION_DENIED",
+                )
 
         user = self.get_object()
 
@@ -242,8 +252,13 @@ class UserViewSet(BaseViewSet):
         """
 
         if "roles" in request.data:
-            if not PermissionService.user_has_permission(request.user, "user_roles.update"):
-                raise PermissionDenied(detail="No tiene permisos para actualizar roles.", code="PERMISSION_DENIED")
+            if not PermissionService.user_has_permission(
+                request.user, "user_roles.update"
+            ):
+                raise PermissionDenied(
+                    detail="No tiene permisos para actualizar roles.",
+                    code="PERMISSION_DENIED",
+                )
 
         user = self.get_object()
 

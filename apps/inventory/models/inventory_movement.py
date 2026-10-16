@@ -1,4 +1,6 @@
 from decimal import Decimal
+
+from django.conf import settings
 from django.core.validators import MinValueValidator
 from django.db import models
 
@@ -16,6 +18,7 @@ class InventoryMovement(ActiveModel):
         """
         Tipos de movimientos permitidos.
         """
+
         ENTRY = "ENTRY", "Entrada"
         EXIT = "EXIT", "Salida"
         ADJUSTMENT = "ADJUSTMENT", "Ajuste"
@@ -72,6 +75,15 @@ class InventoryMovement(ActiveModel):
         verbose_name="Proveedor",
         help_text="Proveedor asociado al movimiento (ej. para compras o entradas).",
     )
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="inventory_movements",
+        verbose_name="Usuario responsable",
+        help_text="Usuario que ejecutó o autorizó el movimiento en inventario.",
+    )
 
     class Meta:
         db_table = "inventory_movements"
@@ -87,6 +99,10 @@ class InventoryMovement(ActiveModel):
             models.Index(
                 fields=["created_at"],
                 name="inv_mov_created_at_idx",
+            ),
+            models.Index(
+                fields=["user"],
+                name="inv_mov_user_idx",
             ),
         ]
 

@@ -37,11 +37,16 @@ class BaseService(Generic[ModelType]):
 
     def perform_delete(self, instance: ModelType, soft_delete: bool = True) -> None:
         """Hook opcional para definir el comportamiento exacto al borrar."""
-        if soft_delete and hasattr(instance, "is_active"):
-            instance.is_active = False
-            instance.save(update_fields=["is_active"])
+        if soft_delete:
+            if hasattr(instance, "soft_delete"):
+                instance.soft_delete()
+            else:
+                instance.delete()
         else:
-            instance.delete()
+            if hasattr(instance, "hard_delete"):
+                instance.hard_delete()
+            else:
+                instance.delete()
 
     @transaction.atomic
     def create(self, **data: Any) -> ModelType:
@@ -65,7 +70,7 @@ class BaseService(Generic[ModelType]):
     def delete(self, instance: ModelType, soft_delete: bool = True) -> None:
         """
         Flujo central de eliminación. Realiza soft-delete por defecto si el modelo
-        soporta el atributo `is_active`.
+        soporta soft delete.
         """
         self.perform_delete(instance, soft_delete=soft_delete)
 
@@ -74,7 +79,9 @@ class BaseService(Generic[ModelType]):
         """
         Restaura un registro eliminado si este utilizaba soft delete.
         """
-        if hasattr(instance, "is_active") and not instance.is_active:
+        if hasattr(instance, "restore"):
+            instance.restore()
+        elif hasattr(instance, "is_active") and not instance.is_active:
             instance.is_active = True
             instance.save(update_fields=["is_active"])
         return instance

@@ -8,8 +8,6 @@ from apps.core.services.base_service import BaseService
 from apps.suppliers.models import Supplier
 
 
-
-
 class SupplierService(BaseService[Supplier]):
     """
     Servicio encargado de la logica de negocio
@@ -19,7 +17,11 @@ class SupplierService(BaseService[Supplier]):
     def __init__(self) -> None:
         super().__init__(Supplier)
 
-    def validate(self, data: dict, instance: Supplier | None = None,) -> dict:
+    def validate(
+        self,
+        data: dict,
+        instance: Supplier | None = None,
+    ) -> dict:
         """
         Valida las reglas de negocio del proveedor.
         """
@@ -29,7 +31,8 @@ class SupplierService(BaseService[Supplier]):
         if document_number:
             document_number = document_number.strip()
 
-            query = Supplier.objects.filter(
+            supplier_mgr = getattr(Supplier, "all_objects", Supplier.objects)
+            query = supplier_mgr.filter(
                 document_number=document_number,
             )
 
@@ -45,8 +48,10 @@ class SupplierService(BaseService[Supplier]):
 
         return data
 
-
-    def perform_create(self, data: dict,) -> Supplier:
+    def perform_create(
+        self,
+        data: dict,
+    ) -> Supplier:
         """
         Crea fisicamente el proveedor
         """
@@ -57,12 +62,14 @@ class SupplierService(BaseService[Supplier]):
 
         return supplier
 
-
-    def perform_update(self, instance: Supplier, data: dict,) -> Supplier:
+    def perform_update(
+        self,
+        instance: Supplier,
+        data: dict,
+    ) -> Supplier:
         """
-        Actualiza un proveedor existente
+        Actualiza un proveedor existente.
         """
-
         for field, value in data.items():
             setattr(instance, field, value)
 
@@ -70,7 +77,6 @@ class SupplierService(BaseService[Supplier]):
         instance.save()
 
         return instance
-
 
     def perform_delete(self, instance: Supplier, soft_delete: bool = True) -> None:
         """
@@ -80,23 +86,19 @@ class SupplierService(BaseService[Supplier]):
         if not instance.is_active:
             raise SupplierInactiveException()
 
-        instance.is_active = False
-
-        instance.full_clean()
-        instance.save(
-            update_fields=[
-                "is_active",
-                "updated_at",
-            ]
-        )
         if soft_delete:
-            instance.delete()
-
-
+            instance.soft_delete()
+        else:
+            if hasattr(instance, "hard_delete"):
+                instance.hard_delete()
+            else:
+                instance.delete()
 
     @staticmethod
     @transaction.atomic
-    def create_supplier(validated_data: dict,) -> Supplier:
+    def create_supplier(
+        validated_data: dict,
+    ) -> Supplier:
         """
         Crea un nuevo proveedor aplicando
         las reglas de negocio.
@@ -106,10 +108,12 @@ class SupplierService(BaseService[Supplier]):
             **validated_data,
         )
 
-
     @staticmethod
     @transaction.atomic
-    def update_supplier(supplier: Supplier, validared_data: dict,) -> Supplier:
+    def update_supplier(
+        supplier: Supplier,
+        validared_data: dict,
+    ) -> Supplier:
         """
         Actualiza un proveedor aplicando
         las reglas de negocio.
@@ -120,10 +124,11 @@ class SupplierService(BaseService[Supplier]):
             **validared_data,
         )
 
-
     @staticmethod
     @transaction.atomic
-    def deactivate_supplier(supplier: Supplier,) -> Supplier:
+    def deactivate_supplier(
+        supplier: Supplier,
+    ) -> Supplier:
         """
         Realiza el borrado logico de un proveedor.
 
@@ -132,29 +137,18 @@ class SupplierService(BaseService[Supplier]):
 
         SupplierService().delete(
             supplier,
-            soft_delete=False,
+            soft_delete=True,
         )
 
         return supplier
 
-
     @staticmethod
     @transaction.atomic
-    def restore_supplier(supplier: Supplier,) -> Supplier:
+    def restore_supplier(
+        supplier: Supplier,
+    ) -> Supplier:
         """
         Reactiva un proveedor previamente desactivado.
         """
 
-        if supplier.is_active:
-            return supplier
-
-        supplier.is_active = True
-        supplier.full_clean()
-        supplier.save(
-            update_fields=[
-                "is_active",
-                "updated_at",
-            ]
-        )
-
-        return supplier
+        return SupplierService().restore(supplier)

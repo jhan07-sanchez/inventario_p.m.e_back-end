@@ -7,7 +7,7 @@ from apps.core.exceptions.custom_exceptions import (
     UserInactiveException,
 )
 from apps.core.services.base_service import BaseService
-from apps.users.models import User, Role, UserRole
+from apps.users.models import Role, User, UserRole
 
 
 class UserService(BaseService[User]):
@@ -23,36 +23,33 @@ class UserService(BaseService[User]):
         email = data.get("email")
         document_number = data.get("document_number")
 
+        user_mgr = getattr(User, "all_objects", User.objects)
+
         if instance is None:
-            if username and User.objects.filter(username=username).exists():
+            if username and user_mgr.filter(username=username).exists():
                 raise UserAlreadyExistsException()
 
-            if email and User.objects.filter(email=email).exists():
+            if email and user_mgr.filter(email=email).exists():
                 raise EmailAlreadyExistsException()
 
             if (
                 document_number
-                and User.objects.filter(document_number=document_number).exists()
+                and user_mgr.filter(document_number=document_number).exists()
             ):
                 raise DocumentAlreadyExistsException()
         else:
             if (
                 username
-                and User.objects.filter(username=username)
-                .exclude(pk=instance.pk)
-                .exists()
+                and user_mgr.filter(username=username).exclude(pk=instance.pk).exists()
             ):
                 raise UserAlreadyExistsException()
 
-            if (
-                email
-                and User.objects.filter(email=email).exclude(pk=instance.pk).exists()
-            ):
+            if email and user_mgr.filter(email=email).exclude(pk=instance.pk).exists():
                 raise EmailAlreadyExistsException()
 
             if (
                 document_number
-                and User.objects.filter(document_number=document_number)
+                and user_mgr.filter(document_number=document_number)
                 .exclude(pk=instance.pk)
                 .exists()
             ):
@@ -63,25 +60,25 @@ class UserService(BaseService[User]):
     def perform_create(self, data: dict) -> User:
         password = data.pop("password")
         roles_ids = data.pop("roles", [])
-        
+
         if "email" in data and data["email"]:
             data["email"] = data["email"].strip().lower()
         user = User(**data)
         user.set_password(password)
         user.full_clean()
         user.save()
-        
+
         if roles_ids:
             roles = Role.objects.filter(id_role__in=roles_ids, is_active=True)
             for role in roles:
                 UserRole.objects.create(user=user, role=role)
-                
+
         return user
 
     def perform_update(self, instance: User, data: dict) -> User:
         password = data.pop("password", None)
         roles_ids = data.pop("roles", None)
-        
+
         if "email" in data and data["email"]:
             data["email"] = data["email"].strip().lower()
 
@@ -93,7 +90,7 @@ class UserService(BaseService[User]):
 
         instance.full_clean()
         instance.save()
-        
+
         if roles_ids is not None:
             # Eliminar roles existentes y asignar los nuevos
             UserRole.objects.filter(user=instance).delete()
@@ -101,20 +98,28 @@ class UserService(BaseService[User]):
                 roles = Role.objects.filter(id_role__in=roles_ids, is_active=True)
                 for role in roles:
                     UserRole.objects.create(user=instance, role=role)
-            
+
+            from apps.core.security.services.permission_service import PermissionService
+
+            PermissionService.invalidate_user_cache(instance.pk)
+
         return instance
 
     def perform_delete(self, instance: User, soft_delete: bool = True) -> None:
         if not instance.is_active:
             raise UserInactiveException()
 
-        instance.is_active = False
-        instance.full_clean()
-        instance.save(update_fields=["is_active", "updated_at"])
-
         if soft_delete:
-            # Soft delete de BaseModel
             instance.delete()
+        else:
+            if hasattr(instance, "hard_delete"):
+                instance.hard_delete()
+            else:
+                instance.delete()
+
+        from apps.core.security.services.permission_service import PermissionService
+
+        PermissionService.invalidate_user_cache(instance.pk)
 
     @staticmethod
     @transaction.atomic
@@ -141,7 +146,7 @@ class UserService(BaseService[User]):
         No elimina el registro físicamente de la base de datos.
         Cambia el estado del usuario a inactivo y registra la fecha de borrado.
         """
-        UserService().delete(user, soft_delete=False)
+        UserService().delete(user, soft_delete=True)
         return user
 
     @staticmethod
@@ -150,16 +155,8 @@ class UserService(BaseService[User]):
         """
         Reactiva un usuario previamente desactivado.
         """
+        restored = UserService().restore(user)
+        from apps.core.security.services.permission_service import PermissionService
 
-        user.is_active = True
-
-        user.save(
-            update_fields=[
-                "is_active",
-                "updated_at",
-            ]
-        )
-
-        user.restore()
-
-        return user
+        PermissionService.invalidate_user_cache(user.pk)
+        return restored

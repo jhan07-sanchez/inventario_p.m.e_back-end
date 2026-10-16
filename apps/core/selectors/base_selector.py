@@ -48,7 +48,7 @@ class BaseSelector(Generic[ModelType]):
         self, record_id: Any, qs: Optional[QuerySet[ModelType]] = None
     ) -> Optional[ModelType]:
         try:
-            return self.get_all(qs).get(id=record_id)
+            return self.get_all(qs).get(pk=record_id)
         except ObjectDoesNotExist:
             return None
 

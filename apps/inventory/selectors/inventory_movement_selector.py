@@ -21,7 +21,7 @@ class InventoryMovementSelector(BaseSelector[InventoryMovement]):
         return (
             super()
             .get_queryset()
-            .select_related("inventory", "inventory__product")
+            .select_related("inventory", "inventory__product", "supplier", "user")
             .order_by("-created_at")
         )
 
@@ -31,9 +31,7 @@ class InventoryMovementSelector(BaseSelector[InventoryMovement]):
         Obtiene el historial de movimientos de un inventario específico.
         """
         return (
-            InventoryMovementSelector()
-            .get_queryset()
-            .filter(inventory_id=id_inventory)
+            InventoryMovementSelector().get_queryset().filter(inventory_id=id_inventory)
         )
 
     @staticmethod

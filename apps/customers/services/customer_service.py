@@ -31,7 +31,8 @@ class CustomerService(BaseService[Customer]):
         if document_number:
             document_number = document_number.strip()
 
-            query = Customer.objects.filter(
+            customer_mgr = getattr(Customer, "all_objects", Customer.objects)
+            query = customer_mgr.filter(
                 document_number=document_number,
             )
 
@@ -91,19 +92,13 @@ class CustomerService(BaseService[Customer]):
         if not instance.is_active:
             raise CustomerInactiveException()
 
-        instance.is_active = False
-
-        instance.full_clean()
-
-        instance.save(
-            update_fields=[
-                "is_active",
-                "updated_at",
-            ]
-        )
-
         if soft_delete:
-            instance.delete()
+            instance.soft_delete()
+        else:
+            if hasattr(instance, "hard_delete"):
+                instance.hard_delete()
+            else:
+                instance.delete()
 
     @staticmethod
     @transaction.atomic
@@ -144,7 +139,7 @@ class CustomerService(BaseService[Customer]):
 
         CustomerService().delete(
             customer,
-            soft_delete=False,
+            soft_delete=True,
         )
 
         return customer
@@ -158,18 +153,4 @@ class CustomerService(BaseService[Customer]):
         Reactiva un cliente previamente desactivado.
         """
 
-        if customer.is_active:
-            return customer
-
-        customer.is_active = True
-
-        customer.full_clean()
-
-        customer.save(
-            update_fields=[
-                "is_active",
-                "updated_at",
-            ]
-        )
-
-        return customer
+        return CustomerService().restore(customer)

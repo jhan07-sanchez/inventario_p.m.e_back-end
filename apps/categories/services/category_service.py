@@ -31,7 +31,8 @@ class CategoryService(BaseService[Category]):
         if category_name:
             category_name = category_name.strip()
 
-            query = Category.objects.filter(
+            category_mgr = getattr(Category, "all_objects", Category.objects)
+            query = category_mgr.filter(
                 name__iexact=category_name,
             )
 
@@ -91,19 +92,13 @@ class CategoryService(BaseService[Category]):
         if not instance.is_active:
             raise CategoryInactiveException()
 
-        instance.is_active = False
-
-        instance.full_clean()
-
-        instance.save(
-            update_fields=[
-                "is_active",
-                "updated_at",
-            ]
-        )
-
         if soft_delete:
-            instance.delete()
+            instance.soft_delete()
+        else:
+            if hasattr(instance, "hard_delete"):
+                instance.hard_delete()
+            else:
+                instance.delete()
 
     @staticmethod
     @transaction.atomic
@@ -144,7 +139,7 @@ class CategoryService(BaseService[Category]):
 
         CategoryService().delete(
             category,
-            soft_delete=False,
+            soft_delete=True,
         )
 
         return category
@@ -158,18 +153,4 @@ class CategoryService(BaseService[Category]):
         Reactiva una categoría previamente desactivada.
         """
 
-        if category.is_active:
-            return category
-
-        category.is_active = True
-
-        category.full_clean()
-
-        category.save(
-            update_fields=[
-                "is_active",
-                "updated_at",
-            ]
-        )
-
-        return category
+        return CategoryService().restore(category)

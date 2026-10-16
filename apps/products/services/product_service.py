@@ -2,7 +2,6 @@ from decimal import Decimal
 from typing import Any
 
 from django.core.exceptions import ValidationError
-
 from django.db import transaction
 
 from apps.categories.models import Category
@@ -10,6 +9,9 @@ from apps.core.exceptions.custom_exceptions import (
     CategoryInactiveException,
     ProductAlreadyExistsException,
     ProductInactiveException,
+)
+from apps.core.security.services.dashboard_metrics_service import (
+    DashboardMetricsService,
 )
 from apps.core.services.base_service import BaseService
 from apps.products.models import Product
@@ -77,7 +79,7 @@ class ProductService(BaseService[Product]):
         purchase_price = data.get("purchase_price")
         sale_price = data.get("sale_price")
 
-        queryset = Product.objects.all()
+        queryset = getattr(Product, "all_objects", Product.objects).all()
 
         if instance is not None:
             queryset = queryset.exclude(pk=instance.pk)
@@ -86,9 +88,7 @@ class ProductService(BaseService[Product]):
             code = code.strip().upper()
 
             if not code:
-                raise ValidationError(
-                    "El código del producto no puede estar vacío."
-                )
+                raise ValidationError("El código del producto no puede estar vacío.")
 
             if queryset.filter(code=code).exists():
                 raise ProductAlreadyExistsException()
@@ -108,9 +108,7 @@ class ProductService(BaseService[Product]):
 
         if category is not None:
             if not isinstance(category, Category):
-                raise ValidationError(
-                    "La categoría proporcionada no es válida."
-                )
+                raise ValidationError("La categoría proporcionada no es válida.")
 
             if not category.is_active:
                 raise CategoryInactiveException()
@@ -119,9 +117,7 @@ class ProductService(BaseService[Product]):
             purchase_price = Decimal(str(purchase_price))
 
             if purchase_price < Decimal("0.00"):
-                raise ValidationError(
-                    "El precio de compra no puede ser negativo."
-                )
+                raise ValidationError("El precio de compra no puede ser negativo.")
 
             data["purchase_price"] = purchase_price
 
@@ -129,30 +125,20 @@ class ProductService(BaseService[Product]):
             sale_price = Decimal(str(sale_price))
 
             if sale_price < Decimal("0.00"):
-                raise ValidationError(
-                    "El precio de venta no puede ser negativo."
-                )
+                raise ValidationError("El precio de venta no puede ser negativo.")
 
             data["sale_price"] = sale_price
 
         effective_purchase_price = (
             purchase_price
             if purchase_price is not None
-            else (
-                instance.purchase_price
-                if instance is not None
-                else None
-            )
+            else (instance.purchase_price if instance is not None else None)
         )
 
         effective_sale_price = (
             sale_price
             if sale_price is not None
-            else (
-                instance.sale_price
-                if instance is not None
-                else None
-            )
+            else (instance.sale_price if instance is not None else None)
         )
 
         if (
@@ -161,8 +147,7 @@ class ProductService(BaseService[Product]):
             and effective_sale_price < effective_purchase_price
         ):
             raise ValidationError(
-                "El precio de venta no puede ser menor "
-                "que el precio de compra."
+                "El precio de venta no puede ser menor que el precio de compra."
             )
 
         return data
@@ -214,17 +199,12 @@ class ProductService(BaseService[Product]):
             raise ProductInactiveException()
 
         if soft_delete:
-            instance.is_active = False
-            instance.full_clean()
-            instance.save(
-                update_fields=[
-                    "is_active",
-                    "updated_at",
-                ]
-            )
-            return
-
-        instance.delete()
+            instance.soft_delete()
+        else:
+            if hasattr(instance, "hard_delete"):
+                instance.hard_delete()
+            else:
+                instance.delete()
 
     @staticmethod
     @transaction.atomic
@@ -238,8 +218,10 @@ class ProductService(BaseService[Product]):
         product = ProductService().create(**validated_data)
 
         # Delegar la creación del inventario inicial al InventoryService
-        #from apps.inventory.services.inventory_service import InventoryService
-        #InventoryService.create_inventory({"product": product})
+        # from apps.inventory.services.inventory_service import InventoryService
+        # InventoryService.create_inventory({"product": product})
+
+        DashboardMetricsService.invalidate_inventory_cache()
 
         return product
 
@@ -267,6 +249,8 @@ class ProductService(BaseService[Product]):
                 inventory.full_clean()
                 inventory.save(update_fields=["is_active", "updated_at"])
 
+        DashboardMetricsService.invalidate_inventory_cache()
+
         return updated_product
 
     @staticmethod
@@ -284,10 +268,9 @@ class ProductService(BaseService[Product]):
         )
 
         if hasattr(product, "inventory"):
-            inventory = product.inventory
-            inventory.is_active = False
-            inventory.full_clean()
-            inventory.save(update_fields=["is_active", "updated_at"])
+            product.inventory.soft_delete()
+
+        DashboardMetricsService.invalidate_inventory_cache()
 
         return product
 
@@ -303,9 +286,8 @@ class ProductService(BaseService[Product]):
         product = ProductService().restore(product)
 
         if hasattr(product, "inventory"):
-            inventory = product.inventory
-            inventory.is_active = True
-            inventory.full_clean()
-            inventory.save(update_fields=["is_active", "updated_at"])
+            product.inventory.restore()
+
+        DashboardMetricsService.invalidate_inventory_cache()
 
         return product

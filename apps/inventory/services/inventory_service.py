@@ -3,6 +3,9 @@ from decimal import Decimal
 from django.core.exceptions import ValidationError
 from django.db import transaction
 
+from apps.core.security.services.dashboard_metrics_service import (
+    DashboardMetricsService,
+)
 from apps.core.services.base_service import BaseService
 from apps.inventory.models import Inventory
 from apps.inventory.models.inventory_movement import InventoryMovement
@@ -34,7 +37,9 @@ class InventoryService(BaseService[Inventory]):
         if Inventory.objects.filter(product=product).exists():
             raise ValidationError("El producto ya tiene un registro de inventario.")
 
-        return InventoryService().create(**data)
+        instance = InventoryService().create(**data)
+        DashboardMetricsService.invalidate_inventory_cache()
+        return instance
 
     @staticmethod
     def update_inventory(
@@ -49,10 +54,12 @@ class InventoryService(BaseService[Inventory]):
 
         data.pop("current_stock", None)
 
-        return InventoryService().update(
+        instance = InventoryService().update(
             inventory,
             **data,
         )
+        DashboardMetricsService.invalidate_inventory_cache()
+        return instance
 
     @staticmethod
     def update_thresholds(
@@ -62,10 +69,12 @@ class InventoryService(BaseService[Inventory]):
         """
         Actualiza los umbrales de stock mínimo y máximo.
         """
-        return InventoryService().update(
+        instance = InventoryService().update(
             inventory,
             **data,
         )
+        DashboardMetricsService.invalidate_inventory_cache()
+        return instance
 
     @staticmethod
     @transaction.atomic
@@ -90,10 +99,13 @@ class InventoryService(BaseService[Inventory]):
         supplier = None
         if supplier_id:
             from apps.suppliers.models import Supplier
+
             try:
                 supplier = Supplier.objects.get(pk=supplier_id, is_active=True)
             except Supplier.DoesNotExist:
-                raise ValidationError("El proveedor seleccionado no existe o está inactivo.")
+                raise ValidationError(
+                    "El proveedor seleccionado no existe o está inactivo."
+                )
 
         inventory_locked = (
             Inventory.objects.select_for_update()
@@ -112,6 +124,10 @@ class InventoryService(BaseService[Inventory]):
             ]
         )
 
+        movement_user = (
+            user if user and getattr(user, "is_authenticated", False) else None
+        )
+
         movement = InventoryMovement.objects.create(
             inventory=inventory_locked,
             movement_type=InventoryMovement.MovementType.ENTRY,
@@ -121,7 +137,10 @@ class InventoryService(BaseService[Inventory]):
             reference=reference,
             notes=notes,
             supplier=supplier,
+            user=movement_user,
         )
+
+        DashboardMetricsService.invalidate_inventory_cache()
 
         return movement
 
@@ -135,7 +154,7 @@ class InventoryService(BaseService[Inventory]):
         """
         Disminuye el stock y registra un movimiento de salida.
         """
-        
+
         quantity = data.get("quantity")
         reference = data.get("reference", None)
         notes = data.get("notes", None)
@@ -164,6 +183,10 @@ class InventoryService(BaseService[Inventory]):
             ]
         )
 
+        movement_user = (
+            user if user and getattr(user, "is_authenticated", False) else None
+        )
+
         movement = InventoryMovement.objects.create(
             inventory=inventory_locked,
             movement_type=InventoryMovement.MovementType.EXIT,
@@ -172,7 +195,10 @@ class InventoryService(BaseService[Inventory]):
             new_stock=new_stock,
             reference=reference,
             notes=notes,
+            user=movement_user,
         )
+
+        DashboardMetricsService.invalidate_inventory_cache()
 
         return movement
 
@@ -186,7 +212,7 @@ class InventoryService(BaseService[Inventory]):
         """
         Ajusta manualmente el stock y registra un movimiento.
         """
-        
+
         new_stock = data.get("new_stock")
         reference = data.get("reference", None)
         notes = data.get("notes", None)
@@ -215,6 +241,10 @@ class InventoryService(BaseService[Inventory]):
             ]
         )
 
+        movement_user = (
+            user if user and getattr(user, "is_authenticated", False) else None
+        )
+
         movement = InventoryMovement.objects.create(
             inventory=inventory_locked,
             movement_type=(InventoryMovement.MovementType.ADJUSTMENT),
@@ -223,7 +253,10 @@ class InventoryService(BaseService[Inventory]):
             new_stock=new_stock,
             reference=reference,
             notes=notes,
+            user=movement_user,
         )
+
+        DashboardMetricsService.invalidate_inventory_cache()
 
         return movement
 
@@ -239,6 +272,7 @@ class InventoryService(BaseService[Inventory]):
             raise ValidationError("El inventario ya se encuentra desactivado.")
 
         InventoryService().delete(inventory)
+        DashboardMetricsService.invalidate_inventory_cache()
 
     @staticmethod
     def restore_inventory(
@@ -251,4 +285,6 @@ class InventoryService(BaseService[Inventory]):
         if inventory.is_active:
             return inventory
 
-        return InventoryService().restore(inventory)
+        instance = InventoryService().restore(inventory)
+        DashboardMetricsService.invalidate_inventory_cache()
+        return instance

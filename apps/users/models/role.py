@@ -48,3 +48,9 @@ class Role(BaseModel):
 
     def __str__(self):
         return self.role_name
+
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        from django.core.cache import cache
+
+        cache.clear()

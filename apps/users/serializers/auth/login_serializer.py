@@ -10,9 +10,16 @@ User = get_user_model()
 class AuthLoginSerializer(serializers.Serializer):
     """Serializer para validar las credenciales de inicio de sesión."""
 
-    email = serializers.EmailField(
-        required=True,
-        help_text="Correo electrónico.",
+    email = serializers.CharField(
+        required=False,
+        allow_blank=True,
+        help_text="Correo electrónico o nombre de usuario.",
+    )
+
+    username = serializers.CharField(
+        required=False,
+        allow_blank=True,
+        help_text="Nombre de usuario alternativo.",
     )
 
     password = serializers.CharField(
@@ -23,19 +30,17 @@ class AuthLoginSerializer(serializers.Serializer):
         help_text="Contraseña del usuario.",
     )
 
-    def validate_email(self, value: str) -> str:
-        """Normaliza el correo electrónico."""
-        return value.strip().lower()
-
     def validate(self, attrs: dict) -> dict:
-        """Valida que las credenciales hayan sido enviadas."""
-
+        """Valida que las credenciales hayan sido enviadas y resuelve el identificador."""
         email = attrs.get("email")
+        username = attrs.get("username")
         password = attrs.get("password")
 
-        if not email:
+        identifier = (email or username or "").strip()
+
+        if not identifier:
             raise serializers.ValidationError(
-                {"email": "El correo electrónico es obligatorio."},
+                {"email": "El correo electrónico o nombre de usuario es obligatorio."},
             )
 
         if not password:
@@ -43,6 +48,13 @@ class AuthLoginSerializer(serializers.Serializer):
                 {"password": "La contraseña es obligatoria."},
             )
 
+        # Si el identificador no tiene formato email o es un username, resolver al email del usuario
+        if "@" not in identifier:
+            matched_user = User.objects.filter(username__iexact=identifier).first()
+            if matched_user:
+                identifier = matched_user.email
+
+        attrs["email"] = identifier.lower()
         return attrs
 
 

@@ -44,13 +44,33 @@ class BaseModel(models.Model):
     def delete(self, using=None, keep_parents=False):
         """
         Sobrescribe el método delete para realizar un borrado lógico (Soft Delete).
+        Sincroniza deleted_at e is_active (si el modelo lo soporta).
         """
         self.deleted_at = timezone.now()
-        self.save(update_fields=["deleted_at"])
+        fields = ["deleted_at"]
+        if hasattr(self, "is_active"):
+            self.is_active = False
+            fields.append("is_active")
+        if hasattr(self, "updated_at"):
+            fields.append("updated_at")
+        self.save(update_fields=fields)
+
+    def hard_delete(self, using=None, keep_parents=False):
+        """
+        Realiza una eliminación física definitiva del registro en la base de datos.
+        """
+        return super().delete(using=using, keep_parents=keep_parents)
 
     def restore(self):
         """
         Restaura un registro eliminado lógicamente.
+        Sincroniza deleted_at e is_active (si el modelo lo soporta).
         """
         self.deleted_at = None
-        self.save(update_fields=["deleted_at"])
+        fields = ["deleted_at"]
+        if hasattr(self, "is_active"):
+            self.is_active = True
+            fields.append("is_active")
+        if hasattr(self, "updated_at"):
+            fields.append("updated_at")
+        self.save(update_fields=fields)

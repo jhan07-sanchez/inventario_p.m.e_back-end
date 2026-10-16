@@ -11,6 +11,9 @@ from apps.core.exceptions.custom_exceptions import (
     InvalidPurchaseTransitionException,
     PurchaseHasNoDetailsException,
 )
+from apps.core.security.services.dashboard_metrics_service import (
+    DashboardMetricsService,
+)
 from apps.core.services.base_service import BaseService
 from apps.products.models import Product
 from apps.purchases.dto.purchase_dto import PurchaseCreateDTO, PurchaseUpdateDTO
@@ -96,6 +99,8 @@ class PurchaseService(BaseService[Purchase]):
         purchase.total = total_sum
         purchase.save(update_fields=["subtotal", "total", "updated_at"])
 
+        DashboardMetricsService.invalidate_purchases_cache()
+
         return purchase
 
     @staticmethod
@@ -131,6 +136,9 @@ class PurchaseService(BaseService[Purchase]):
 
         purchase.status = Purchase.Status.PENDING
         purchase.save(update_fields=["status", "updated_at"])
+
+        DashboardMetricsService.invalidate_purchases_cache()
+
         return purchase
 
     @staticmethod
@@ -180,6 +188,10 @@ class PurchaseService(BaseService[Purchase]):
 
         purchase.status = Purchase.Status.RECEIVED
         purchase.save(update_fields=["status", "updated_at"])
+
+        DashboardMetricsService.invalidate_purchases_cache()
+        DashboardMetricsService.invalidate_inventory_cache()
+
         return purchase
 
     @staticmethod
@@ -238,6 +250,8 @@ class PurchaseService(BaseService[Purchase]):
         invoice = InvoiceService.create_invoice(invoice_dto)
         InvoiceService.issue_invoice(invoice)
 
+        DashboardMetricsService.invalidate_purchases_cache()
+
         return purchase
 
     @staticmethod
@@ -252,6 +266,9 @@ class PurchaseService(BaseService[Purchase]):
 
         purchase.status = Purchase.Status.CANCELLED
         purchase.save(update_fields=["status", "updated_at"])
+
+        DashboardMetricsService.invalidate_purchases_cache()
+
         return purchase
 
     @staticmethod
@@ -264,6 +281,7 @@ class PurchaseService(BaseService[Purchase]):
             raise ValidationError("La compra ya se encuentra desactivada.")
 
         PurchaseService().delete(purchase)
+        DashboardMetricsService.invalidate_purchases_cache()
 
     @staticmethod
     @transaction.atomic
@@ -274,4 +292,6 @@ class PurchaseService(BaseService[Purchase]):
         if purchase.is_active:
             return purchase
 
-        return PurchaseService().restore(purchase)
+        instance = PurchaseService().restore(purchase)
+        DashboardMetricsService.invalidate_purchases_cache()
+        return instance

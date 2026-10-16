@@ -1,8 +1,6 @@
 from rest_framework import serializers
 
-from apps.inventory.models import Inventory
-from apps.inventory.models import InventoryMovement
-from apps.products.models import Product
+from apps.inventory.models import Inventory, InventoryMovement
 
 
 class InventoryListSerializer(serializers.ModelSerializer):
@@ -160,6 +158,7 @@ class InventoryCreateSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         from apps.inventory.services.inventory_service import InventoryService
+
         return InventoryService.create_inventory(validated_data)
 
 
@@ -205,6 +204,7 @@ class InventoryUpdateSerializer(serializers.ModelSerializer):
 
     def update(self, instance, validated_data):
         from apps.inventory.services.inventory_service import InventoryService
+
         return InventoryService.update_inventory(instance, validated_data)
 
 
@@ -235,6 +235,8 @@ class InventoryMovementListSerializer(
         read_only=True,
     )
 
+    user_name = serializers.SerializerMethodField()
+
     class Meta:
         model = InventoryMovement
         fields = [
@@ -249,10 +251,19 @@ class InventoryMovementListSerializer(
             "new_stock",
             "reference",
             "notes",
+            "supplier",
             "supplier_name",
+            "user",
+            "user_name",
             "created_at",
             "updated_at",
         ]
+
+    def get_user_name(self, obj) -> str | None:
+        if not obj.user:
+            return None
+        full_name = obj.user.get_full_name()
+        return full_name if full_name else obj.user.username
 
 
 class InventoryMovementDetailSerializer(
@@ -283,6 +294,8 @@ class InventoryMovementDetailSerializer(
         read_only=True,
     )
 
+    user_name = serializers.SerializerMethodField()
+
     class Meta:
         model = InventoryMovement
         fields = [
@@ -297,10 +310,19 @@ class InventoryMovementDetailSerializer(
             "new_stock",
             "reference",
             "notes",
+            "supplier",
             "supplier_name",
+            "user",
+            "user_name",
             "created_at",
             "updated_at",
         ]
+
+    def get_user_name(self, obj) -> str | None:
+        if not obj.user:
+            return None
+        full_name = obj.user.get_full_name()
+        return full_name if full_name else obj.user.username
 
 
 class InventoryThresholdUpdateSerializer(serializers.ModelSerializer):
@@ -339,6 +361,7 @@ class InventoryThresholdUpdateSerializer(serializers.ModelSerializer):
 
     def update(self, instance, validated_data):
         from apps.inventory.services.inventory_service import InventoryService
+
         return InventoryService.update_thresholds(instance, validated_data)
 
 

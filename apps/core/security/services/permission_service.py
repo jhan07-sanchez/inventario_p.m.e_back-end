@@ -24,7 +24,9 @@ if TYPE_CHECKING:
     from apps.users.models import Role, User
 
 
+from django.conf import settings
 from django.core.cache import cache
+
 
 class PermissionService:
     """
@@ -33,22 +35,33 @@ class PermissionService:
     """
 
     @staticmethod
+    def invalidate_user_cache(user_id: int | None = None) -> None:
+        """
+        Invalida el caché de permisos de un usuario específico o todo el caché.
+        """
+        if user_id is not None:
+            cache.delete(f"user_permissions_{user_id}")
+        else:
+            cache.clear()
+
+    @staticmethod
     def _get_active_roles(user: User):
         """
         Obtiene los roles activos del usuario de forma optimizada.
-        Utiliza prefetch cache si existe, o un cache temporal en el objeto user.
+        Utiliza prefetch cache si existe.
         """
-        if hasattr(user, "_prefetched_objects_cache") and "user_roles" in user._prefetched_objects_cache:
+        if (
+            hasattr(user, "_prefetched_objects_cache")
+            and "user_roles" in user._prefetched_objects_cache
+        ):
             return [ur.role for ur in user.user_roles.all() if ur.role.is_active]
 
-        if hasattr(user, "_active_roles_cache"):
-            return user._active_roles_cache
-
-        active_roles = [
-            ur.role for ur in user.user_roles.filter(role__is_active=True).select_related("role")
+        return [
+            ur.role
+            for ur in user.user_roles.filter(role__is_active=True).select_related(
+                "role"
+            )
         ]
-        user._active_roles_cache = active_roles
-        return active_roles
 
     @staticmethod
     def get_effective_permissions(user: User) -> dict[str, bool]:
@@ -67,16 +80,18 @@ class PermissionService:
             Diccionario ``{código_permiso: bool}`` con todos los
             permisos registrados en ``SecurityRegistry``.
         """
-        
+
         cache_key = f"user_permissions_{user.pk}"
         cached_permissions = cache.get(cache_key)
-        
+
         if cached_permissions is not None:
             return cached_permissions
 
+        timeout = getattr(settings, "CACHE_TIMEOUTS", {}).get("permissions", 600)
+
         if user.is_superuser:
             val = {code: True for code in SecurityRegistry.get_all_security_codes()}
-            cache.set(cache_key, val, timeout=300)
+            cache.set(cache_key, val, timeout=timeout)
             return val
 
         all_codes = SecurityRegistry.get_all_security_codes()
@@ -89,7 +104,7 @@ class PermissionService:
                 if PermissionService.role_grants_permission(role, code):
                     effective[code] = True
 
-        cache.set(cache_key, effective, timeout=300)
+        cache.set(cache_key, effective, timeout=timeout)
         return effective
 
     @staticmethod
@@ -140,6 +155,9 @@ class PermissionService:
         """
         Verifica si un usuario posee un permiso específico.
 
+        Aprovecha la resolución y caché de permisos efectivos
+        para máxima velocidad de consulta en middlewares y guards.
+
         Args:
             user:
                 Instancia del usuario autenticado.
@@ -150,19 +168,11 @@ class PermissionService:
             ``True`` si el usuario tiene el permiso.
         """
 
-        if user.is_superuser:
+        if getattr(user, "is_superuser", False):
             return True
 
-        active_roles = PermissionService._get_active_roles(user)
-
-        for role in active_roles:
-            if PermissionService.role_grants_permission(
-                role,
-                permission_code,
-            ):
-                return True
-
-        return False
+        effective = PermissionService.get_effective_permissions(user)
+        return effective.get(permission_code, False)
 
     @staticmethod
     def get_navigation(

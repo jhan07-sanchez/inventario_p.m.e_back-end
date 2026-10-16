@@ -89,7 +89,8 @@ class RoleService(BaseService[Role]):
         if not role_name:
             return
 
-        queryset = Role.objects.filter(
+        role_mgr = getattr(Role, "all_objects", Role.objects)
+        queryset = role_mgr.filter(
             role_name__iexact=role_name,
         )
 
@@ -207,19 +208,13 @@ class RoleService(BaseService[Role]):
         if not instance.is_active:
             raise RoleInactiveException()
 
-        instance.is_active = False
-
-        instance.full_clean()
-
-        instance.save(
-            update_fields=[
-                "is_active",
-                "updated_at",
-            ],
-        )
-
         if soft_delete:
-            instance.delete()
+            instance.soft_delete()
+        else:
+            if hasattr(instance, "hard_delete"):
+                instance.hard_delete()
+            else:
+                instance.delete()
 
     @staticmethod
     @transaction.atomic
@@ -264,7 +259,7 @@ class RoleService(BaseService[Role]):
 
         RoleService().delete(
             role,
-            soft_delete=False,
+            soft_delete=True,
         )
         cache.clear()
         return role
@@ -278,15 +273,6 @@ class RoleService(BaseService[Role]):
         Reactiva un rol previamente desactivado.
         """
 
-        role.is_active = True
-
-        role.save(
-            update_fields=[
-                "is_active",
-                "updated_at",
-            ],
-        )
-
-        role.restore()
+        role = RoleService().restore(role)
         cache.clear()
         return role
