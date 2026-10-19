@@ -51,11 +51,11 @@ role_list_schema = extend_schema(
         ),
         401: OpenApiResponse(
             response=ApiErrorResponseSerializer,
-            description="Token inválido, expirado o usuario no autenticado."
+            description="Token inválido, expirado o usuario no autenticado.",
         ),
         403: OpenApiResponse(
             response=ApiErrorResponseSerializer,
-            description="El usuario no tiene permiso para consultar roles."
+            description="El usuario no tiene permiso para consultar roles.",
         ),
     },
 )
@@ -83,15 +83,14 @@ role_detail_schema = extend_schema(
         ),
         401: OpenApiResponse(
             response=ApiErrorResponseSerializer,
-            description="Token inválido, expirado o usuario no autenticado."
+            description="Token inválido, expirado o usuario no autenticado.",
         ),
         403: OpenApiResponse(
             response=ApiErrorResponseSerializer,
-            description="El usuario no tiene permiso para consultar roles."
+            description="El usuario no tiene permiso para consultar roles.",
         ),
         404: OpenApiResponse(
-            response=ApiErrorResponseSerializer,
-            description="Rol no encontrado."
+            response=ApiErrorResponseSerializer, description="Rol no encontrado."
         ),
     },
 )
@@ -118,11 +117,11 @@ role_create_schema = extend_schema(
         ),
         401: OpenApiResponse(
             response=ApiErrorResponseSerializer,
-            description="Token inválido, expirado o usuario no autenticado."
+            description="Token inválido, expirado o usuario no autenticado.",
         ),
         403: OpenApiResponse(
             response=ApiErrorResponseSerializer,
-            description="El usuario no tiene permiso para crear roles."
+            description="El usuario no tiene permiso para crear roles.",
         ),
     },
     examples=[
@@ -136,8 +135,8 @@ role_create_schema = extend_schema(
                 "permissions": {
                     "users.view": True,
                     "users.create": True,
-                    "customers.view": True
-                }
+                    "customers.view": True,
+                },
             },
         )
     ],
@@ -171,15 +170,14 @@ role_update_schema = extend_schema(
         ),
         401: OpenApiResponse(
             response=ApiErrorResponseSerializer,
-            description="Token inválido, expirado o usuario no autenticado."
+            description="Token inválido, expirado o usuario no autenticado.",
         ),
         403: OpenApiResponse(
             response=ApiErrorResponseSerializer,
-            description="El usuario no tiene permiso para actualizar roles."
+            description="El usuario no tiene permiso para actualizar roles.",
         ),
         404: OpenApiResponse(
-            response=ApiErrorResponseSerializer,
-            description="Rol no encontrado."
+            response=ApiErrorResponseSerializer, description="Rol no encontrado."
         ),
     },
 )
@@ -212,15 +210,14 @@ role_partial_update_schema = extend_schema(
         ),
         401: OpenApiResponse(
             response=ApiErrorResponseSerializer,
-            description="Token inválido, expirado o usuario no autenticado."
+            description="Token inválido, expirado o usuario no autenticado.",
         ),
         403: OpenApiResponse(
             response=ApiErrorResponseSerializer,
-            description="El usuario no tiene permiso para actualizar roles."
+            description="El usuario no tiene permiso para actualizar roles.",
         ),
         404: OpenApiResponse(
-            response=ApiErrorResponseSerializer,
-            description="Rol no encontrado."
+            response=ApiErrorResponseSerializer, description="Rol no encontrado."
         ),
     },
 )
@@ -251,15 +248,14 @@ role_delete_schema = extend_schema(
         ),
         401: OpenApiResponse(
             response=ApiErrorResponseSerializer,
-            description="Token inválido, expirado o usuario no autenticado."
+            description="Token inválido, expirado o usuario no autenticado.",
         ),
         403: OpenApiResponse(
             response=ApiErrorResponseSerializer,
-            description="El usuario no tiene permiso para eliminar roles."
+            description="El usuario no tiene permiso para eliminar roles.",
         ),
         404: OpenApiResponse(
-            response=ApiErrorResponseSerializer,
-            description="Rol no encontrado."
+            response=ApiErrorResponseSerializer, description="Rol no encontrado."
         ),
     },
 )
@@ -291,15 +287,14 @@ role_restore_schema = extend_schema(
         ),
         401: OpenApiResponse(
             response=ApiErrorResponseSerializer,
-            description="Token inválido, expirado o usuario no autenticado."
+            description="Token inválido, expirado o usuario no autenticado.",
         ),
         403: OpenApiResponse(
             response=ApiErrorResponseSerializer,
-            description="El usuario no tiene permiso para restaurar roles."
+            description="El usuario no tiene permiso para restaurar roles.",
         ),
         404: OpenApiResponse(
-            response=ApiErrorResponseSerializer,
-            description="Rol no encontrado."
+            response=ApiErrorResponseSerializer, description="Rol no encontrado."
         ),
     },
 )

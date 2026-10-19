@@ -4,8 +4,8 @@ from django.conf import settings
 from django.core.validators import MinValueValidator
 from django.db import models
 
-from apps.core.models.active_model import ActiveModel
 from apps.cash.models.cash_register import CashRegister
+from apps.core.models.active_model import ActiveModel
 
 
 class CashSession(ActiveModel):

@@ -1,18 +1,18 @@
 from decimal import Decimal
 
-from rest_framework import serializers
 from drf_spectacular.utils import extend_schema_field
+from rest_framework import serializers
 
 from apps.invoices.models import Invoice
+from apps.sales.dto.sale_detail_dto import SaleDetailDto
 from apps.sales.dto.sale_dto import (
     SaleCreateDto,
     SaleUpdateDto,
 )
-from apps.sales.dto.sale_detail_dto import SaleDetailDto
 from apps.sales.models import Sale
 from apps.sales.serializers.sale_detail_serializer import (
     SaleDetailCreateSerializer,
-    SaleDetailSerializer
+    SaleDetailSerializer,
 )
 
 
@@ -80,10 +80,7 @@ class SaleListSerializer(serializers.ModelSerializer):
         if invoices is None:
             invoices = obj.invoices.filter(is_active=True)
 
-        return [
-            SaleInvoiceSummarySerializer(invoice).data
-            for invoice in invoices
-        ]
+        return [SaleInvoiceSummarySerializer(invoice).data for invoice in invoices]
 
 
 class SaleRetrieveSerializer(serializers.ModelSerializer):
@@ -154,7 +151,7 @@ class SaleRetrieveSerializer(serializers.ModelSerializer):
             "document_number": obj.customer.document_number,
             "email": obj.customer.email,
             "mobile": obj.customer.mobile,
-            "phone": obj.customer.phone
+            "phone": obj.customer.phone,
         }
 
     @extend_schema_field(
@@ -165,10 +162,7 @@ class SaleRetrieveSerializer(serializers.ModelSerializer):
         if invoices is None:
             invoices = obj.invoices.filter(is_active=True)
 
-        return [
-            SaleInvoiceSummarySerializer(invoice).data
-            for invoice in invoices
-        ]
+        return [SaleInvoiceSummarySerializer(invoice).data for invoice in invoices]
 
 
 class SaleCreateSerializer(serializers.Serializer):

@@ -51,11 +51,11 @@ user_role_list_schema = extend_schema(
         ),
         401: OpenApiResponse(
             response=ApiErrorResponseSerializer,
-            description="Token inválido, expirado o usuario no autenticado."
+            description="Token inválido, expirado o usuario no autenticado.",
         ),
         403: OpenApiResponse(
             response=ApiErrorResponseSerializer,
-            description="El usuario no tiene permiso para consultar asignaciones."
+            description="El usuario no tiene permiso para consultar asignaciones.",
         ),
     },
 )
@@ -83,15 +83,14 @@ user_role_detail_schema = extend_schema(
         ),
         401: OpenApiResponse(
             response=ApiErrorResponseSerializer,
-            description="Token inválido, expirado o usuario no autenticado."
+            description="Token inválido, expirado o usuario no autenticado.",
         ),
         403: OpenApiResponse(
             response=ApiErrorResponseSerializer,
-            description="El usuario no tiene permiso para consultar asignaciones."
+            description="El usuario no tiene permiso para consultar asignaciones.",
         ),
         404: OpenApiResponse(
-            response=ApiErrorResponseSerializer,
-            description="Asignación no encontrada."
+            response=ApiErrorResponseSerializer, description="Asignación no encontrada."
         ),
     },
 )
@@ -115,21 +114,18 @@ user_role_create_schema = extend_schema(
         ),
         401: OpenApiResponse(
             response=ApiErrorResponseSerializer,
-            description="Token inválido, expirado o usuario no autenticado."
+            description="Token inválido, expirado o usuario no autenticado.",
         ),
         403: OpenApiResponse(
             response=ApiErrorResponseSerializer,
-            description="El usuario no tiene permiso para crear asignaciones."
+            description="El usuario no tiene permiso para crear asignaciones.",
         ),
     },
     examples=[
         OpenApiExample(
             name="Asignar Rol",
             request_only=True,
-            value={
-                "user": 1,
-                "role": 2
-            },
+            value={"user": 1, "role": 2},
         )
     ],
 )
@@ -162,15 +158,14 @@ user_role_update_schema = extend_schema(
         ),
         401: OpenApiResponse(
             response=ApiErrorResponseSerializer,
-            description="Token inválido, expirado o usuario no autenticado."
+            description="Token inválido, expirado o usuario no autenticado.",
         ),
         403: OpenApiResponse(
             response=ApiErrorResponseSerializer,
-            description="El usuario no tiene permiso para actualizar asignaciones."
+            description="El usuario no tiene permiso para actualizar asignaciones.",
         ),
         404: OpenApiResponse(
-            response=ApiErrorResponseSerializer,
-            description="Asignación no encontrada."
+            response=ApiErrorResponseSerializer, description="Asignación no encontrada."
         ),
     },
 )
@@ -203,15 +198,14 @@ user_role_partial_update_schema = extend_schema(
         ),
         401: OpenApiResponse(
             response=ApiErrorResponseSerializer,
-            description="Token inválido, expirado o usuario no autenticado."
+            description="Token inválido, expirado o usuario no autenticado.",
         ),
         403: OpenApiResponse(
             response=ApiErrorResponseSerializer,
-            description="El usuario no tiene permiso para actualizar asignaciones."
+            description="El usuario no tiene permiso para actualizar asignaciones.",
         ),
         404: OpenApiResponse(
-            response=ApiErrorResponseSerializer,
-            description="Asignación no encontrada."
+            response=ApiErrorResponseSerializer, description="Asignación no encontrada."
         ),
     },
 )
@@ -242,15 +236,14 @@ user_role_delete_schema = extend_schema(
         ),
         401: OpenApiResponse(
             response=ApiErrorResponseSerializer,
-            description="Token inválido, expirado o usuario no autenticado."
+            description="Token inválido, expirado o usuario no autenticado.",
         ),
         403: OpenApiResponse(
             response=ApiErrorResponseSerializer,
-            description="El usuario no tiene permiso para eliminar asignaciones."
+            description="El usuario no tiene permiso para eliminar asignaciones.",
         ),
         404: OpenApiResponse(
-            response=ApiErrorResponseSerializer,
-            description="Asignación no encontrada."
+            response=ApiErrorResponseSerializer, description="Asignación no encontrada."
         ),
     },
 )
@@ -282,15 +275,14 @@ user_role_restore_schema = extend_schema(
         ),
         401: OpenApiResponse(
             response=ApiErrorResponseSerializer,
-            description="Token inválido, expirado o usuario no autenticado."
+            description="Token inválido, expirado o usuario no autenticado.",
         ),
         403: OpenApiResponse(
             response=ApiErrorResponseSerializer,
-            description="El usuario no tiene permiso para restaurar asignaciones."
+            description="El usuario no tiene permiso para restaurar asignaciones.",
         ),
         404: OpenApiResponse(
-            response=ApiErrorResponseSerializer,
-            description="Asignación no encontrada."
+            response=ApiErrorResponseSerializer, description="Asignación no encontrada."
         ),
     },
 )

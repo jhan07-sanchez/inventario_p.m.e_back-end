@@ -1,7 +1,13 @@
 from decimal import Decimal
+
+from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
-from apps.purchases.dto.purchase_dto import PurchaseCreateDTO, PurchaseDetailCreateDTO, PurchaseUpdateDTO
+from apps.purchases.dto.purchase_dto import (
+    PurchaseCreateDTO,
+    PurchaseDetailCreateDTO,
+    PurchaseUpdateDTO,
+)
 from apps.purchases.models import Purchase, PurchaseDetail
 from apps.suppliers.serializers.supplier_serializer import SupplierListSerializer
 
@@ -24,8 +30,12 @@ class PurchaseDetailSerializer(serializers.ModelSerializer):
 
 
 class PurchaseListSerializer(serializers.ModelSerializer):
-    supplier_name = serializers.CharField(source="supplier.business_name", read_only=True, default="")
-    supplier_document = serializers.CharField(source="supplier.document_number", read_only=True)
+    supplier_name = serializers.CharField(
+        source="supplier.business_name", read_only=True, default=""
+    )
+    supplier_document = serializers.CharField(
+        source="supplier.document_number", read_only=True
+    )
 
     class Meta:
         model = Purchase
@@ -65,6 +75,7 @@ class PurchaseRetrieveSerializer(serializers.ModelSerializer):
             "updated_at",
         )
 
+    @extend_schema_field(serializers.ListField(child=serializers.DictField()))
     def get_invoices_summary(self, obj):
         invoices = obj.invoices.filter(is_active=True).values(
             "id", "invoice_number", "status", "document_type"
@@ -74,15 +85,21 @@ class PurchaseRetrieveSerializer(serializers.ModelSerializer):
 
 class PurchaseDetailCreateSerializer(serializers.Serializer):
     product_id = serializers.IntegerField(required=True)
-    quantity = serializers.DecimalField(max_digits=12, decimal_places=2, required=True, min_value=Decimal('0.01'))
-    unit_price = serializers.DecimalField(max_digits=12, decimal_places=2, required=True, min_value=Decimal('0.00'))
+    quantity = serializers.DecimalField(
+        max_digits=12, decimal_places=2, required=True, min_value=Decimal("0.01")
+    )
+    unit_price = serializers.DecimalField(
+        max_digits=12, decimal_places=2, required=True, min_value=Decimal("0.00")
+    )
 
 
 class PurchaseCreateSerializer(serializers.Serializer):
     supplier_id = serializers.IntegerField(required=True)
     issue_date = serializers.DateField(required=False, allow_null=True)
     notes = serializers.CharField(required=False, allow_null=True, allow_blank=True)
-    details = PurchaseDetailCreateSerializer(many=True, required=True, allow_empty=False)
+    details = PurchaseDetailCreateSerializer(
+        many=True, required=True, allow_empty=False
+    )
 
     def to_dto(self) -> PurchaseCreateDTO:
         validated_data = self.validated_data
@@ -92,7 +109,7 @@ class PurchaseCreateSerializer(serializers.Serializer):
             PurchaseDetailCreateDTO(
                 product_id=detail["product_id"],
                 quantity=detail["quantity"],
-                unit_price=detail["unit_price"]
+                unit_price=detail["unit_price"],
             )
             for detail in details_data
         ]
@@ -101,7 +118,7 @@ class PurchaseCreateSerializer(serializers.Serializer):
             supplier_id=validated_data["supplier_id"],
             issue_date=validated_data.get("issue_date"),
             notes=validated_data.get("notes"),
-            details=details_dto
+            details=details_dto,
         )
 
 
@@ -113,5 +130,5 @@ class PurchaseUpdateSerializer(serializers.Serializer):
         validated_data = self.validated_data
         return PurchaseUpdateDTO(
             issue_date=validated_data.get("issue_date"),
-            notes=validated_data.get("notes")
+            notes=validated_data.get("notes"),
         )

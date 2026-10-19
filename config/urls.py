@@ -25,18 +25,22 @@ from drf_spectacular.views import (
     SpectacularSwaggerView,
 )
 
-urlpatterns = [
-    path("admin/", admin.site.urls),
+from apps.core.views.health_view import root_health_check
 
+urlpatterns = [
+    # Health check for Render / load balancers
+    path("health/", root_health_check, name="health-check"),
+    path("admin/", admin.site.urls),
     # OpenAPI Schema (YAML/JSON)
     path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
-
     # Swagger UI
-    path("api/docs/", SpectacularSwaggerView.as_view(url_name="schema"), name="swagger-ui",),
-
+    path(
+        "api/docs/",
+        SpectacularSwaggerView.as_view(url_name="schema"),
+        name="swagger-ui",
+    ),
     # ReDoc
     path("api/redoc/", SpectacularRedocView.as_view(url_name="schema"), name="redoc"),
-
     # API endpoints
     path("api/v1/", include("config.api_urls")),
 ]

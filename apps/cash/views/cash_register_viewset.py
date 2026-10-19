@@ -1,9 +1,6 @@
 from rest_framework import status
-from rest_framework.filters import SearchFilter, OrderingFilter
+from rest_framework.filters import OrderingFilter, SearchFilter
 
-from apps.core.security import HasPermission
-from apps.core.views.base_viewset import BaseViewSet
-from apps.users.permissions import IsAuthenticatedAndActive
 from apps.cash.docs.cash_docs import (
     cash_register_create_schema,
     cash_register_detail_schema,
@@ -12,12 +9,16 @@ from apps.cash.docs.cash_docs import (
 from apps.cash.models.cash_register import CashRegister
 from apps.cash.selectors.cash_register_selector import CashRegisterSelector
 from apps.cash.serializers.cash_register_serializer import CashRegisterSerializer
+from apps.core.security import HasPermission
+from apps.core.views.base_viewset import BaseViewSet
+from apps.users.permissions import IsAuthenticatedAndActive
 
 
 class CashRegisterViewSet(BaseViewSet):
     """
     ViewSet para listar y consultar Cajas Registradoras.
     """
+
     http_method_names = ["get", "post", "head", "options"]
     queryset = CashRegister.objects.none()
     permission_classes = [IsAuthenticatedAndActive]
@@ -30,7 +31,9 @@ class CashRegisterViewSet(BaseViewSet):
             "retrieve": (IsAuthenticatedAndActive, HasPermission("cash.view")),
             "create": (IsAuthenticatedAndActive, HasPermission("cash.create")),
         }
-        classes = permission_map.get(self.action, (IsAuthenticatedAndActive, HasPermission("cash.view")))
+        classes = permission_map.get(
+            self.action, (IsAuthenticatedAndActive, HasPermission("cash.view"))
+        )
         return [permission() for permission in classes]
 
     def get_queryset(self):
@@ -47,7 +50,7 @@ class CashRegisterViewSet(BaseViewSet):
             message="Cajas obtenidas correctamente.",
             code="CASH_REGISTERS_FETCHED",
             data=serializer.data,
-            status_code=status.HTTP_200_OK
+            status_code=status.HTTP_200_OK,
         )
 
     @cash_register_detail_schema
@@ -58,7 +61,7 @@ class CashRegisterViewSet(BaseViewSet):
             message="Caja obtenida correctamente.",
             code="CASH_REGISTER_FETCHED",
             data=serializer.data,
-            status_code=status.HTTP_200_OK
+            status_code=status.HTTP_200_OK,
         )
 
     @cash_register_create_schema
@@ -70,5 +73,5 @@ class CashRegisterViewSet(BaseViewSet):
             message="Caja registrada correctamente.",
             code="CASH_REGISTER_CREATED",
             data=serializer.data,
-            status_code=status.HTTP_201_CREATED
+            status_code=status.HTTP_201_CREATED,
         )

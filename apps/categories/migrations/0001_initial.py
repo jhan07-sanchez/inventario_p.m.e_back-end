@@ -5,32 +5,90 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     initial = True
 
-    dependencies = [
-    ]
+    dependencies = []
 
     operations = [
         migrations.CreateModel(
-            name='Category',
+            name="Category",
             fields=[
-                ('created_at', models.DateTimeField(auto_now_add=True, verbose_name='Fecha de creación')),
-                ('updated_at', models.DateTimeField(auto_now=True, verbose_name='Fecha de actualización')),
-                ('deleted_at', models.DateTimeField(blank=True, null=True, verbose_name='Fecha de eliminación')),
-                ('id_category', models.BigAutoField(primary_key=True, serialize=False, verbose_name='ID')),
-                ('name', models.CharField(help_text='Nombre de la categoria.', max_length=150, verbose_name='Nombre')),
-                ('description', models.TextField(blank=True, help_text='Descripcion de la categoria.', verbose_name='Descripcion')),
-                ('is_active', models.BooleanField(default=True, help_text='Indica si la categoria esta activa en el sistema.', verbose_name='Estado')),
-                ('parent', models.ForeignKey(blank=True, help_text='Categoria superior a la que pertenece esta categoria.', null=True, on_delete=django.db.models.deletion.PROTECT, to='categories.category', verbose_name='Categoria padre')),
+                (
+                    "created_at",
+                    models.DateTimeField(
+                        auto_now_add=True, verbose_name="Fecha de creación"
+                    ),
+                ),
+                (
+                    "updated_at",
+                    models.DateTimeField(
+                        auto_now=True, verbose_name="Fecha de actualización"
+                    ),
+                ),
+                (
+                    "deleted_at",
+                    models.DateTimeField(
+                        blank=True, null=True, verbose_name="Fecha de eliminación"
+                    ),
+                ),
+                (
+                    "id_category",
+                    models.BigAutoField(
+                        primary_key=True, serialize=False, verbose_name="ID"
+                    ),
+                ),
+                (
+                    "name",
+                    models.CharField(
+                        help_text="Nombre de la categoria.",
+                        max_length=150,
+                        verbose_name="Nombre",
+                    ),
+                ),
+                (
+                    "description",
+                    models.TextField(
+                        blank=True,
+                        help_text="Descripcion de la categoria.",
+                        verbose_name="Descripcion",
+                    ),
+                ),
+                (
+                    "is_active",
+                    models.BooleanField(
+                        default=True,
+                        help_text="Indica si la categoria esta activa en el sistema.",
+                        verbose_name="Estado",
+                    ),
+                ),
+                (
+                    "parent",
+                    models.ForeignKey(
+                        blank=True,
+                        help_text="Categoria superior a la que pertenece esta categoria.",
+                        null=True,
+                        on_delete=django.db.models.deletion.PROTECT,
+                        to="categories.category",
+                        verbose_name="Categoria padre",
+                    ),
+                ),
             ],
             options={
-                'verbose_name': 'categoria',
-                'verbose_name_plural': 'Categorias',
-                'db_table': 'categories',
-                'ordering': ['name'],
-                'indexes': [models.Index(fields=['name'], name='category_name_idx'), models.Index(fields=['is_active'], name='category_active_idx'), models.Index(fields=['parent'], name='category_parent_idx')],
-                'constraints': [models.UniqueConstraint(fields=('parent', 'name'), name='category_unique_name_per_parent')],
+                "verbose_name": "categoria",
+                "verbose_name_plural": "Categorias",
+                "db_table": "categories",
+                "ordering": ["name"],
+                "indexes": [
+                    models.Index(fields=["name"], name="category_name_idx"),
+                    models.Index(fields=["is_active"], name="category_active_idx"),
+                    models.Index(fields=["parent"], name="category_parent_idx"),
+                ],
+                "constraints": [
+                    models.UniqueConstraint(
+                        fields=("parent", "name"),
+                        name="category_unique_name_per_parent",
+                    )
+                ],
             },
         ),
     ]

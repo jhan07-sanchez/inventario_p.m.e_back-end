@@ -4,30 +4,29 @@ from django.db import migrations
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('products', '0002_alter_product_is_active'),
+        ("products", "0002_alter_product_is_active"),
     ]
 
     operations = [
         migrations.RemoveConstraint(
-            model_name='product',
-            name='product_max_stock_gte_min_stock',
+            model_name="product",
+            name="product_max_stock_gte_min_stock",
         ),
         migrations.RemoveIndex(
-            model_name='product',
-            name='product_active_stock_idx',
+            model_name="product",
+            name="product_active_stock_idx",
         ),
         migrations.RemoveField(
-            model_name='product',
-            name='maximum_stock',
+            model_name="product",
+            name="maximum_stock",
         ),
         migrations.RemoveField(
-            model_name='product',
-            name='minimum_stock',
+            model_name="product",
+            name="minimum_stock",
         ),
         migrations.RemoveField(
-            model_name='product',
-            name='stock',
+            model_name="product",
+            name="stock",
         ),
     ]

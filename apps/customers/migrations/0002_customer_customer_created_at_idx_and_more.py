@@ -4,18 +4,17 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('customers', '0001_initial'),
+        ("customers", "0001_initial"),
     ]
 
     operations = [
         migrations.AddIndex(
-            model_name='customer',
-            index=models.Index(fields=['created_at'], name='customer_created_at_idx'),
+            model_name="customer",
+            index=models.Index(fields=["created_at"], name="customer_created_at_idx"),
         ),
         migrations.AddIndex(
-            model_name='customer',
-            index=models.Index(fields=['deleted_at'], name='customer_deleted_at_idx'),
+            model_name="customer",
+            index=models.Index(fields=["deleted_at"], name="customer_deleted_at_idx"),
         ),
     ]

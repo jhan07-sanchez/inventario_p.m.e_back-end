@@ -5,10 +5,10 @@ from django.core.cache import cache as django_cache
 from django.test import TestCase
 
 from apps.core.security.services.dashboard_metrics_service import (
-    DashboardMetricsService,
     _INVENTORY_CACHE_KEYS,
     _PURCHASES_CACHE_KEYS,
     _SALES_CACHE_KEYS,
+    DashboardMetricsService,
 )
 from apps.inventory.services.inventory_service import InventoryService
 
@@ -71,15 +71,17 @@ class DashboardCacheInvalidationTests(TestCase):
 
         mock_inv_locked = MagicMock()
         mock_inv_locked.current_stock = Decimal("10.00")
-        mock_inv_objects.select_for_update.return_value.select_related.return_value.get.return_value = (
-            mock_inv_locked
-        )
+        mock_inv_objects.select_for_update.return_value.select_related.return_value.get.return_value = mock_inv_locked
 
         # Set cache key
         django_cache.set("dashboard_metric_inventory_stock_distribution", {"dummy": 1})
-        self.assertIsNotNone(django_cache.get("dashboard_metric_inventory_stock_distribution"))
+        self.assertIsNotNone(
+            django_cache.get("dashboard_metric_inventory_stock_distribution")
+        )
 
         data = {"quantity": Decimal("10.00"), "reference": "REF-ENTRY"}
         InventoryService.register_entry(mock_inv, data)
 
-        self.assertIsNone(django_cache.get("dashboard_metric_inventory_stock_distribution"))
+        self.assertIsNone(
+            django_cache.get("dashboard_metric_inventory_stock_distribution")
+        )

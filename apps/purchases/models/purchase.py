@@ -1,4 +1,5 @@
 from decimal import Decimal
+
 from django.core.validators import MinValueValidator
 from django.db import models
 
@@ -70,7 +71,9 @@ class Purchase(ActiveModel):
         indexes = [
             models.Index(fields=["status"], name="purchase_status_idx"),
             models.Index(fields=["issue_date"], name="purchase_issue_date_idx"),
-            models.Index(fields=["supplier", "status"], name="purchase_supp_status_idx"),
+            models.Index(
+                fields=["supplier", "status"], name="purchase_supp_status_idx"
+            ),
         ]
 
     def __str__(self) -> str:

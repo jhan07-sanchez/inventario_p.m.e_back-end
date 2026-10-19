@@ -2,7 +2,6 @@ from rest_framework.routers import DefaultRouter
 
 from apps.invoices.views import InvoiceTemplateViewSet, InvoiceViewSet
 
-
 router = DefaultRouter()
 
 router.register(

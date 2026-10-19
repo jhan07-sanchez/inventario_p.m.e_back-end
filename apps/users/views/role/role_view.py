@@ -1,7 +1,7 @@
 from django.core.exceptions import ValidationError
 from rest_framework import status
 from rest_framework.decorators import action
-from rest_framework.filters import SearchFilter, OrderingFilter
+from rest_framework.filters import OrderingFilter, SearchFilter
 
 from apps.core.security import HasPermission
 from apps.core.views.base_viewset import BaseViewSet

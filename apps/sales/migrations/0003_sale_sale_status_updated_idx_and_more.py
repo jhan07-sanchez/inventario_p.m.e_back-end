@@ -5,20 +5,21 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('customers', '0003_alter_customer_is_active'),
-        ('sales', '0002_sale_optional_customer_pos_fields'),
+        ("customers", "0003_alter_customer_is_active"),
+        ("sales", "0002_sale_optional_customer_pos_fields"),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
     operations = [
         migrations.AddIndex(
-            model_name='sale',
-            index=models.Index(fields=['status', 'updated_at'], name='sale_status_updated_idx'),
+            model_name="sale",
+            index=models.Index(
+                fields=["status", "updated_at"], name="sale_status_updated_idx"
+            ),
         ),
         migrations.AddIndex(
-            model_name='sale',
-            index=models.Index(fields=['-updated_at'], name='sale_updated_desc_idx'),
+            model_name="sale",
+            index=models.Index(fields=["-updated_at"], name="sale_updated_desc_idx"),
         ),
     ]

@@ -1,6 +1,8 @@
 from rest_framework import serializers
-from apps.cash.models.cash_movement import CashMovement
+
 from apps.cash.dto.cash_movement_dto import CashMovementCreateDto
+from apps.cash.models.cash_movement import CashMovement
+
 
 class CashMovementRetrieveSerializer(serializers.ModelSerializer):
     payment_method = serializers.CharField(
@@ -14,9 +16,19 @@ class CashMovementRetrieveSerializer(serializers.ModelSerializer):
     class Meta:
         model = CashMovement
         fields = [
-            "id_cash_movement", "cash_session", "payment", "amount", "movement_type",
-            "is_cash", "reference", "description", "payment_method", "payment_reference", "created_at"
+            "id_cash_movement",
+            "cash_session",
+            "payment",
+            "amount",
+            "movement_type",
+            "is_cash",
+            "reference",
+            "description",
+            "payment_method",
+            "payment_reference",
+            "created_at",
         ]
+
 
 class CashMovementCreateSerializer(serializers.Serializer):
     amount = serializers.DecimalField(max_digits=12, decimal_places=2)
@@ -32,5 +44,5 @@ class CashMovementCreateSerializer(serializers.Serializer):
             movement_type=self.validated_data["movement_type"],
             is_cash=self.validated_data["is_cash"],
             reference=self.validated_data.get("reference", ""),
-            description=self.validated_data.get("description", "")
+            description=self.validated_data.get("description", ""),
         )

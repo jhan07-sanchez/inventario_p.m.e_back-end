@@ -34,7 +34,12 @@ SECURITY_MODULES = [
         "parent": None,
         "permissions": {"dashboard.view": "Ver dashboard"},
         "actions": {"dashboard.refresh": "Refrescar datos"},
-        "widgets": ["erp_activity", "needs_attention", "top_selling_products", "latest_sales"],
+        "widgets": [
+            "erp_activity",
+            "needs_attention",
+            "top_selling_products",
+            "latest_sales",
+        ],
         "order": 0,
     },
     {

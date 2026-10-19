@@ -1,4 +1,5 @@
 from decimal import Decimal
+
 from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.test import TestCase
@@ -6,7 +7,6 @@ from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APIClient
 
-from apps.categories.models.category import Category
 from apps.cash.dto.cash_movement_dto import CashMovementCreateDto
 from apps.cash.dto.cash_session_dto import CashSessionCloseDto, CashSessionOpenDto
 from apps.cash.models.cash_movement import CashMovement
@@ -15,6 +15,7 @@ from apps.cash.models.cash_session import CashSession
 from apps.cash.models.payment import Payment
 from apps.cash.services.cash_movement_service import CashMovementService
 from apps.cash.services.cash_session_service import CashSessionService
+from apps.categories.models.category import Category
 from apps.core.enums import PaymentMethod, PaymentStatus
 from apps.inventory.models import Inventory
 from apps.invoices.models import InvoiceTemplate
@@ -112,7 +113,9 @@ class CashSessionServiceTests(TestCase):
         )
         with self.assertRaises(ValidationError) as ctx:
             CashSessionService.open_session(open_dto2, self.user1)
-        self.assertIn("El usuario ya tiene una sesión de caja abierta.", str(ctx.exception))
+        self.assertIn(
+            "El usuario ya tiene una sesión de caja abierta.", str(ctx.exception)
+        )
 
         # Validar apertura con monto negativo
         open_dto_negative = CashSessionOpenDto(
@@ -140,7 +143,9 @@ class CashSessionServiceTests(TestCase):
         )
         with self.assertRaises(ValidationError) as ctx:
             CashSessionService.open_session(open_dto2, self.user2)
-        self.assertIn("La caja seleccionada ya está abierta por otro usuario.", str(ctx.exception))
+        self.assertIn(
+            "La caja seleccionada ya está abierta por otro usuario.", str(ctx.exception)
+        )
 
     def test_scenario_d_close_session_and_difference_calculation(self):
         """
@@ -270,7 +275,9 @@ class CashSessionServiceTests(TestCase):
                     movement_type=CashMovement.MovementType.IN,
                 )
             )
-        self.assertIn("El monto del movimiento debe ser mayor a cero.", str(ctx.exception))
+        self.assertIn(
+            "El monto del movimiento debe ser mayor a cero.", str(ctx.exception)
+        )
 
         # 5. Movimiento no-efectivo (is_cash=False): no altera expected_balance en gaveta
         mov_electronic = CashMovementService.create_movement(
@@ -299,7 +306,10 @@ class CashSessionServiceTests(TestCase):
                     movement_type=CashMovement.MovementType.IN,
                 )
             )
-        self.assertIn("No se pueden registrar movimientos en una sesión cerrada.", str(ctx.exception))
+        self.assertIn(
+            "No se pueden registrar movimientos en una sesión cerrada.",
+            str(ctx.exception),
+        )
 
 
 class CashSaleFinancialFlowTests(TestCase):
@@ -342,7 +352,9 @@ class CashSaleFinancialFlowTests(TestCase):
         )
 
         # Catálogo e Inventario
-        self.category = Category.objects.create(name="Abarrotes", description="Productos generales")
+        self.category = Category.objects.create(
+            name="Abarrotes", description="Productos generales"
+        )
         self.product = Product.objects.create(
             code="P001",
             name="Arroz Premium 1kg",
@@ -601,15 +613,21 @@ class CashSessionApiTests(TestCase):
             "opening_balance": "50.00",
             "notes": "Apertura desde API",
         }
-        response_open = self.client.post(reverse("cash-session-open"), open_payload, format="json")
+        response_open = self.client.post(
+            reverse("cash-session-open"), open_payload, format="json"
+        )
         self.assertEqual(response_open.status_code, status.HTTP_201_CREATED)
         self.assertEqual(response_open.data.get("code"), "CASH_SESSION_OPENED")
 
         # Con sesión abierta
         response_current = self.client.get(reverse("cash-session-current"))
         self.assertEqual(response_current.status_code, status.HTTP_200_OK)
-        self.assertEqual(response_current.data["data"]["status"], CashSession.SessionStatus.OPEN)
-        self.assertEqual(Decimal(response_current.data["data"]["opening_balance"]), Decimal("50.00"))
+        self.assertEqual(
+            response_current.data["data"]["status"], CashSession.SessionStatus.OPEN
+        )
+        self.assertEqual(
+            Decimal(response_current.data["data"]["opening_balance"]), Decimal("50.00")
+        )
 
     def test_add_movement_and_list_movements_endpoints(self):
         """

@@ -4,8 +4,8 @@ import sys
 from concurrent.futures import ThreadPoolExecutor
 
 from django.conf import settings
-from django.utils.deprecation import MiddlewareMixin
 from django.db import connection
+from django.utils.deprecation import MiddlewareMixin
 
 from apps.core.models.audit_log import AuditLog
 
@@ -27,7 +27,9 @@ class AuditMiddleware(MiddlewareMixin):
         return "test" in sys.argv or getattr(settings, "TESTING", False)
 
     @staticmethod
-    def _save_audit_log_sync(user_id, method, path, ip_address, user_agent, status_code, payload):
+    def _save_audit_log_sync(
+        user_id, method, path, ip_address, user_agent, status_code, payload
+    ):
         try:
             AuditLog.objects.create(
                 user_id=user_id,
@@ -42,7 +44,9 @@ class AuditMiddleware(MiddlewareMixin):
             logger.debug(f"No se pudo guardar auditoría sincrónica en test: {e!s}")
 
     @staticmethod
-    def _save_audit_log_async(user_id, method, path, ip_address, user_agent, status_code, payload):
+    def _save_audit_log_async(
+        user_id, method, path, ip_address, user_agent, status_code, payload
+    ):
         try:
             AuditLog.objects.create(
                 user_id=user_id,
@@ -54,7 +58,9 @@ class AuditMiddleware(MiddlewareMixin):
                 payload=payload,
             )
         except Exception as e:  # noqa: BLE001
-            logger.error(f"No se pudo guardar el registro de auditoría en background: {e!s}")
+            logger.error(
+                f"No se pudo guardar el registro de auditoría en background: {e!s}"
+            )
         finally:
             connection.close()
 

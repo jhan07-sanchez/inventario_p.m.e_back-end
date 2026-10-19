@@ -29,7 +29,6 @@ class InvoiceSelector(BaseSelector[Invoice]):
     def get_invoices() -> QuerySet[Invoice]:
         return InvoiceSelector().get_all()
 
-
     @staticmethod
     def get_active_invoices() -> QuerySet[Invoice]:
         """
@@ -43,7 +42,6 @@ class InvoiceSelector(BaseSelector[Invoice]):
         Verifica si existe una factura por su número.
         """
         return InvoiceSelector().exists(invoice_number=invoice_number)
-
 
     @staticmethod
     def get_by_id(invoice_id: int) -> Invoice:
@@ -79,7 +77,7 @@ class InvoiceSelector(BaseSelector[Invoice]):
 
         if is_active is not None:
             queryset = queryset.filter(is_active=is_active)
-            
+
         if purchase is not None:
             queryset = queryset.filter(purchase_id=purchase)
 

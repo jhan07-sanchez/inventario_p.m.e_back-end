@@ -51,11 +51,11 @@ user_list_schema = extend_schema(
         ),
         401: OpenApiResponse(
             response=ApiErrorResponseSerializer,
-            description="Token inválido, expirado o usuario no autenticado."
+            description="Token inválido, expirado o usuario no autenticado.",
         ),
         403: OpenApiResponse(
             response=ApiErrorResponseSerializer,
-            description="El usuario no tiene permiso para consultar usuarios."
+            description="El usuario no tiene permiso para consultar usuarios.",
         ),
     },
 )
@@ -83,15 +83,14 @@ user_detail_schema = extend_schema(
         ),
         401: OpenApiResponse(
             response=ApiErrorResponseSerializer,
-            description="Token inválido, expirado o usuario no autenticado."
+            description="Token inválido, expirado o usuario no autenticado.",
         ),
         403: OpenApiResponse(
             response=ApiErrorResponseSerializer,
-            description="El usuario no tiene permiso para consultar usuarios."
+            description="El usuario no tiene permiso para consultar usuarios.",
         ),
         404: OpenApiResponse(
-            response=ApiErrorResponseSerializer,
-            description="Usuario no encontrado."
+            response=ApiErrorResponseSerializer, description="Usuario no encontrado."
         ),
     },
 )
@@ -118,11 +117,11 @@ user_create_schema = extend_schema(
         ),
         401: OpenApiResponse(
             response=ApiErrorResponseSerializer,
-            description="Token inválido, expirado o usuario no autenticado."
+            description="Token inválido, expirado o usuario no autenticado.",
         ),
         403: OpenApiResponse(
             response=ApiErrorResponseSerializer,
-            description="El usuario no tiene permiso para crear usuarios."
+            description="El usuario no tiene permiso para crear usuarios.",
         ),
     },
     examples=[
@@ -170,15 +169,14 @@ user_update_schema = extend_schema(
         ),
         401: OpenApiResponse(
             response=ApiErrorResponseSerializer,
-            description="Token inválido, expirado o usuario no autenticado."
+            description="Token inválido, expirado o usuario no autenticado.",
         ),
         403: OpenApiResponse(
             response=ApiErrorResponseSerializer,
-            description="El usuario no tiene permiso para actualizar usuarios."
+            description="El usuario no tiene permiso para actualizar usuarios.",
         ),
         404: OpenApiResponse(
-            response=ApiErrorResponseSerializer,
-            description="Usuario no encontrado."
+            response=ApiErrorResponseSerializer, description="Usuario no encontrado."
         ),
     },
 )
@@ -211,15 +209,14 @@ user_partial_update_schema = extend_schema(
         ),
         401: OpenApiResponse(
             response=ApiErrorResponseSerializer,
-            description="Token inválido, expirado o usuario no autenticado."
+            description="Token inválido, expirado o usuario no autenticado.",
         ),
         403: OpenApiResponse(
             response=ApiErrorResponseSerializer,
-            description="El usuario no tiene permiso para actualizar usuarios."
+            description="El usuario no tiene permiso para actualizar usuarios.",
         ),
         404: OpenApiResponse(
-            response=ApiErrorResponseSerializer,
-            description="Usuario no encontrado."
+            response=ApiErrorResponseSerializer, description="Usuario no encontrado."
         ),
     },
 )
@@ -252,15 +249,14 @@ user_delete_schema = extend_schema(
         ),
         401: OpenApiResponse(
             response=ApiErrorResponseSerializer,
-            description="Token inválido, expirado o usuario no autenticado."
+            description="Token inválido, expirado o usuario no autenticado.",
         ),
         403: OpenApiResponse(
             response=ApiErrorResponseSerializer,
-            description="El usuario no tiene permiso para eliminar usuarios."
+            description="El usuario no tiene permiso para eliminar usuarios.",
         ),
         404: OpenApiResponse(
-            response=ApiErrorResponseSerializer,
-            description="Usuario no encontrado."
+            response=ApiErrorResponseSerializer, description="Usuario no encontrado."
         ),
     },
 )
@@ -292,15 +288,14 @@ user_restore_schema = extend_schema(
         ),
         401: OpenApiResponse(
             response=ApiErrorResponseSerializer,
-            description="Token inválido, expirado o usuario no autenticado."
+            description="Token inválido, expirado o usuario no autenticado.",
         ),
         403: OpenApiResponse(
             response=ApiErrorResponseSerializer,
-            description="El usuario no tiene permiso para restaurar usuarios."
+            description="El usuario no tiene permiso para restaurar usuarios.",
         ),
         404: OpenApiResponse(
-            response=ApiErrorResponseSerializer,
-            description="Usuario no encontrado."
+            response=ApiErrorResponseSerializer, description="Usuario no encontrado."
         ),
     },
 )

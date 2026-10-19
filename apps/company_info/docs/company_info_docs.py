@@ -360,4 +360,3 @@ company_info_remove_logo_schema = extend_schema(
         ),
     },
 )
-

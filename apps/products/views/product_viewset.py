@@ -1,21 +1,10 @@
 from django.core.exceptions import ValidationError
-
 from rest_framework import status
 from rest_framework.decorators import action
-
-from rest_framework.filters import SearchFilter, OrderingFilter
+from rest_framework.filters import OrderingFilter, SearchFilter
 
 from apps.core.security import HasPermission
 from apps.core.views.base_viewset import BaseViewSet
-from apps.products.models import Product
-from apps.products.selectors.product_selector import ProductSelector
-from apps.products.serializers.product_serializer import (
-    ProductCreateSerializer,
-    ProductDetailSerializer,
-    ProductListSerializer,
-    ProductUpdateSerializer,
-    ProductSearchSerializer,
-)
 from apps.products.docs.product_docs import (
     product_create_schema,
     product_delete_schema,
@@ -25,6 +14,15 @@ from apps.products.docs.product_docs import (
     product_restore_schema,
     product_search_schema,
     product_update_schema,
+)
+from apps.products.models import Product
+from apps.products.selectors.product_selector import ProductSelector
+from apps.products.serializers.product_serializer import (
+    ProductCreateSerializer,
+    ProductDetailSerializer,
+    ProductListSerializer,
+    ProductSearchSerializer,
+    ProductUpdateSerializer,
 )
 from apps.products.services.product_service import ProductService
 from apps.users.permissions import IsAuthenticatedAndActive
@@ -76,10 +74,7 @@ class ProductViewSet(BaseViewSet):
                 IsAuthenticatedAndActive,
                 HasPermission("products.update"),
             ),
-            "search": (
-                IsAuthenticatedAndActive,
-                HasPermission("products.view")
-            ),
+            "search": (IsAuthenticatedAndActive, HasPermission("products.view")),
         }
 
         classes = permission_map.get(
@@ -370,8 +365,6 @@ class ProductViewSet(BaseViewSet):
                 message="No fue posible restaurar el producto.",
             )
 
-
-
     @product_search_schema
     @action(
         detail=False,
@@ -381,12 +374,12 @@ class ProductViewSet(BaseViewSet):
     )
     def search(self, request, *args, **kwargs):
         """
-            Busqueda de productos para autocompletado (POS).
-            Query params:
-                q (str): Término de búsqueda (código, nombre o barcode).
-                limit (int): Máximo de resultados. Default 20, tope 50.
+        Busqueda de productos para autocompletado (POS).
+        Query params:
+            q (str): Término de búsqueda (código, nombre o barcode).
+            limit (int): Máximo de resultados. Default 20, tope 50.
 
-            Retorna una lista plana de productos activos.
+        Retorna una lista plana de productos activos.
         """
 
         query = request.query_params.get("q", "").strip()
@@ -398,9 +391,15 @@ class ProductViewSet(BaseViewSet):
 
         limit = max(1, min(limit, 50))
 
-        products = ProductSelector.search_products(query=query, limit=limit,)
+        products = ProductSelector.search_products(
+            query=query,
+            limit=limit,
+        )
 
-        serializer = ProductSearchSerializer(products, many=True,)
+        serializer = ProductSearchSerializer(
+            products,
+            many=True,
+        )
 
         return self.success_response(
             message="Productos obtenidos correctamente.",

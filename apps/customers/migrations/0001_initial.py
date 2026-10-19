@@ -4,40 +4,169 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     initial = True
 
-    dependencies = [
-    ]
+    dependencies = []
 
     operations = [
         migrations.CreateModel(
-            name='Customer',
+            name="Customer",
             fields=[
-                ('created_at', models.DateTimeField(auto_now_add=True, verbose_name='Fecha de creación')),
-                ('updated_at', models.DateTimeField(auto_now=True, verbose_name='Fecha de actualización')),
-                ('deleted_at', models.DateTimeField(blank=True, null=True, verbose_name='Fecha de eliminación')),
-                ('id_customer', models.BigAutoField(primary_key=True, serialize=False, verbose_name='ID')),
-                ('document_type', models.CharField(choices=[('CC', 'Cédula de Ciudadanía'), ('NIT', 'Número de Identificación Tributaria'), ('CE', 'Cédula de Extranjería'), ('PAS', 'Pasaporte'), ('TI', 'Tarjeta de Identidad')], help_text='Tipo de documento del cliente (CC, NIT, CE, PAS, TI).', max_length=10, verbose_name='Tipo de Documento')),
-                ('document_number', models.CharField(help_text='Número único de identidad del cliente.', max_length=30, unique=True, verbose_name='Número de Documento')),
-                ('first_name', models.CharField(blank=True, max_length=100, verbose_name='Nombres')),
-                ('last_name', models.CharField(blank=True, max_length=100, verbose_name='Apellidos')),
-                ('business_name', models.CharField(blank=True, help_text='Nombre de la empresa o razón social del cliente.', max_length=200, verbose_name='Razón Social')),
-                ('email', models.EmailField(blank=True, help_text='Correo electrónico del cliente.', max_length=254, verbose_name='Correo Electrónico')),
-                ('phone', models.CharField(blank=True, help_text='Número de teléfono del cliente.', max_length=30, verbose_name='Teléfono')),
-                ('mobile', models.CharField(blank=True, help_text='Número de celular del cliente.', max_length=30, verbose_name='Celular')),
-                ('address', models.CharField(blank=True, help_text='Dirección física del cliente.', max_length=255, verbose_name='Dirección')),
-                ('city', models.CharField(blank=True, help_text='Ciudad de residencia del cliente.', max_length=100, verbose_name='Ciudad')),
-                ('country', models.CharField(blank=True, help_text='País de residencia del cliente.', max_length=100, verbose_name='País')),
-                ('notes', models.TextField(blank=True, help_text='Notas adicionales sobre el cliente.', verbose_name='Notas')),
-                ('is_active', models.BooleanField(default=True, help_text='Indica si el cliente está activo en el sistema.', verbose_name='Estado')),
+                (
+                    "created_at",
+                    models.DateTimeField(
+                        auto_now_add=True, verbose_name="Fecha de creación"
+                    ),
+                ),
+                (
+                    "updated_at",
+                    models.DateTimeField(
+                        auto_now=True, verbose_name="Fecha de actualización"
+                    ),
+                ),
+                (
+                    "deleted_at",
+                    models.DateTimeField(
+                        blank=True, null=True, verbose_name="Fecha de eliminación"
+                    ),
+                ),
+                (
+                    "id_customer",
+                    models.BigAutoField(
+                        primary_key=True, serialize=False, verbose_name="ID"
+                    ),
+                ),
+                (
+                    "document_type",
+                    models.CharField(
+                        choices=[
+                            ("CC", "Cédula de Ciudadanía"),
+                            ("NIT", "Número de Identificación Tributaria"),
+                            ("CE", "Cédula de Extranjería"),
+                            ("PAS", "Pasaporte"),
+                            ("TI", "Tarjeta de Identidad"),
+                        ],
+                        help_text="Tipo de documento del cliente (CC, NIT, CE, PAS, TI).",
+                        max_length=10,
+                        verbose_name="Tipo de Documento",
+                    ),
+                ),
+                (
+                    "document_number",
+                    models.CharField(
+                        help_text="Número único de identidad del cliente.",
+                        max_length=30,
+                        unique=True,
+                        verbose_name="Número de Documento",
+                    ),
+                ),
+                (
+                    "first_name",
+                    models.CharField(
+                        blank=True, max_length=100, verbose_name="Nombres"
+                    ),
+                ),
+                (
+                    "last_name",
+                    models.CharField(
+                        blank=True, max_length=100, verbose_name="Apellidos"
+                    ),
+                ),
+                (
+                    "business_name",
+                    models.CharField(
+                        blank=True,
+                        help_text="Nombre de la empresa o razón social del cliente.",
+                        max_length=200,
+                        verbose_name="Razón Social",
+                    ),
+                ),
+                (
+                    "email",
+                    models.EmailField(
+                        blank=True,
+                        help_text="Correo electrónico del cliente.",
+                        max_length=254,
+                        verbose_name="Correo Electrónico",
+                    ),
+                ),
+                (
+                    "phone",
+                    models.CharField(
+                        blank=True,
+                        help_text="Número de teléfono del cliente.",
+                        max_length=30,
+                        verbose_name="Teléfono",
+                    ),
+                ),
+                (
+                    "mobile",
+                    models.CharField(
+                        blank=True,
+                        help_text="Número de celular del cliente.",
+                        max_length=30,
+                        verbose_name="Celular",
+                    ),
+                ),
+                (
+                    "address",
+                    models.CharField(
+                        blank=True,
+                        help_text="Dirección física del cliente.",
+                        max_length=255,
+                        verbose_name="Dirección",
+                    ),
+                ),
+                (
+                    "city",
+                    models.CharField(
+                        blank=True,
+                        help_text="Ciudad de residencia del cliente.",
+                        max_length=100,
+                        verbose_name="Ciudad",
+                    ),
+                ),
+                (
+                    "country",
+                    models.CharField(
+                        blank=True,
+                        help_text="País de residencia del cliente.",
+                        max_length=100,
+                        verbose_name="País",
+                    ),
+                ),
+                (
+                    "notes",
+                    models.TextField(
+                        blank=True,
+                        help_text="Notas adicionales sobre el cliente.",
+                        verbose_name="Notas",
+                    ),
+                ),
+                (
+                    "is_active",
+                    models.BooleanField(
+                        default=True,
+                        help_text="Indica si el cliente está activo en el sistema.",
+                        verbose_name="Estado",
+                    ),
+                ),
             ],
             options={
-                'verbose_name': 'cliente',
-                'verbose_name_plural': 'Clientes',
-                'db_table': 'customers',
-                'ordering': ['id_customer'],
-                'indexes': [models.Index(fields=['document_number'], name='customer_document_idx'), models.Index(fields=['is_active'], name='customer_active_idx'), models.Index(fields=['last_name'], name='customer_last_name_idx'), models.Index(fields=['business_name'], name='customer_business_name_idx')],
+                "verbose_name": "cliente",
+                "verbose_name_plural": "Clientes",
+                "db_table": "customers",
+                "ordering": ["id_customer"],
+                "indexes": [
+                    models.Index(
+                        fields=["document_number"], name="customer_document_idx"
+                    ),
+                    models.Index(fields=["is_active"], name="customer_active_idx"),
+                    models.Index(fields=["last_name"], name="customer_last_name_idx"),
+                    models.Index(
+                        fields=["business_name"], name="customer_business_name_idx"
+                    ),
+                ],
             },
         ),
     ]

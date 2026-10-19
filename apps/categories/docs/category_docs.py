@@ -18,7 +18,6 @@ from apps.core.docs.error_schemas import (
     ValidationErrorResponseSerializer,
 )
 
-
 pagination_parameters = [
     OpenApiParameter(
         name="page",

@@ -1,18 +1,21 @@
 import sys
 from datetime import timedelta
 from pathlib import Path
+from urllib.parse import parse_qs, unquote, urlparse
 
 from decouple import Csv, config
 
+from .spectacular import *  # noqa: F403
+
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
-
-SECRET_KEY = config("SECRET_KEY")
+SECRET_KEY = config("SECRET_KEY", default="")
 
 DEBUG = config("DEBUG", default=False, cast=bool)
 
 ALLOWED_HOSTS = config("ALLOWED_HOSTS", default="", cast=Csv())
 
+TESTING = any(cmd in sys.argv for cmd in ["test", "pytest"])
 
 DJANGO_APPS = [
     "django.contrib.admin",
@@ -47,9 +50,9 @@ LOCAL_APPS = [
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
 
-
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "corsheaders.middleware.CorsMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -60,9 +63,7 @@ MIDDLEWARE = [
     "apps.core.middlewares.audit_middleware.AuditMiddleware",
 ]
 
-
 ROOT_URLCONF = "config.urls"
-
 
 TEMPLATES = [
     {
@@ -79,43 +80,86 @@ TEMPLATES = [
     },
 ]
 
-
 WSGI_APPLICATION = "config.wsgi.application"
 
 
-DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.postgresql",
-        "NAME": config("DB_NAME"),
-        "USER": config("DB_USER"),
-        "PASSWORD": config("DB_PASSWORD"),
-        "HOST": config("DB_HOST"),
-        "PORT": config("DB_PORT"),
-        "CONN_MAX_AGE": config(
-            "CONN_MAX_AGE",
-            default=60,
-            cast=int,
-        ),
-        "CONN_HEALTH_CHECKS": config(
-            "CONN_HEALTH_CHECKS",
-            default=True,
-            cast=bool,
-        ),
-        "OPTIONS": {
-            "connect_timeout": 10,
+def get_database_config():
+    """
+    Configura el diccionario de base de datos soportando:
+    1. DATABASE_URL (formato postgres://user:password@host:port/dbname) estándar en Render y Supabase.
+    2. Variables individuales DB_NAME, DB_USER, DB_PASSWORD, DB_HOST, DB_PORT.
+    3. Fallback a SQLite en memoria durante ejecución de pruebas automáticas.
+    """
+    if TESTING:
+        return {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": ":memory:",
+        }
+
+    database_url = config("DATABASE_URL", default="").strip()
+    if database_url:
+        parsed = urlparse(database_url)
+        db_name = parsed.path.lstrip("/")
+        db_user = unquote(parsed.username) if parsed.username else ""
+        db_password = unquote(parsed.password) if parsed.password else ""
+        db_host = parsed.hostname or "localhost"
+        db_port = parsed.port or 5432
+
+        query_params = parse_qs(parsed.query)
+        sslmode = query_params.get("sslmode", [config("DB_SSLMODE", default="")])[0]
+
+        options = {
+            "connect_timeout": config("DB_CONNECT_TIMEOUT", default=10, cast=int),
             "keepalives": 1,
             "keepalives_idle": 30,
             "keepalives_interval": 10,
             "keepalives_count": 5,
-        },
+        }
+        if sslmode:
+            options["sslmode"] = sslmode
+
+        return {
+            "ENGINE": "django.db.backends.postgresql",
+            "NAME": db_name,
+            "USER": db_user,
+            "PASSWORD": db_password,
+            "HOST": db_host,
+            "PORT": db_port,
+            "CONN_MAX_AGE": config("CONN_MAX_AGE", default=60, cast=int),
+            "CONN_HEALTH_CHECKS": config("CONN_HEALTH_CHECKS", default=True, cast=bool),
+            "OPTIONS": options,
+        }
+
+    # Fallback con variables individuales
+    options = {
+        "connect_timeout": config("DB_CONNECT_TIMEOUT", default=10, cast=int),
+        "keepalives": 1,
+        "keepalives_idle": 30,
+        "keepalives_interval": 10,
+        "keepalives_count": 5,
     }
+    db_sslmode = config("DB_SSLMODE", default="")
+    if db_sslmode:
+        options["sslmode"] = db_sslmode
+
+    return {
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": config("DB_NAME", default=""),
+        "USER": config("DB_USER", default=""),
+        "PASSWORD": config("DB_PASSWORD", default=""),
+        "HOST": config("DB_HOST", default=""),
+        "PORT": config("DB_PORT", default=""),
+        "CONN_MAX_AGE": config("CONN_MAX_AGE", default=60, cast=int),
+        "CONN_HEALTH_CHECKS": config("CONN_HEALTH_CHECKS", default=True, cast=bool),
+        "OPTIONS": options,
+    }
+
+
+DATABASES = {
+    "default": get_database_config(),
 }
 
-if any(cmd in sys.argv for cmd in ["test", "pytest"]):
-    DATABASES["default"] = {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": ":memory:",
-    }
+if TESTING:
     PASSWORD_HASHERS = [
         "django.contrib.auth.hashers.MD5PasswordHasher",
     ]
@@ -131,20 +175,17 @@ USE_TZ = True
 
 
 # ======================================
-# Configuración de Archivos Multimedia (Media)
+# Archivos Estáticos y Multimedia
 # ======================================
 
-STATIC_URL = "static/"
+STATIC_URL = "/static/"
 
 STATIC_ROOT = BASE_DIR / "staticfiles"
+STATIC_ROOT.mkdir(parents=True, exist_ok=True)
 
 STATICFILES_DIRS = [
     BASE_DIR / "static",
 ]
-
-# ======================================
-# Configuración de Archivos de Medios
-# ======================================
 
 MEDIA_URL = "/media/"
 
@@ -154,49 +195,31 @@ MEDIA_ROOT = BASE_DIR / "media"
 # ======================================
 # Caché Configuration (LocMemCache)
 # ======================================
-# IMPORTANTE: LocMemCache es per-process (cada worker de Gunicorn
-# tiene su propia instancia de caché). Esto significa:
-# - La invalidación de caché solo afecta al worker que la ejecuta.
-# - El caché NO se comparte entre workers ni entre procesos.
-# - En producción con múltiples workers, considerar migrar a un
-#   backend compartido (ej. Redis) cuando el proyecto lo requiera.
-#
-# Para migrar a Redis en el futuro, solo cambiar BACKEND y LOCATION:
-#   "BACKEND": "django.core.cache.backends.redis.RedisCache",
-#   "LOCATION": "redis://127.0.0.1:6379/1",
-# ======================================
-
 CACHES = {
     "default": {
         "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
         "LOCATION": "inventario-pme-cache",
-        "TIMEOUT": 300,  # 5 minutos por defecto
+        "TIMEOUT": 300,
         "OPTIONS": {
             "MAX_ENTRIES": 1000,
         },
     },
 }
 
-# Timeouts centralizados para caché (en segundos).
-# Usar estas constantes en servicios y selectors para mantener
-# consistencia y facilitar ajustes globales.
 CACHE_TIMEOUTS = {
-    "dashboard_metrics": 300,  # 5 min — métricas del dashboard
-    "permissions": 600,  # 10 min — permisos de usuario
-    "products_list": 180,  # 3 min — listado de productos
-    "inventory_status": 120,  # 2 min — estado de inventario
-    "sales_summary": 300,  # 5 min — resumen de ventas
-    "company_info": 3600,  # 1 hora — info de la empresa (rara vez cambia)
+    "dashboard_metrics": 300,
+    "permissions": 600,
+    "products_list": 180,
+    "inventory_status": 120,
+    "sales_summary": 300,
+    "company_info": 3600,
 }
-
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 
-from .spectacular import *  # noqa: F403
-
 # =======================================
-# Simple jwt
+# Simple JWT
 # =======================================
 
 SIMPLE_JWT = {
@@ -209,5 +232,52 @@ SIMPLE_JWT = {
     "USER_ID_CLAIM": "user_id",
 }
 
-
 AUTH_USER_MODEL = "users.User"
+
+
+# =======================================
+# Logging Centralizado (Render compatible)
+# =======================================
+
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "verbose": {
+            "format": "[{asctime}] {levelname} {name} - {message}",
+            "style": "{",
+        },
+        "simple": {
+            "format": "[{asctime}] {levelname} {name}: {message}",
+            "style": "{",
+        },
+    },
+    "handlers": {
+        "console": {
+            "level": "INFO",
+            "class": "logging.StreamHandler",
+            "formatter": "simple",
+        },
+    },
+    "root": {
+        "handlers": ["console"],
+        "level": "INFO",
+    },
+    "loggers": {
+        "django": {
+            "handlers": ["console"],
+            "level": "INFO",
+            "propagate": False,
+        },
+        "django.request": {
+            "handlers": ["console"],
+            "level": "ERROR",
+            "propagate": False,
+        },
+        "apps": {
+            "handlers": ["console"],
+            "level": "INFO",
+            "propagate": False,
+        },
+    },
+}

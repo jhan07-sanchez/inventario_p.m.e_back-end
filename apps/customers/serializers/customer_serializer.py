@@ -4,7 +4,6 @@ from apps.customers.models import Customer
 from apps.customers.services.customer_service import CustomerService
 
 
-
 class CustomerListSerializer(serializers.ModelSerializer):
     """
     Serializer utlizado para listar clientes.
@@ -30,7 +29,6 @@ class CustomerListSerializer(serializers.ModelSerializer):
         )
 
         read_only_fields = fields
-
 
 
 class CustomerDetailSerializer(serializers.ModelSerializer):
@@ -66,8 +64,6 @@ class CustomerDetailSerializer(serializers.ModelSerializer):
         )
 
 
-
-
 class CustomerCreateSerializer(serializers.ModelSerializer):
     """
     Serializer utlizado para crear un cliente.
@@ -101,8 +97,6 @@ class CustomerCreateSerializer(serializers.ModelSerializer):
         return CustomerService.create_customer(validated_data)
 
 
-
-
 class CustomerUpdateSerializer(serializers.ModelSerializer):
     """
     Serializer utlizado para actualizar un cliente.
@@ -129,9 +123,10 @@ class CustomerUpdateSerializer(serializers.ModelSerializer):
             "is_active",
         )
 
-
     def update(self, instance, validated_data):
         """
         Actualiza un cliente utilizando el CustomerService.
         """
-        return CustomerService.update_customer(customer=instance, validated_data=validated_data)
+        return CustomerService.update_customer(
+            customer=instance, validated_data=validated_data
+        )

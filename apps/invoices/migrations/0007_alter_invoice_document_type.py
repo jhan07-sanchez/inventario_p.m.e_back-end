@@ -4,15 +4,22 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('invoices', '0006_invoice_company_city_snapshot_and_more'),
+        ("invoices", "0006_invoice_company_city_snapshot_and_more"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='invoice',
-            name='document_type',
-            field=models.CharField(choices=[('PURCHASE_INVOICE', 'Factura de Compra'), ('SALE_INVOICE', 'Factura de Venta'), ('POS_TICKET', 'Ticket POS')], max_length=50, verbose_name='Tipo de documento'),
+            model_name="invoice",
+            name="document_type",
+            field=models.CharField(
+                choices=[
+                    ("PURCHASE_INVOICE", "Factura de Compra"),
+                    ("SALE_INVOICE", "Factura de Venta"),
+                    ("POS_TICKET", "Ticket POS"),
+                ],
+                max_length=50,
+                verbose_name="Tipo de documento",
+            ),
         ),
     ]

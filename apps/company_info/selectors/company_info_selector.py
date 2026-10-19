@@ -1,9 +1,8 @@
+from django.core.cache import cache
 from django.db.models import QuerySet
 
 from apps.company_info.models import CompanyInfo
 
-
-from django.core.cache import cache
 
 class CompanyInfoSelector:
     """
@@ -21,19 +20,15 @@ class CompanyInfoSelector:
 
         Retorna la primera empresa activa registrada (singleton).
         """
-        
+
         cache_key = "company_info_current"
         cached_val = cache.get(cache_key)
-        
+
         if cached_val is not None:
             return cached_val
-            
-        val = (
-            CompanyInfo.objects.filter(is_active=True)
-            .order_by("id_company")
-            .first()
-        )
-        
+
+        val = CompanyInfo.objects.filter(is_active=True).order_by("id_company").first()
+
         cache.set(cache_key, val, timeout=3600)  # 1 hora
         return val
 
@@ -54,10 +49,7 @@ class CompanyInfoSelector:
         Obtiene todos los registros de empresa activos.
         """
 
-        return (
-            CompanyInfo.objects.filter(is_active=True)
-            .order_by("id_company")
-        )
+        return CompanyInfo.objects.filter(is_active=True).order_by("id_company")
 
     @staticmethod
     def exists() -> bool:

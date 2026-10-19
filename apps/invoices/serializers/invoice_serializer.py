@@ -1,10 +1,14 @@
 from decimal import Decimal
+
 from rest_framework import serializers
 
-from apps.invoices.dto.invoice_dto import InvoiceCreateDTO, InvoiceItemCreateDTO, InvoiceUpdateDTO
+from apps.invoices.dto.invoice_dto import (
+    InvoiceCreateDTO,
+    InvoiceItemCreateDTO,
+    InvoiceUpdateDTO,
+)
 from apps.invoices.models import Invoice, InvoiceItem
 from apps.invoices.serializers.invoice_template_serializer import (
-    InvoiceTemplateListSerializer,
     InvoiceTemplateRetrieveSerializer,
 )
 
@@ -86,14 +90,32 @@ class InvoiceRetrieveSerializer(serializers.ModelSerializer):
 
 class InvoiceItemCreateSerializer(serializers.Serializer):
     product_id = serializers.IntegerField(required=True)
-    quantity = serializers.DecimalField(max_digits=12, decimal_places=2, required=True, min_value=Decimal('0.01'))
-    unit_price = serializers.DecimalField(max_digits=12, decimal_places=2, required=True, min_value=Decimal('0.00'))
-    discount = serializers.DecimalField(max_digits=12, decimal_places=2, required=False, default=Decimal('0.00'), min_value=Decimal('0.00'))
-    tax = serializers.DecimalField(max_digits=12, decimal_places=2, required=False, default=Decimal('0.00'), min_value=Decimal('0.00'))
+    quantity = serializers.DecimalField(
+        max_digits=12, decimal_places=2, required=True, min_value=Decimal("0.01")
+    )
+    unit_price = serializers.DecimalField(
+        max_digits=12, decimal_places=2, required=True, min_value=Decimal("0.00")
+    )
+    discount = serializers.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        required=False,
+        default=Decimal("0.00"),
+        min_value=Decimal("0.00"),
+    )
+    tax = serializers.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        required=False,
+        default=Decimal("0.00"),
+        min_value=Decimal("0.00"),
+    )
 
 
 class InvoiceCreateSerializer(serializers.Serializer):
-    document_type = serializers.ChoiceField(choices=Invoice.DocumentType.choices, required=True)
+    document_type = serializers.ChoiceField(
+        choices=Invoice.DocumentType.choices, required=True
+    )
     template_id = serializers.IntegerField(required=True)
     invoice_number = serializers.CharField(max_length=50, required=True)
     issue_date = serializers.DateField(required=False, allow_null=True)
@@ -143,7 +165,7 @@ class InvoiceCreateSerializer(serializers.Serializer):
             discount=validated_data.get("discount", Decimal("0.00")),
             tax=validated_data.get("tax", Decimal("0.00")),
             notes=validated_data.get("notes"),
-            items=items_dto
+            items=items_dto,
         )
 
 
@@ -157,5 +179,5 @@ class InvoiceUpdateSerializer(serializers.Serializer):
         return InvoiceUpdateDTO(
             issue_date=validated_data.get("issue_date"),
             due_date=validated_data.get("due_date"),
-            notes=validated_data.get("notes")
+            notes=validated_data.get("notes"),
         )

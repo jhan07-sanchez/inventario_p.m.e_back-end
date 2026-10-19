@@ -3,7 +3,6 @@ from django.contrib import admin
 from apps.categories.models import Category
 
 
-
 @admin.register(Category)
 class CategoryAdmin(admin.ModelAdmin):
     list_display = (
@@ -26,7 +25,6 @@ class CategoryAdmin(admin.ModelAdmin):
 
     ordering = ("id_category",)
 
-
     fieldsets = (
         (
             "Informacion principal",
@@ -40,11 +38,7 @@ class CategoryAdmin(admin.ModelAdmin):
         ),
         (
             "Estado y Notas",
-            {
-                "fields": (
-                    "is_active",
-                )
-            },
+            {"fields": ("is_active",)},
         ),
         (
             "Fechas importantes",
@@ -63,7 +57,6 @@ class CategoryAdmin(admin.ModelAdmin):
     )
 
     exclude = ("delete_at",)
-
 
     def get_queryset(self, request):
         """

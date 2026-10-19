@@ -6,13 +6,12 @@ from apps.users.serializers.auth.dashboard_serializer import DashboardResponseSe
 from apps.users.serializers.auth.navigation_serializer import (
     NavigationResponseSerializer,
 )
-from apps.users.serializers.auth.security_context_serializer import (
-    SecurityContextResponseSerializer,
-)
 from apps.users.serializers.auth.permission_catalog_serializer import (
     PermissionCatalogResponseSerializer,
 )
-
+from apps.users.serializers.auth.security_context_serializer import (
+    SecurityContextResponseSerializer,
+)
 
 security_context_schema = extend_schema(
     tags=["Security Dashboard"],

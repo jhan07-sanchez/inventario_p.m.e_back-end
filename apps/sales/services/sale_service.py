@@ -16,14 +16,12 @@ from apps.core.security.services.dashboard_metrics_service import (
 )
 from apps.core.services.base_service import BaseService
 from apps.customers.models import Customer
-from apps.inventory.services.inventory_service import InventoryService
 from apps.inventory.models import InventoryMovement
+from apps.inventory.services.inventory_service import InventoryService
 from apps.invoices.models import Invoice
 from apps.products.models import Product
-from apps.sales.dto.sale_detail_dto import SaleDetailDto
 from apps.sales.dto.sale_dto import SaleCreateDto
-from apps.sales.models import Sale
-from apps.sales.models import SaleDetail
+from apps.sales.models import Sale, SaleDetail
 
 
 class SaleService(BaseService[Sale]):
@@ -89,8 +87,7 @@ class SaleService(BaseService[Sale]):
         # Fetch all products at once to avoid N+1 queries
         product_ids = [d.product_id for d in dto.details]
         products_map = {
-            p.id_product: p 
-            for p in Product.objects.filter(pk__in=product_ids)
+            p.id_product: p for p in Product.objects.filter(pk__in=product_ids)
         }
 
         subtotal_sum = Decimal("0.00")
@@ -98,8 +95,10 @@ class SaleService(BaseService[Sale]):
         for detail_dto in dto.details:
             product = products_map.get(detail_dto.product_id)
             if not product:
-                raise ValidationError(f"El producto con ID {detail_dto.product_id} no existe.")
-            
+                raise ValidationError(
+                    f"El producto con ID {detail_dto.product_id} no existe."
+                )
+
             if not product.is_active:
                 raise ProductInactiveException(
                     f"El producto {product.name} se encuentra inactivo."
@@ -155,7 +154,11 @@ class SaleService(BaseService[Sale]):
 
         # Calcular cambio si es efectivo y se especificó monto recibido
         from apps.core.enums import PaymentMethod
-        if PaymentMethod.is_cash(sale.payment_method) and sale.amount_received is not None:
+
+        if (
+            PaymentMethod.is_cash(sale.payment_method)
+            and sale.amount_received is not None
+        ):
             if sale.amount_received >= sale.total:
                 sale.change_amount = sale.amount_received - sale.total
             else:
@@ -247,13 +250,18 @@ class SaleService(BaseService[Sale]):
 
         # Lock inventories in order to prevent deadlocks
         inventory_ids = [
-            detail.product.inventory.pk 
-            for detail in details 
+            detail.product.inventory.pk
+            for detail in details
             if hasattr(detail.product, "inventory")
         ]
         if inventory_ids:
             from apps.inventory.models import Inventory
-            list(Inventory.objects.filter(pk__in=inventory_ids).select_for_update().order_by('pk'))
+
+            list(
+                Inventory.objects.filter(pk__in=inventory_ids)
+                .select_for_update()
+                .order_by("pk")
+            )
 
         for detail in details:
             if not hasattr(detail.product, "inventory"):
@@ -277,11 +285,11 @@ class SaleService(BaseService[Sale]):
             )
 
         from apps.invoices.models import Invoice
+
         invoice_exists = sale.invoices.filter(
-            document_type=Invoice.DocumentType.SALE_INVOICE,
-            is_active=True
+            document_type=Invoice.DocumentType.SALE_INVOICE, is_active=True
         ).exists()
-        
+
         if not invoice_exists:
             SaleService._create_sale_invoice(sale, details)
 
@@ -325,20 +333,28 @@ class SaleService(BaseService[Sale]):
 
         # Forzamos sale_type=POS
         from dataclasses import replace as dc_replace
+
         dto = dc_replace(dto, sale_type=Sale.SaleType.POS)
 
         sale = SaleService.create_sale(dto, user)
-        details = sale.details.select_related("product__inventory").filter(is_active=True)
+        details = sale.details.select_related("product__inventory").filter(
+            is_active=True
+        )
 
         # Lock inventories in order to prevent deadlocks
         inventory_ids = [
-            detail.product.inventory.pk 
-            for detail in details 
+            detail.product.inventory.pk
+            for detail in details
             if hasattr(detail.product, "inventory")
         ]
         if inventory_ids:
             from apps.inventory.models import Inventory
-            list(Inventory.objects.filter(pk__in=inventory_ids).select_for_update().order_by('pk'))
+
+            list(
+                Inventory.objects.filter(pk__in=inventory_ids)
+                .select_for_update()
+                .order_by("pk")
+            )
 
         for detail in details:
             if not hasattr(detail.product, "inventory"):
@@ -402,10 +418,14 @@ class SaleService(BaseService[Sale]):
         from apps.invoices.models import Invoice, InvoiceTemplate
         from apps.invoices.services.invoice_service import InvoiceService
 
-        template = InvoiceTemplate.objects.filter(
-            document_type=InvoiceTemplate.DocumentType.SALE_INVOICE,
-            is_active=True,
-        ).order_by("-is_default").first()
+        template = (
+            InvoiceTemplate.objects.filter(
+                document_type=InvoiceTemplate.DocumentType.SALE_INVOICE,
+                is_active=True,
+            )
+            .order_by("-is_default")
+            .first()
+        )
 
         if template is None:
             raise ValidationError(
@@ -487,13 +507,18 @@ class SaleService(BaseService[Sale]):
 
         # Lock inventories in order to prevent deadlocks
         inventory_ids = [
-            detail.product.inventory.pk 
-            for detail in details 
+            detail.product.inventory.pk
+            for detail in details
             if hasattr(detail.product, "inventory")
         ]
         if inventory_ids:
             from apps.inventory.models import Inventory
-            list(Inventory.objects.filter(pk__in=inventory_ids).select_for_update().order_by('pk'))
+
+            list(
+                Inventory.objects.filter(pk__in=inventory_ids)
+                .select_for_update()
+                .order_by("pk")
+            )
 
         for detail in details:
             if not hasattr(detail.product, "inventory"):
@@ -585,23 +610,23 @@ class SaleService(BaseService[Sale]):
         """
         Registra el pago de la venta y el movimiento de caja correspondiente.
         """
-        from apps.cash.models.cash_session import CashSession
-        from apps.cash.dto.payment_dto import PaymentCreateDto
-        from apps.cash.services.payment_service import PaymentService
         from apps.cash.dto.cash_movement_dto import CashMovementCreateDto
-        from apps.cash.services.cash_movement_service import CashMovementService
+        from apps.cash.dto.payment_dto import PaymentCreateDto
         from apps.cash.models.cash_movement import CashMovement
+        from apps.cash.models.cash_session import CashSession
         from apps.cash.models.payment import Payment
+        from apps.cash.services.cash_movement_service import CashMovementService
+        from apps.cash.services.payment_service import PaymentService
         from apps.core.enums import PaymentMethod, PaymentStatus
 
         session = CashSession.objects.filter(
-            user=user, 
-            status=CashSession.SessionStatus.OPEN,
-            is_active=True
+            user=user, status=CashSession.SessionStatus.OPEN, is_active=True
         ).first()
 
         if sale.sale_type == sale.SaleType.POS and not session:
-            raise ValidationError("Para realizar ventas POS debe tener una sesión de caja abierta.")
+            raise ValidationError(
+                "Para realizar ventas POS debe tener una sesión de caja abierta."
+            )
 
         # Venta a crédito: genera registro de pago PENDING para cartera y NO afecta la caja
         if sale.payment_method == PaymentMethod.CREDIT:
@@ -621,7 +646,7 @@ class SaleService(BaseService[Sale]):
             amount=sale.total,
             payment_method=sale.payment_method,
             status=PaymentStatus.COMPLETED,
-            reference=f"Venta #{sale.sale_number}"
+            reference=f"Venta #{sale.sale_number}",
         )
         payment = PaymentService.create_payment(payment_dto)
 
@@ -635,7 +660,7 @@ class SaleService(BaseService[Sale]):
                 movement_type=CashMovement.MovementType.IN,
                 is_cash=is_cash,
                 reference=f"Cobro venta #{sale.sale_number}",
-                description=f"Pago por venta {sale.sale_number}"
+                description=f"Pago por venta {sale.sale_number}",
             )
             CashMovementService.create_movement(movement_dto)
 
@@ -644,21 +669,19 @@ class SaleService(BaseService[Sale]):
         """
         Revierte los pagos de una venta cancelada y genera la salida de caja.
         """
-        from apps.cash.models.cash_session import CashSession
         from apps.cash.dto.cash_movement_dto import CashMovementCreateDto
-        from apps.cash.services.cash_movement_service import CashMovementService
         from apps.cash.models.cash_movement import CashMovement
+        from apps.cash.models.cash_session import CashSession
+        from apps.cash.services.cash_movement_service import CashMovementService
         from apps.core.enums import PaymentMethod, PaymentStatus
 
         session = CashSession.objects.filter(
-            user=user, 
-            status=CashSession.SessionStatus.OPEN,
-            is_active=True
+            user=user, status=CashSession.SessionStatus.OPEN, is_active=True
         ).first()
 
         payments = sale.payments.exclude(status=PaymentStatus.CANCELLED)
         for payment in payments:
-            was_completed = (payment.status == PaymentStatus.COMPLETED)
+            was_completed = payment.status == PaymentStatus.COMPLETED
             payment.status = PaymentStatus.CANCELLED
             payment.save(update_fields=["status", "updated_at"])
 
@@ -671,7 +694,6 @@ class SaleService(BaseService[Sale]):
                     movement_type=CashMovement.MovementType.OUT,
                     is_cash=is_cash,
                     reference=f"Reverso venta #{sale.sale_number}",
-                    description=f"Reverso de pago por cancelación de venta {sale.sale_number}"
+                    description=f"Reverso de pago por cancelación de venta {sale.sale_number}",
                 )
                 CashMovementService.create_movement(movement_dto)
-

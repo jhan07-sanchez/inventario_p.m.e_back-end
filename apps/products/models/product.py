@@ -1,9 +1,10 @@
 from decimal import Decimal
+
 from django.core.validators import MinValueValidator
 from django.db import models
 
-from apps.core.models.active_model import ActiveModel
 from apps.categories.models.category import Category
+from apps.core.models.active_model import ActiveModel
 
 
 class Product(ActiveModel):

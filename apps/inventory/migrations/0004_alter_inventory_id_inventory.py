@@ -4,15 +4,16 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('inventory', '0003_inventorymovement_supplier'),
+        ("inventory", "0003_inventorymovement_supplier"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='inventory',
-            name='id_inventory',
-            field=models.BigAutoField(primary_key=True, serialize=False, verbose_name='ID'),
+            model_name="inventory",
+            name="id_inventory",
+            field=models.BigAutoField(
+                primary_key=True, serialize=False, verbose_name="ID"
+            ),
         ),
     ]

@@ -3,8 +3,6 @@ from django.db.models import QuerySet
 from apps.suppliers.models import Supplier
 
 
-
-
 class SupplierSelector:
     """
     Selector encargado exclusivamente de realizar consultas
@@ -21,9 +19,10 @@ class SupplierSelector:
         """
         return Supplier.objects.all()
 
-
     @staticmethod
-    def get_supplier_by_id(supplier_id: int,) -> Supplier:
+    def get_supplier_by_id(
+        supplier_id: int,
+    ) -> Supplier:
         """
         Obtiene un proveedor mediante su identificador.
 
@@ -39,4 +38,6 @@ class SupplierSelector:
                 Si el proveedor no existe.
         """
 
-        return Supplier.objects.get(pk=supplier_id,)
+        return Supplier.objects.get(
+            pk=supplier_id,
+        )

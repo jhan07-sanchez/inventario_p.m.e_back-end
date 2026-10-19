@@ -3,9 +3,9 @@ from decimal import Decimal
 from django.core.validators import MinValueValidator
 from django.db import models
 
-from apps.core.models.active_model import ActiveModel
 from apps.cash.models.cash_session import CashSession
 from apps.cash.models.payment import Payment
+from apps.core.models.active_model import ActiveModel
 
 
 class CashMovement(ActiveModel):

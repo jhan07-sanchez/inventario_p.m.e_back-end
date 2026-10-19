@@ -1,16 +1,17 @@
 from decimal import Decimal
-from django.db import transaction
+
 from django.core.exceptions import ValidationError
+from django.db import transaction
 from django.utils import timezone
 
-from apps.core.services.base_service import BaseService
 from apps.core.exceptions.custom_exceptions import (
-    InvoiceTemplateNotFoundException,
     InvalidInvoiceStateException,
     InvalidInvoiceTransitionException,
     InvoiceHasNoItemsException,
+    InvoiceTemplateNotFoundException,
     ProductInactiveException,
 )
+from apps.core.services.base_service import BaseService
 from apps.invoices.dto.invoice_dto import InvoiceCreateDTO, InvoiceUpdateDTO
 from apps.invoices.models import Invoice, InvoiceItem, InvoiceTemplate
 from apps.products.models import Product
@@ -49,7 +50,10 @@ class InvoiceService(BaseService[Invoice]):
             raise ValidationError("El número de factura ya existe.")
 
         # Obtener datos de la empresa activos (usa selector cacheado)
-        from apps.company_info.selectors.company_info_selector import CompanyInfoSelector
+        from apps.company_info.selectors.company_info_selector import (
+            CompanyInfoSelector,
+        )
+
         company = CompanyInfoSelector.get_current()
 
         c_name = company.business_name if company else ""
@@ -58,7 +62,11 @@ class InvoiceService(BaseService[Invoice]):
         c_phone = company.phone or company.mobile if company else ""
         c_email = company.email if company else ""
         c_city = company.city if company and hasattr(company, "city") else ""
-        c_receipt_footer = company.receipt_footer if company and hasattr(company, "receipt_footer") else ""
+        c_receipt_footer = (
+            company.receipt_footer
+            if company and hasattr(company, "receipt_footer")
+            else ""
+        )
 
         # Crear cabecera
         invoice = Invoice.objects.create(
@@ -93,10 +101,14 @@ class InvoiceService(BaseService[Invoice]):
             try:
                 product = Product.objects.get(pk=item_dto.product_id)
             except Product.DoesNotExist:
-                raise ValidationError(f"El producto con ID {item_dto.product_id} no existe.")
+                raise ValidationError(
+                    f"El producto con ID {item_dto.product_id} no existe."
+                )
 
             if not product.is_active:
-                raise ProductInactiveException(f"El producto {product.name} está inactivo.")
+                raise ProductInactiveException(
+                    f"El producto {product.name} está inactivo."
+                )
 
             if item_dto.quantity <= Decimal("0.00"):
                 raise ValidationError("La cantidad debe ser mayor a cero.")
@@ -119,7 +131,7 @@ class InvoiceService(BaseService[Invoice]):
             subtotal_sum += line_subtotal
             discount_sum += item_dto.discount
             tax_sum += item_dto.tax
-            total_sum += (line_subtotal - item_dto.discount + item_dto.tax)
+            total_sum += line_subtotal - item_dto.discount + item_dto.tax
 
         if dto.discount < Decimal("0.00") or dto.tax < Decimal("0.00"):
             raise ValidationError(
@@ -142,7 +154,9 @@ class InvoiceService(BaseService[Invoice]):
         invoice.discount = discount_sum
         invoice.tax = tax_sum
         invoice.total = total_sum
-        invoice.save(update_fields=["subtotal", "discount", "tax", "total", "updated_at"])
+        invoice.save(
+            update_fields=["subtotal", "discount", "tax", "total", "updated_at"]
+        )
 
         return invoice
 
@@ -164,9 +178,7 @@ class InvoiceService(BaseService[Invoice]):
             try:
                 purchase = Purchase.objects.get(pk=dto.purchase_id)
             except Purchase.DoesNotExist as exception:
-                raise ValidationError(
-                    "La compra relacionada no existe."
-                ) from exception
+                raise ValidationError("La compra relacionada no existe.") from exception
 
             if dto.document_type != Invoice.DocumentType.PURCHASE_INVOICE:
                 raise ValidationError(
@@ -178,14 +190,10 @@ class InvoiceService(BaseService[Invoice]):
         try:
             sale = Sale.objects.get(pk=dto.sale_id)
         except Sale.DoesNotExist as exception:
-            raise ValidationError(
-                "La venta relacionada no existe."
-            ) from exception
+            raise ValidationError("La venta relacionada no existe.") from exception
 
         if dto.document_type != Invoice.DocumentType.SALE_INVOICE:
-            raise ValidationError(
-                "Las ventas solo pueden generar facturas de venta."
-            )
+            raise ValidationError("Las ventas solo pueden generar facturas de venta.")
 
         return None, sale
 
@@ -193,7 +201,9 @@ class InvoiceService(BaseService[Invoice]):
     @transaction.atomic
     def update_invoice(invoice: Invoice, dto: InvoiceUpdateDTO) -> Invoice:
         if invoice.status != Invoice.Status.DRAFT:
-            raise InvalidInvoiceStateException("Solo se pueden actualizar facturas en estado Borrador (DRAFT).")
+            raise InvalidInvoiceStateException(
+                "Solo se pueden actualizar facturas en estado Borrador (DRAFT)."
+            )
 
         if dto.issue_date is not None:
             invoice.issue_date = dto.issue_date
@@ -212,7 +222,9 @@ class InvoiceService(BaseService[Invoice]):
         Transita de DRAFT a ISSUED.
         """
         if invoice.status != Invoice.Status.DRAFT:
-            raise InvalidInvoiceTransitionException("Solo las facturas en Borrador pueden ser emitidas.")
+            raise InvalidInvoiceTransitionException(
+                "Solo las facturas en Borrador pueden ser emitidas."
+            )
 
         if not invoice.items.exists():
             raise InvoiceHasNoItemsException()
@@ -228,7 +240,9 @@ class InvoiceService(BaseService[Invoice]):
         Transita una factura emitida a CANCELLED.
         """
         if invoice.status == Invoice.Status.CANCELLED:
-            raise InvalidInvoiceTransitionException("La factura ya se encuentra anulada.")
+            raise InvalidInvoiceTransitionException(
+                "La factura ya se encuentra anulada."
+            )
 
         if invoice.status != Invoice.Status.ISSUED:
             raise InvalidInvoiceTransitionException(

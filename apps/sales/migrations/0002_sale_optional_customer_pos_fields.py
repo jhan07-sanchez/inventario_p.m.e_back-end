@@ -63,9 +63,7 @@ class Migration(migrations.Migration):
                 help_text="Efectivo recibido del cliente (POS efectivo).",
                 max_digits=12,
                 null=True,
-                validators=[
-                    django.core.validators.MinValueValidator(Decimal("0.00"))
-                ],
+                validators=[django.core.validators.MinValueValidator(Decimal("0.00"))],
                 verbose_name="Monto recibido",
             ),
         ),
@@ -79,9 +77,7 @@ class Migration(migrations.Migration):
                 help_text="Vuelto/cambio entregado al cliente (POS efectivo).",
                 max_digits=12,
                 null=True,
-                validators=[
-                    django.core.validators.MinValueValidator(Decimal("0.00"))
-                ],
+                validators=[django.core.validators.MinValueValidator(Decimal("0.00"))],
                 verbose_name="Cambio",
             ),
         ),

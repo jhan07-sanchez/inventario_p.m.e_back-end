@@ -1,33 +1,32 @@
 from django.core.exceptions import ValidationError
 from rest_framework import status
 from rest_framework.decorators import action
+from rest_framework.filters import OrderingFilter, SearchFilter
 
+from apps.core.security import HasPermission
+from apps.core.views.base_viewset import BaseViewSet
+from apps.purchases.docs.purchase_docs import (
+    purchase_cancel_schema,
+    purchase_complete_schema,
+    purchase_confirm_schema,
+    purchase_create_schema,
+    purchase_delete_schema,
+    purchase_detail_schema,
+    purchase_list_schema,
+    purchase_partial_update_schema,
+    purchase_receive_schema,
+    purchase_restore_schema,
+    purchase_update_schema,
+)
 from apps.purchases.models import Purchase
 from apps.purchases.selectors.purchase_selector import PurchaseSelector
 from apps.purchases.serializers.purchase_serializer import (
     PurchaseCreateSerializer,
-    PurchaseRetrieveSerializer,
     PurchaseListSerializer,
+    PurchaseRetrieveSerializer,
     PurchaseUpdateSerializer,
 )
-from apps.purchases.docs.purchase_docs import (
-    purchase_list_schema,
-    purchase_detail_schema,
-    purchase_create_schema,
-    purchase_update_schema,
-    purchase_partial_update_schema,
-    purchase_delete_schema,
-    purchase_confirm_schema,
-    purchase_receive_schema,
-    purchase_complete_schema,
-    purchase_cancel_schema,
-    purchase_restore_schema,
-)
 from apps.purchases.services.purchase_service import PurchaseService
-from apps.core.security import HasPermission
-from rest_framework.filters import SearchFilter, OrderingFilter
-
-from apps.core.views.base_viewset import BaseViewSet
 from apps.users.permissions import IsAuthenticatedAndActive
 
 
@@ -41,7 +40,13 @@ class PurchaseViewSet(BaseViewSet):
 
     permission_classes = [IsAuthenticatedAndActive]
     filter_backends = [SearchFilter, OrderingFilter]
-    search_fields = ["notes", "supplier__business_name", "supplier__first_name", "supplier__last_name", "supplier__document_number"]
+    search_fields = [
+        "notes",
+        "supplier__business_name",
+        "supplier__first_name",
+        "supplier__last_name",
+        "supplier__document_number",
+    ]
 
     def get_permissions(self):
         """

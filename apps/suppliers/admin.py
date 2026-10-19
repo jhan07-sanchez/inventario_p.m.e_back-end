@@ -84,7 +84,6 @@ class SupplierAdmin(admin.ModelAdmin):
 
     exclude = ("delete_at",)
 
-
     def get_queryset(self, request):
         """
         Muestra todos los proveedores incluyendo los eliminados logicamente.

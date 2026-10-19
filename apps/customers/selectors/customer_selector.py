@@ -2,6 +2,7 @@ from django.db.models import QuerySet
 
 from apps.customers.models import Customer
 
+
 class CustomerSelector:
     """
     Selector encargado exclusivamente de las consultas relacionadas con clientes.
@@ -15,8 +16,6 @@ class CustomerSelector:
 
         return Customer.objects.all().order_by("id_customer")
 
-
-
     @staticmethod
     def get_active_customers() -> QuerySet[Customer]:
         """
@@ -24,8 +23,6 @@ class CustomerSelector:
         """
 
         return Customer.objects.filter(is_active=True).order_by("id_customer")
-
-
 
     @staticmethod
     def get_customer_by_id(customer_id: int) -> Customer:
@@ -37,8 +34,6 @@ class CustomerSelector:
         """
 
         return Customer.objects.get(id_customer=customer_id)
-
-
 
     @staticmethod
     def get_customer_by_document(document_number: str) -> Customer | None:

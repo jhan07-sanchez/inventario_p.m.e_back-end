@@ -74,6 +74,7 @@ class BaseViewSet(BaseResponseMixin, ModelViewSet):
     """
     ViewSet base para todos los modulos de inventario-pme (CRUD completo).
     """
+
     pass
 
 
@@ -81,5 +82,5 @@ class BaseGenericViewSet(BaseResponseMixin, GenericViewSet):
     """
     ViewSet base no opinado para modulos con acciones personalizadas sin CRUD forzado.
     """
-    pass
 
+    pass

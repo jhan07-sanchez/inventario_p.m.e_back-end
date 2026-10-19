@@ -6,21 +6,28 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('inventory', '0004_alter_inventory_id_inventory'),
-        ('suppliers', '0002_alter_supplier_is_active'),
+        ("inventory", "0004_alter_inventory_id_inventory"),
+        ("suppliers", "0002_alter_supplier_is_active"),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='inventorymovement',
-            name='user',
-            field=models.ForeignKey(blank=True, help_text='Usuario que ejecutó o autorizó el movimiento en inventario.', null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='inventory_movements', to=settings.AUTH_USER_MODEL, verbose_name='Usuario responsable'),
+            model_name="inventorymovement",
+            name="user",
+            field=models.ForeignKey(
+                blank=True,
+                help_text="Usuario que ejecutó o autorizó el movimiento en inventario.",
+                null=True,
+                on_delete=django.db.models.deletion.SET_NULL,
+                related_name="inventory_movements",
+                to=settings.AUTH_USER_MODEL,
+                verbose_name="Usuario responsable",
+            ),
         ),
         migrations.AddIndex(
-            model_name='inventorymovement',
-            index=models.Index(fields=['user'], name='inv_mov_user_idx'),
+            model_name="inventorymovement",
+            index=models.Index(fields=["user"], name="inv_mov_user_idx"),
         ),
     ]

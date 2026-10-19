@@ -1,5 +1,5 @@
-from django.core.exceptions import ValidationError
 from django.core.cache import cache
+from django.core.exceptions import ValidationError
 from django.db import transaction
 
 from apps.company_info.dto.company_info_dto import (
@@ -40,9 +40,7 @@ class CompanyInfoService(BaseService[CompanyInfo]):
             )
 
         if CompanyInfo.objects.filter(tax_id=dto.tax_id).exists():
-            raise ValidationError(
-                "Ya existe un registro con el NIT proporcionado."
-            )
+            raise ValidationError("Ya existe un registro con el NIT proporcionado.")
 
         company = CompanyInfo.objects.create(
             business_name=dto.business_name,
@@ -91,9 +89,7 @@ class CompanyInfoService(BaseService[CompanyInfo]):
                 .exclude(pk=company.pk)
                 .exists()
             ):
-                raise ValidationError(
-                    "Ya existe un registro con el NIT proporcionado."
-                )
+                raise ValidationError("Ya existe un registro con el NIT proporcionado.")
             company.tax_id = dto.tax_id
             update_fields.append("tax_id")
 

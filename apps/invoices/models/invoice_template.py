@@ -60,7 +60,9 @@ class InvoiceTemplate(ActiveModel):
         ordering = ["-is_default", "name"]
 
         indexes = [
-            models.Index(fields=["document_type", "is_active"], name="inv_tmpl_type_active_idx"),
+            models.Index(
+                fields=["document_type", "is_active"], name="inv_tmpl_type_active_idx"
+            ),
         ]
 
     def __str__(self) -> str:

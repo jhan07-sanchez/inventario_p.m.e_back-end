@@ -125,5 +125,10 @@ class InventorySelector(BaseSelector[Inventory]):
         """
         Obtiene el historial de movimientos de un inventario específico.
         """
-        from apps.inventory.selectors.inventory_movement_selector import InventoryMovementSelector
-        return InventoryMovementSelector.get_movements_by_inventory(id_inventory=inventory.id_inventory)
+        from apps.inventory.selectors.inventory_movement_selector import (
+            InventoryMovementSelector,
+        )
+
+        return InventoryMovementSelector.get_movements_by_inventory(
+            id_inventory=inventory.id_inventory
+        )

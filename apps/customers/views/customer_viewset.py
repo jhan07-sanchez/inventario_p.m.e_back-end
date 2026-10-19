@@ -1,10 +1,19 @@
 from django.core.exceptions import ValidationError
 from rest_framework import status
 from rest_framework.decorators import action
-from rest_framework.filters import SearchFilter, OrderingFilter
+from rest_framework.filters import OrderingFilter, SearchFilter
 
 from apps.core.security import HasPermission
 from apps.core.views.base_viewset import BaseViewSet
+from apps.customers.docs.customer_docs import (
+    customer_create_schema,
+    customer_delete_schema,
+    customer_detail_schema,
+    customer_list_schema,
+    customer_partial_update_schema,
+    customer_restore_schema,
+    customer_update_schema,
+)
 from apps.customers.models import Customer
 from apps.customers.selectors.customer_selector import CustomerSelector
 from apps.customers.serializers.customer_serializer import (
@@ -15,17 +24,6 @@ from apps.customers.serializers.customer_serializer import (
 )
 from apps.customers.services.customer_service import CustomerService
 from apps.users.permissions import IsAuthenticatedAndActive
-from apps.customers.docs.customer_docs import (
-    customer_create_schema,
-    customer_delete_schema,
-    customer_detail_schema,
-    customer_list_schema,
-    customer_partial_update_schema,
-    customer_restore_schema,
-    customer_update_schema,
-)
-
-
 
 
 class CustomerViewSet(BaseViewSet):

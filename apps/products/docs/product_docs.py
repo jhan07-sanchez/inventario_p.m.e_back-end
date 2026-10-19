@@ -19,7 +19,6 @@ from apps.products.serializers.product_serializer import (
     ProductUpdateSerializer,
 )
 
-
 pagination_parameters = [
     OpenApiParameter(
         name="page",
@@ -386,4 +385,3 @@ product_search_schema = extend_schema(
         ),
     },
 )
-

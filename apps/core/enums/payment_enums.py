@@ -6,6 +6,7 @@ class PaymentMethod(models.TextChoices):
     Métodos o medios de pago disponibles en el sistema.
     Fuente única de verdad para ventas, pagos, movimientos y compras.
     """
+
     CASH = "CASH", "Efectivo"
     CARD = "CARD", "Tarjeta"
     TRANSFER = "TRANSFER", "Transferencia"
@@ -22,6 +23,7 @@ class PaymentStatus(models.TextChoices):
     """
     Estados disponibles para un registro de pago.
     """
+
     PENDING = "PENDING", "Pendiente"
     COMPLETED = "COMPLETED", "Completado"
     CANCELLED = "CANCELLED", "Cancelado"

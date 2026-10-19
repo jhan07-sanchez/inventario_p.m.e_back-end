@@ -1,9 +1,9 @@
 from django.test import TestCase
 
+from apps.invoices.dto.invoice_template_dto import InvoiceTemplateCreateDTO
 from apps.invoices.models import InvoiceTemplate
 from apps.invoices.selectors.invoice_template_selector import InvoiceTemplateSelector
 from apps.invoices.services.invoice_template_service import InvoiceTemplateService
-from apps.invoices.dto.invoice_template_dto import InvoiceTemplateCreateDTO
 
 
 class InvoiceTemplateTests(TestCase):

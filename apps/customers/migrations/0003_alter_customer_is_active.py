@@ -4,15 +4,19 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('customers', '0002_customer_customer_created_at_idx_and_more'),
+        ("customers", "0002_customer_customer_created_at_idx_and_more"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='customer',
-            name='is_active',
-            field=models.BooleanField(db_index=True, default=True, help_text='Indica si el registro se encuentra activo.', verbose_name='Estado'),
+            model_name="customer",
+            name="is_active",
+            field=models.BooleanField(
+                db_index=True,
+                default=True,
+                help_text="Indica si el registro se encuentra activo.",
+                verbose_name="Estado",
+            ),
         ),
     ]

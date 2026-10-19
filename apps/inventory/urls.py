@@ -1,8 +1,8 @@
 from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 
-from apps.inventory.views.inventory_viewset import InventoryViewSet
 from apps.inventory.views.inventory_movement_viewset import InventoryMovementViewSet
+from apps.inventory.views.inventory_viewset import InventoryViewSet
 
 router = DefaultRouter()
 

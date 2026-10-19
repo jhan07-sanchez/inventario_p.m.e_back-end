@@ -1,9 +1,11 @@
-from .inventory_serializer import InventoryCreateSerializer
-from .inventory_serializer import InventoryDetailSerializer
-from .inventory_serializer import InventoryListSerializer
-from .inventory_serializer import InventoryMovementDetailSerializer
-from .inventory_serializer import InventoryMovementListSerializer
-from .inventory_serializer import InventoryUpdateSerializer
+from .inventory_serializer import (
+    InventoryCreateSerializer,
+    InventoryDetailSerializer,
+    InventoryListSerializer,
+    InventoryMovementDetailSerializer,
+    InventoryMovementListSerializer,
+    InventoryUpdateSerializer,
+)
 
 __all__ = [
     "InventoryCreateSerializer",

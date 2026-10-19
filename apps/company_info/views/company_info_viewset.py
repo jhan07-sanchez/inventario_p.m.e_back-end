@@ -171,7 +171,9 @@ class CompanyInfoViewSet(BaseViewSet):
 
         try:
             company = CompanyInfoService.create_company_info(serializer.to_dto())
-            response_serializer = CompanyInfoSerializer(company, context={"request": request})
+            response_serializer = CompanyInfoSerializer(
+                company, context={"request": request}
+            )
             return self.success_response(
                 message="Información de empresa creada correctamente.",
                 code="COMPANY_INFO_CREATED",
@@ -201,8 +203,12 @@ class CompanyInfoViewSet(BaseViewSet):
         serializer.is_valid(raise_exception=True)
 
         try:
-            company = CompanyInfoService.update_company_info(company, serializer.to_dto())
-            response_serializer = CompanyInfoSerializer(company, context={"request": request})
+            company = CompanyInfoService.update_company_info(
+                company, serializer.to_dto()
+            )
+            response_serializer = CompanyInfoSerializer(
+                company, context={"request": request}
+            )
             return self.success_response(
                 message="Información de empresa actualizada correctamente.",
                 code="COMPANY_INFO_UPDATED",
@@ -232,8 +238,12 @@ class CompanyInfoViewSet(BaseViewSet):
         serializer.is_valid(raise_exception=True)
 
         try:
-            company = CompanyInfoService.update_company_info(company, serializer.to_dto())
-            response_serializer = CompanyInfoSerializer(company, context={"request": request})
+            company = CompanyInfoService.update_company_info(
+                company, serializer.to_dto()
+            )
+            response_serializer = CompanyInfoSerializer(
+                company, context={"request": request}
+            )
             return self.success_response(
                 message="Información de empresa actualizada parcialmente.",
                 code="COMPANY_INFO_PARTIAL_UPDATED",
@@ -273,7 +283,12 @@ class CompanyInfoViewSet(BaseViewSet):
             )
 
     @company_info_upload_logo_schema
-    @action(detail=True, methods=["post"], url_path="upload-logo", parser_classes=[MultiPartParser])
+    @action(
+        detail=True,
+        methods=["post"],
+        url_path="upload-logo",
+        parser_classes=[MultiPartParser],
+    )
     def upload_logo(self, request, pk=None):
         """
         Sube o actualiza el logo de la empresa.
@@ -296,7 +311,9 @@ class CompanyInfoViewSet(BaseViewSet):
 
         try:
             company = CompanyInfoService.update_logo(company, logo_file)
-            response_serializer = CompanyInfoSerializer(company, context={"request": request})
+            response_serializer = CompanyInfoSerializer(
+                company, context={"request": request}
+            )
             return self.success_response(
                 message="Logo actualizado correctamente.",
                 code="COMPANY_INFO_LOGO_UPDATED",
@@ -305,7 +322,10 @@ class CompanyInfoViewSet(BaseViewSet):
             )
         except Exception as e:
             import logging
-            logging.getLogger(__name__).error(f"Error al subir el logo: {e}", exc_info=True)
+
+            logging.getLogger(__name__).error(
+                f"Error al subir el logo: {e}", exc_info=True
+            )
             return self.error_response(
                 message="Error interno del servidor al procesar el logo.",
                 code="INTERNAL_SERVER_ERROR",
@@ -328,7 +348,9 @@ class CompanyInfoViewSet(BaseViewSet):
 
         try:
             company = CompanyInfoService.remove_logo(company)
-            response_serializer = CompanyInfoSerializer(company, context={"request": request})
+            response_serializer = CompanyInfoSerializer(
+                company, context={"request": request}
+            )
             return self.success_response(
                 message="Logo eliminado correctamente.",
                 code="COMPANY_INFO_LOGO_REMOVED",
@@ -337,7 +359,10 @@ class CompanyInfoViewSet(BaseViewSet):
             )
         except Exception as e:
             import logging
-            logging.getLogger(__name__).error(f"Error al eliminar el logo: {e}", exc_info=True)
+
+            logging.getLogger(__name__).error(
+                f"Error al eliminar el logo: {e}", exc_info=True
+            )
             return self.error_response(
                 message="Error interno del servidor al procesar la eliminación del logo.",
                 code="INTERNAL_SERVER_ERROR",

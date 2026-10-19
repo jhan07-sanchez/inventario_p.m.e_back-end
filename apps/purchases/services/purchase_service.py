@@ -1,25 +1,25 @@
 from decimal import Decimal
 
-from django.db import transaction
 from django.core.exceptions import ValidationError
+from django.db import transaction
 from django.utils import timezone
 
 from apps.core.exceptions.custom_exceptions import (
-    SupplierInactiveException,
-    ProductInactiveException,
     InvalidPurchaseStateException,
     InvalidPurchaseTransitionException,
+    ProductInactiveException,
     PurchaseHasNoDetailsException,
+    SupplierInactiveException,
 )
 from apps.core.security.services.dashboard_metrics_service import (
     DashboardMetricsService,
 )
 from apps.core.services.base_service import BaseService
+from apps.inventory.services.inventory_service import InventoryService
 from apps.products.models import Product
 from apps.purchases.dto.purchase_dto import PurchaseCreateDTO, PurchaseUpdateDTO
 from apps.purchases.models import Purchase, PurchaseDetail
 from apps.suppliers.models import Supplier
-from apps.inventory.services.inventory_service import InventoryService
 
 
 class PurchaseService(BaseService[Purchase]):
@@ -53,7 +53,7 @@ class PurchaseService(BaseService[Purchase]):
             notes=dto.notes,
             status=Purchase.Status.DRAFT,
             subtotal=Decimal("0.00"),
-            total=Decimal("0.00")
+            total=Decimal("0.00"),
         )
 
         subtotal_sum = Decimal("0.00")
@@ -62,18 +62,21 @@ class PurchaseService(BaseService[Purchase]):
         # Fetch all products at once to avoid N+1 queries
         product_ids = [d.product_id for d in dto.details]
         products_map = {
-            p.id_product: p 
-            for p in Product.objects.filter(pk__in=product_ids)
+            p.id_product: p for p in Product.objects.filter(pk__in=product_ids)
         }
 
         # Crear los detalles
         for detail_dto in dto.details:
             product = products_map.get(detail_dto.product_id)
             if not product:
-                raise ValidationError(f"El producto con ID {detail_dto.product_id} no existe.")
+                raise ValidationError(
+                    f"El producto con ID {detail_dto.product_id} no existe."
+                )
 
             if not product.is_active:
-                raise ProductInactiveException(f"El producto {product.name} se encuentra inactivo.")
+                raise ProductInactiveException(
+                    f"El producto {product.name} se encuentra inactivo."
+                )
 
             if detail_dto.quantity <= Decimal("0.00"):
                 raise ValidationError("La cantidad del detalle debe ser mayor a cero.")
@@ -111,7 +114,9 @@ class PurchaseService(BaseService[Purchase]):
         Solo permitido en estado DRAFT.
         """
         if purchase.status != Purchase.Status.DRAFT:
-            raise InvalidPurchaseStateException("Solo se pueden actualizar compras en estado Borrador (DRAFT).")
+            raise InvalidPurchaseStateException(
+                "Solo se pueden actualizar compras en estado Borrador (DRAFT)."
+            )
 
         if dto.issue_date is not None:
             purchase.issue_date = dto.issue_date
@@ -129,7 +134,9 @@ class PurchaseService(BaseService[Purchase]):
         Transición de DRAFT a PENDING.
         """
         if purchase.status != Purchase.Status.DRAFT:
-            raise InvalidPurchaseTransitionException("Solo las compras en Borrador pueden ser confirmadas.")
+            raise InvalidPurchaseTransitionException(
+                "Solo las compras en Borrador pueden ser confirmadas."
+            )
 
         if not purchase.details.exists():
             raise PurchaseHasNoDetailsException()
@@ -149,7 +156,9 @@ class PurchaseService(BaseService[Purchase]):
         Registra la entrada en el inventario para cada detalle.
         """
         if purchase.status != Purchase.Status.PENDING:
-            raise InvalidPurchaseTransitionException("Solo las compras Pendientes pueden ser recibidas.")
+            raise InvalidPurchaseTransitionException(
+                "Solo las compras Pendientes pueden ser recibidas."
+            )
 
         details = purchase.details.select_related("product__inventory").all()
         if not details:
@@ -157,18 +166,25 @@ class PurchaseService(BaseService[Purchase]):
 
         # Lock inventories in order to prevent deadlocks
         inventory_ids = [
-            detail.product.inventory.pk 
-            for detail in details 
+            detail.product.inventory.pk
+            for detail in details
             if hasattr(detail.product, "inventory")
         ]
         if inventory_ids:
             from apps.inventory.models import Inventory
-            list(Inventory.objects.filter(pk__in=inventory_ids).select_for_update().order_by('pk'))
+
+            list(
+                Inventory.objects.filter(pk__in=inventory_ids)
+                .select_for_update()
+                .order_by("pk")
+            )
 
         for detail in details:
             # Obtener el inventario del producto
             if not hasattr(detail.product, "inventory"):
-                raise ValidationError(f"El producto {detail.product.code} no tiene un registro de inventario configurado.")
+                raise ValidationError(
+                    f"El producto {detail.product.code} no tiene un registro de inventario configurado."
+                )
 
             inventory = detail.product.inventory
 
@@ -181,9 +197,7 @@ class PurchaseService(BaseService[Purchase]):
             }
 
             InventoryService.register_entry(
-                inventory=inventory,
-                data=entry_data,
-                user=user
+                inventory=inventory, data=entry_data, user=user
             )
 
         purchase.status = Purchase.Status.RECEIVED
@@ -202,25 +216,33 @@ class PurchaseService(BaseService[Purchase]):
         Además genera y emite automáticamente la factura de compra asociada.
         """
         if purchase.status != Purchase.Status.RECEIVED:
-            raise InvalidPurchaseTransitionException("Solo las compras Recibidas pueden ser completadas.")
+            raise InvalidPurchaseTransitionException(
+                "Solo las compras Recibidas pueden ser completadas."
+            )
 
         purchase.status = Purchase.Status.COMPLETED
         purchase.save(update_fields=["status", "updated_at"])
 
         # --- Generación de Factura Automática ---
-        from apps.invoices.services.invoice_service import InvoiceService
-        from apps.invoices.dto.invoice_dto import InvoiceCreateDTO, InvoiceItemCreateDTO
-        from apps.invoices.models import InvoiceTemplate, Invoice
         from django.utils import timezone
 
+        from apps.invoices.dto.invoice_dto import InvoiceCreateDTO, InvoiceItemCreateDTO
+        from apps.invoices.models import Invoice, InvoiceTemplate
+        from apps.invoices.services.invoice_service import InvoiceService
+
         # Buscar plantilla por defecto
-        template = InvoiceTemplate.objects.filter(
-            document_type=InvoiceTemplate.DocumentType.PURCHASE_INVOICE,
-            is_active=True
-        ).order_by("-is_default").first()
+        template = (
+            InvoiceTemplate.objects.filter(
+                document_type=InvoiceTemplate.DocumentType.PURCHASE_INVOICE,
+                is_active=True,
+            )
+            .order_by("-is_default")
+            .first()
+        )
 
         if not template:
             from django.core.exceptions import ValidationError
+
             raise ValidationError(
                 "No existe una plantilla de factura de compra activa. "
                 "Por favor configure una plantilla en el módulo de facturación antes de procesar compras."
@@ -243,7 +265,7 @@ class PurchaseService(BaseService[Purchase]):
             issue_date=timezone.now().date(),
             purchase_id=purchase.pk,
             notes=f"Factura generada automáticamente por compra #{purchase.id_purchase}",
-            items=items_dto
+            items=items_dto,
         )
 
         # Crear y emitir la factura
@@ -262,7 +284,9 @@ class PurchaseService(BaseService[Purchase]):
         Solo se permite cancelar compras que no hayan sido recibidas.
         """
         if purchase.status not in [Purchase.Status.DRAFT, Purchase.Status.PENDING]:
-            raise InvalidPurchaseTransitionException("No se puede cancelar una compra que ya ha sido recibida o completada.")
+            raise InvalidPurchaseTransitionException(
+                "No se puede cancelar una compra que ya ha sido recibida o completada."
+            )
 
         purchase.status = Purchase.Status.CANCELLED
         purchase.save(update_fields=["status", "updated_at"])

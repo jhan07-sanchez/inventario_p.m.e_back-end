@@ -2,10 +2,6 @@ from django.core.exceptions import ValidationError
 from rest_framework import status
 from rest_framework.decorators import action
 
-from apps.core.security import HasPermission
-from apps.core.views.base_viewset import BaseGenericViewSet
-from apps.users.permissions import IsAuthenticatedAndActive
-
 from apps.cash.docs.cash_docs import (
     cash_session_add_movement_schema,
     cash_session_close_schema,
@@ -17,23 +13,27 @@ from apps.cash.docs.cash_docs import (
 )
 from apps.cash.models.cash_session import CashSession
 from apps.cash.selectors.cash_session_selector import CashSessionSelector
-from apps.cash.serializers.cash_session_serializer import (
-    CashSessionRetrieveSerializer,
-    CashSessionOpenSerializer,
-    CashSessionCloseSerializer
-)
 from apps.cash.serializers.cash_movement_serializer import (
+    CashMovementCreateSerializer,
     CashMovementRetrieveSerializer,
-    CashMovementCreateSerializer
 )
-from apps.cash.services.cash_session_service import CashSessionService
+from apps.cash.serializers.cash_session_serializer import (
+    CashSessionCloseSerializer,
+    CashSessionOpenSerializer,
+    CashSessionRetrieveSerializer,
+)
 from apps.cash.services.cash_movement_service import CashMovementService
+from apps.cash.services.cash_session_service import CashSessionService
+from apps.core.security import HasPermission
+from apps.core.views.base_viewset import BaseGenericViewSet
+from apps.users.permissions import IsAuthenticatedAndActive
 
 
 class CashSessionViewSet(BaseGenericViewSet):
     """
     ViewSet para manejar la apertura, cierre y movimientos manuales de caja.
     """
+
     http_method_names = ["get", "post", "head", "options"]
     queryset = CashSession.objects.none()
     permission_classes = [IsAuthenticatedAndActive]
@@ -48,7 +48,9 @@ class CashSessionViewSet(BaseGenericViewSet):
             "add_movement": (IsAuthenticatedAndActive, HasPermission("cash.movement")),
             "movements": (IsAuthenticatedAndActive, HasPermission("cash.view")),
         }
-        classes = permission_map.get(self.action, (IsAuthenticatedAndActive, HasPermission("cash.view")))
+        classes = permission_map.get(
+            self.action, (IsAuthenticatedAndActive, HasPermission("cash.view"))
+        )
         return [permission() for permission in classes]
 
     def get_queryset(self):
@@ -77,7 +79,7 @@ class CashSessionViewSet(BaseGenericViewSet):
             message="Sesiones obtenidas.",
             code="CASH_SESSIONS_FETCHED",
             data=serializer.data,
-            status_code=status.HTTP_200_OK
+            status_code=status.HTTP_200_OK,
         )
 
     @cash_session_detail_schema
@@ -88,7 +90,7 @@ class CashSessionViewSet(BaseGenericViewSet):
             message="Sesión obtenida.",
             code="CASH_SESSION_FETCHED",
             data=serializer.data,
-            status_code=status.HTTP_200_OK
+            status_code=status.HTTP_200_OK,
         )
 
     @cash_session_current_schema
@@ -99,14 +101,14 @@ class CashSessionViewSet(BaseGenericViewSet):
             return self.error_response(
                 message="No tienes una sesión de caja abierta.",
                 code="NO_OPEN_SESSION",
-                status_code=status.HTTP_404_NOT_FOUND
+                status_code=status.HTTP_404_NOT_FOUND,
             )
         serializer = self.get_serializer(session)
         return self.success_response(
             message="Sesión actual obtenida.",
             code="CURRENT_SESSION_FETCHED",
             data=serializer.data,
-            status_code=status.HTTP_200_OK
+            status_code=status.HTTP_200_OK,
         )
 
     @cash_session_open_schema
@@ -122,7 +124,7 @@ class CashSessionViewSet(BaseGenericViewSet):
                 message="Sesión abierta correctamente.",
                 code="CASH_SESSION_OPENED",
                 data=response_serializer.data,
-                status_code=status.HTTP_201_CREATED
+                status_code=status.HTTP_201_CREATED,
             )
         except ValidationError as e:
             return self.handle_validation_error(e, "Error al abrir sesión de caja.")
@@ -132,11 +134,13 @@ class CashSessionViewSet(BaseGenericViewSet):
     def close(self, request, pk=None):
         session = CashSessionSelector.get_by_id(pk)
 
-        if session.user != request.user and not (request.user.is_staff or request.user.is_superuser):
+        if session.user != request.user and not (
+            request.user.is_staff or request.user.is_superuser
+        ):
             return self.error_response(
                 message="No tienes permiso para cerrar la sesión de caja de otro usuario.",
                 code="FORBIDDEN_SESSION_CLOSE",
-                status_code=status.HTTP_403_FORBIDDEN
+                status_code=status.HTTP_403_FORBIDDEN,
             )
 
         serializer = self.get_serializer(data=request.data)
@@ -149,7 +153,7 @@ class CashSessionViewSet(BaseGenericViewSet):
                 message="Sesión cerrada correctamente.",
                 code="CASH_SESSION_CLOSED",
                 data=response_serializer.data,
-                status_code=status.HTTP_200_OK
+                status_code=status.HTTP_200_OK,
             )
         except ValidationError as e:
             return self.handle_validation_error(e, "Error al cerrar sesión de caja.")
@@ -159,24 +163,28 @@ class CashSessionViewSet(BaseGenericViewSet):
     def add_movement(self, request, pk=None):
         session = CashSessionSelector.get_by_id(pk)
 
-        if session.user != request.user and not (request.user.is_staff or request.user.is_superuser):
+        if session.user != request.user and not (
+            request.user.is_staff or request.user.is_superuser
+        ):
             return self.error_response(
                 message="No tienes permiso para registrar movimientos en la sesión de otro usuario.",
                 code="FORBIDDEN_SESSION_MOVEMENT",
-                status_code=status.HTTP_403_FORBIDDEN
+                status_code=status.HTTP_403_FORBIDDEN,
             )
 
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
         try:
-            movement = CashMovementService.create_movement(serializer.to_dto(session.id_cash_session))
+            movement = CashMovementService.create_movement(
+                serializer.to_dto(session.id_cash_session)
+            )
             response_serializer = CashMovementRetrieveSerializer(movement)
             return self.success_response(
                 message="Movimiento registrado correctamente.",
                 code="CASH_MOVEMENT_CREATED",
                 data=response_serializer.data,
-                status_code=status.HTTP_201_CREATED
+                status_code=status.HTTP_201_CREATED,
             )
         except ValidationError as e:
             return self.handle_validation_error(e, "Error al registrar movimiento.")
@@ -191,5 +199,5 @@ class CashSessionViewSet(BaseGenericViewSet):
             message="Movimientos obtenidos correctamente.",
             code="CASH_MOVEMENTS_FETCHED",
             data=serializer.data,
-            status_code=status.HTTP_200_OK
+            status_code=status.HTTP_200_OK,
         )

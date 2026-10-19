@@ -20,10 +20,10 @@ from typing import TYPE_CHECKING
 from apps.core.security.builders.action_builder import ActionBuilder
 from apps.core.security.builders.dashboard_builder import DashboardBuilder
 from apps.core.security.builders.permission_builder import PermissionBuilder
-from apps.core.security.services.permission_service import PermissionService
 from apps.core.security.services.permission_catalog_service import (
     PermissionCatalogService,
 )
+from apps.core.security.services.permission_service import PermissionService
 from apps.users.dto.security_context_result import SecurityContextResult
 
 if TYPE_CHECKING:

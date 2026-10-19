@@ -22,4 +22,4 @@ __all__ = [
     "sale_partial_update_schema",
     "sale_restore_schema",
     "sale_update_schema",
-]
+]

@@ -2,8 +2,8 @@ from django.contrib.auth.password_validation import validate_password
 from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
-from apps.users.models import User
 from apps.core.security.services.permission_service import PermissionService
+from apps.users.models import User
 
 from .role_serializer import RoleListSerializer
 
@@ -138,7 +138,6 @@ class UserUpdateSerializer(serializers.ModelSerializer):
             "email": {"validators": []},
             "document_number": {"validators": []},
         }
-
 
     def validate_phone_number(self, value):
         if value is not None and value.strip() == "":

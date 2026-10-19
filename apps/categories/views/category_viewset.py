@@ -1,15 +1,8 @@
 from django.core.exceptions import ValidationError
 from rest_framework import status
 from rest_framework.decorators import action
+from rest_framework.filters import OrderingFilter, SearchFilter
 
-from apps.categories.models import Category
-from apps.categories.selectors.category_selector import CategorySelector
-from apps.categories.serializers.category_serializer import (
-    CategoryCreateSerializer,
-    CategoryDetailSerializer,
-    CategoryListSerializer,
-    CategoryUpdateSerializer,
-)
 from apps.categories.docs.category_docs import (
     category_create_schema,
     category_delete_schema,
@@ -19,10 +12,16 @@ from apps.categories.docs.category_docs import (
     category_restore_schema,
     category_update_schema,
 )
+from apps.categories.models import Category
+from apps.categories.selectors.category_selector import CategorySelector
+from apps.categories.serializers.category_serializer import (
+    CategoryCreateSerializer,
+    CategoryDetailSerializer,
+    CategoryListSerializer,
+    CategoryUpdateSerializer,
+)
 from apps.categories.services.category_service import CategoryService
 from apps.core.security import HasPermission
-from rest_framework.filters import SearchFilter, OrderingFilter
-
 from apps.core.views.base_viewset import BaseViewSet
 from apps.users.permissions import IsAuthenticatedAndActive
 

@@ -1,5 +1,5 @@
 from django.db import models
-from django.db.models import QuerySet, Q
+from django.db.models import Q, QuerySet
 from django.shortcuts import get_object_or_404
 
 from apps.core.selectors.base_selector import BaseSelector
@@ -141,10 +141,12 @@ class ProductSelector(BaseSelector[Product]):
 
         return queryset.order_by("-created_at")
 
-
-
     @staticmethod
-    def search_products(*, query: str = "", limit: int = 20,) -> QuerySet[Product]:
+    def search_products(
+        *,
+        query: str = "",
+        limit: int = 20,
+    ) -> QuerySet[Product]:
         """
         Busqueda optimizada para el POS.
 
@@ -156,7 +158,9 @@ class ProductSelector(BaseSelector[Product]):
             2. Coincidencia por nombre (busqueda manual).
         """
 
-        queryset = (ProductSelector().get_active().select_related("category", "inventory"))
+        queryset = (
+            ProductSelector().get_active().select_related("category", "inventory")
+        )
 
         query = (query or "").strip()
 

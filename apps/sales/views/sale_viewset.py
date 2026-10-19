@@ -5,8 +5,6 @@ from rest_framework.filters import OrderingFilter, SearchFilter
 
 from apps.core.security import HasPermission
 from apps.core.views.base_viewset import BaseViewSet
-from apps.sales.models import Sale
-from apps.sales.selectors.sale_selector import SaleSelector
 from apps.sales.docs.sale_docs import (
     quick_sale_schema,
     sale_cancel_schema,
@@ -19,6 +17,8 @@ from apps.sales.docs.sale_docs import (
     sale_restore_schema,
     sale_update_schema,
 )
+from apps.sales.models import Sale
+from apps.sales.selectors.sale_selector import SaleSelector
 from apps.sales.serializers.sale_serializer import (
     SaleCreateSerializer,
     SaleListSerializer,
@@ -92,10 +92,7 @@ class SaleViewSet(BaseViewSet):
             ),
             "cancel": (
                 IsAuthenticatedAndActive,
-                (
-                    HasPermission("sales.cancel")
-                    | HasPermission("sales.update")
-                ),
+                (HasPermission("sales.cancel") | HasPermission("sales.update")),
             ),
             "restore": (
                 IsAuthenticatedAndActive,

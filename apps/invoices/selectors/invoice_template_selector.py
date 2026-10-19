@@ -1,6 +1,6 @@
+from django.core.cache import cache
 from django.db.models import QuerySet
 from django.shortcuts import get_object_or_404
-from django.core.cache import cache
 
 from apps.core.selectors.base_selector import BaseSelector
 from apps.invoices.models import InvoiceTemplate

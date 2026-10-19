@@ -6,10 +6,9 @@ from drf_spectacular.utils import (
     extend_schema,
 )
 
-from apps.core.docs.api_response_schema import build_api_response_schema
-from apps.core.docs.error_schemas import (
-    ApiErrorResponseSerializer,
-    ValidationErrorResponseSerializer,
+from apps.cash.serializers.cash_movement_serializer import (
+    CashMovementCreateSerializer,
+    CashMovementRetrieveSerializer,
 )
 from apps.cash.serializers.cash_register_serializer import CashRegisterSerializer
 from apps.cash.serializers.cash_session_serializer import (
@@ -17,9 +16,10 @@ from apps.cash.serializers.cash_session_serializer import (
     CashSessionOpenSerializer,
     CashSessionRetrieveSerializer,
 )
-from apps.cash.serializers.cash_movement_serializer import (
-    CashMovementCreateSerializer,
-    CashMovementRetrieveSerializer,
+from apps.core.docs.api_response_schema import build_api_response_schema
+from apps.core.docs.error_schemas import (
+    ApiErrorResponseSerializer,
+    ValidationErrorResponseSerializer,
 )
 
 # -------------------------------------------------------------------------

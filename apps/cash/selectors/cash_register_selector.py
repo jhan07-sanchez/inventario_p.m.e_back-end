@@ -1,4 +1,5 @@
 from django.db.models import QuerySet
+
 from apps.cash.models.cash_register import CashRegister
 
 

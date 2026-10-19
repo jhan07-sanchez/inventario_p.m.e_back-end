@@ -4,15 +4,19 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('invoices', '0004_invoice_company_address_snapshot_and_more'),
+        ("invoices", "0004_invoice_company_address_snapshot_and_more"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='invoicetemplate',
-            name='body_content',
-            field=models.TextField(blank=True, help_text='Contenido HTML para el cuerpo (ej. tabla de productos con variables dinámicas).', null=True, verbose_name='Contenido del cuerpo'),
+            model_name="invoicetemplate",
+            name="body_content",
+            field=models.TextField(
+                blank=True,
+                help_text="Contenido HTML para el cuerpo (ej. tabla de productos con variables dinámicas).",
+                null=True,
+                verbose_name="Contenido del cuerpo",
+            ),
         ),
     ]

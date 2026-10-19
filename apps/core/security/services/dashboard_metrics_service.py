@@ -96,7 +96,9 @@ class DashboardMetricsService:
         """
         Invalida todas las claves de métricas cacheadas del dashboard.
         """
-        all_keys = set(_SALES_CACHE_KEYS + _INVENTORY_CACHE_KEYS + _PURCHASES_CACHE_KEYS)
+        all_keys = set(
+            _SALES_CACHE_KEYS + _INVENTORY_CACHE_KEYS + _PURCHASES_CACHE_KEYS
+        )
         for key in all_keys:
             django_cache.delete(key)
 

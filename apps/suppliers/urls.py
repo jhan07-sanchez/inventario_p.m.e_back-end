@@ -3,7 +3,6 @@ from rest_framework.routers import DefaultRouter
 
 from apps.suppliers.views.supplier_viewset import SupplierViewSet
 
-
 router = DefaultRouter()
 
 router.register(

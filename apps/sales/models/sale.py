@@ -4,8 +4,8 @@ from django.conf import settings
 from django.core.validators import MinValueValidator
 from django.db import models
 
-from apps.core.models.active_model import ActiveModel
 from apps.core.enums import PaymentMethod
+from apps.core.models.active_model import ActiveModel
 from apps.customers.models.customer import Customer
 
 
@@ -58,8 +58,7 @@ class Sale(ActiveModel):
         blank=True,
         verbose_name="Cliente",
         help_text=(
-            "Cliente asociado a la venta. "
-            "NULL indica venta a Consumidor Final (POS)."
+            "Cliente asociado a la venta. NULL indica venta a Consumidor Final (POS)."
         ),
     )
 

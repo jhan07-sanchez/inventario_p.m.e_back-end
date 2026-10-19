@@ -479,4 +479,3 @@ quick_sale_schema = extend_schema(
         ),
     ],
 )
-

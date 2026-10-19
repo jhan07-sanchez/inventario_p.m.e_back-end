@@ -1,34 +1,46 @@
 from decimal import Decimal
+
 from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.utils import timezone
 
-from apps.core.services.base_service import BaseService
-from apps.cash.models.cash_session import CashSession
+from apps.cash.dto.cash_session_dto import CashSessionCloseDto, CashSessionOpenDto
 from apps.cash.models.cash_register import CashRegister
-from apps.cash.dto.cash_session_dto import CashSessionOpenDto, CashSessionCloseDto
+from apps.cash.models.cash_session import CashSession
+from apps.core.services.base_service import BaseService
 
 
 class CashSessionService(BaseService[CashSession]):
     """
     Servicio para manejar la lógica de las sesiones de caja.
     """
+
     def __init__(self):
         super().__init__(CashSession)
 
     @staticmethod
     @transaction.atomic
     def open_session(dto: CashSessionOpenDto, user) -> CashSession:
-        if CashSession.objects.filter(user=user, status=CashSession.SessionStatus.OPEN, is_active=True).exists():
+        if CashSession.objects.filter(
+            user=user, status=CashSession.SessionStatus.OPEN, is_active=True
+        ).exists():
             raise ValidationError("El usuario ya tiene una sesión de caja abierta.")
 
         try:
-            register = CashRegister.objects.select_for_update().get(pk=dto.cash_register_id, is_active=True)
+            register = CashRegister.objects.select_for_update().get(
+                pk=dto.cash_register_id, is_active=True
+            )
         except CashRegister.DoesNotExist:
             raise ValidationError("La caja seleccionada no existe o está inactiva.")
 
-        if CashSession.objects.filter(cash_register=register, status=CashSession.SessionStatus.OPEN, is_active=True).exists():
-            raise ValidationError("La caja seleccionada ya está abierta por otro usuario.")
+        if CashSession.objects.filter(
+            cash_register=register,
+            status=CashSession.SessionStatus.OPEN,
+            is_active=True,
+        ).exists():
+            raise ValidationError(
+                "La caja seleccionada ya está abierta por otro usuario."
+            )
 
         if dto.opening_balance < Decimal("0.00"):
             raise ValidationError("El efectivo inicial no puede ser negativo.")
@@ -60,11 +72,18 @@ class CashSessionService(BaseService[CashSession]):
         session.counted_balance = dto.counted_balance
         session.difference = dto.counted_balance - session.expected_balance
         session.status = CashSession.SessionStatus.CLOSED
-        
+
         if dto.notes:
             session.notes = f"{session.notes}\nCierre: {dto.notes}".strip()
 
         session.save(
-            update_fields=["end_time", "counted_balance", "difference", "status", "notes", "updated_at"]
+            update_fields=[
+                "end_time",
+                "counted_balance",
+                "difference",
+                "status",
+                "notes",
+                "updated_at",
+            ]
         )
         return session

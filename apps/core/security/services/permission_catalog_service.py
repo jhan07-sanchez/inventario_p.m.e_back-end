@@ -2,11 +2,10 @@
 Servicio de dominio para construir el catalogo
 dinamico de permisos y acciones de inventario-pme.
 """
+
 from __future__ import annotations
 
 from apps.core.security.registry import SecurityRegistry
-
-
 
 
 class PermissionCatalogService:

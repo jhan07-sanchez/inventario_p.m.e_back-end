@@ -19,10 +19,9 @@ from apps.inventory.serializers.inventory_serializer import (
     InventoryExitSerializer,
     InventoryListSerializer,
     InventoryMovementSerializer,
-    InventoryUpdateSerializer,
     InventoryThresholdUpdateSerializer,
+    InventoryUpdateSerializer,
 )
-
 
 pagination_parameters = [
     OpenApiParameter(
@@ -254,9 +253,7 @@ inventory_partial_update_schema = extend_schema(
 inventory_delete_schema = extend_schema(
     tags=["Inventory"],
     summary="Desactivar inventario",
-    description=(
-        "Desactiva lógicamente un registro de inventario del sistema."
-    ),
+    description=("Desactiva lógicamente un registro de inventario del sistema."),
     parameters=[
         OpenApiParameter(
             name="id",
@@ -536,6 +533,7 @@ inventory_adjustment_schema = extend_schema(
 
 
 inventory_movements_schema = extend_schema(
+    operation_id="inventory_movements_list_by_inventory",
     tags=["Inventory"],
     summary="Historial de movimientos",
     description=(

@@ -5,16 +5,23 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('inventory', '0002_alter_inventory_maximum_stock_inventorymovement'),
-        ('suppliers', '0002_alter_supplier_is_active'),
+        ("inventory", "0002_alter_inventory_maximum_stock_inventorymovement"),
+        ("suppliers", "0002_alter_supplier_is_active"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='inventorymovement',
-            name='supplier',
-            field=models.ForeignKey(blank=True, help_text='Proveedor asociado al movimiento (ej. para compras o entradas).', null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='inventory_movements', to='suppliers.supplier', verbose_name='Proveedor'),
+            model_name="inventorymovement",
+            name="supplier",
+            field=models.ForeignKey(
+                blank=True,
+                help_text="Proveedor asociado al movimiento (ej. para compras o entradas).",
+                null=True,
+                on_delete=django.db.models.deletion.SET_NULL,
+                related_name="inventory_movements",
+                to="suppliers.supplier",
+                verbose_name="Proveedor",
+            ),
         ),
     ]

@@ -84,7 +84,6 @@ class InvalidTokenException(BusinessException):
     status_code = 401
 
 
-
 class InvalidRolePermissionsException(BusinessException):
     """
     Se lanza cuando un rol contiene permisos
@@ -97,15 +96,14 @@ class InvalidRolePermissionsException(BusinessException):
     default_code = ErrorCodes.INVALID_ROLE_PERMISSIONS
 
 
-
 class CustomerAlreadyExistsException(BusinessException):
     default_detail = "El cliente ya existe."
     default_code = ErrorCodes.CUSTOMER_ALREADY_EXISTS
 
+
 class CustomerInactiveException(BusinessException):
     default_detail = "El cliente se encuentra inactivo."
     default_code = ErrorCodes.CUSTOMER_INACTIVE
-
 
 
 class SupplierAlreadyExistsException(BusinessException):
@@ -113,6 +111,7 @@ class SupplierAlreadyExistsException(BusinessException):
     Se lanza cuando ya existe un proveedor
     con el mismo numero de documento.
     """
+
     default_detail = "El proveedor ya existe."
     default_code = ErrorCodes.SUPPLIER_ALREADY_EXISTS
 
@@ -121,15 +120,16 @@ class SupplierInactiveException(BusinessException):
     """
     Se lanza cuando el proveedor se encuentra inactivo.
     """
+
     default_detail = "El proveedor se encuentra inactivo."
     default_code = ErrorCodes.SUPPLIER_INACTIVE
-
 
 
 class CategoryAlreadyExistsException(BusinessException):
     """
     Se lanza cuando ya existe una categoria
     """
+
     default_detail = "La categoria ya existe."
     default_code = ErrorCodes.CATEGORY_ALREADY_EXISTS
 
@@ -138,9 +138,9 @@ class CategoryInactiveException(BusinessException):
     """
     Se lanza cuando una categoria se encuentra inactiva
     """
+
     default_detail = "La categoria de encuentra Inactiva."
     default_code = ErrorCodes.CATEGORY_INACTIVE
-
 
 
 class ProductAlreadyExistsException(BusinessException):
@@ -148,6 +148,7 @@ class ProductAlreadyExistsException(BusinessException):
     Se lanza cuando ya existe un producto
     con el mismo código interno o código de barras.
     """
+
     default_detail = "El producto ya existe."
     default_code = ErrorCodes.PRODUCT_ALREADY_EXISTS
 
@@ -156,6 +157,7 @@ class ProductInactiveException(BusinessException):
     """
     Se lanza cuando un producto se encuentra inactivo.
     """
+
     default_detail = "El producto se encuentra inactivo."
     default_code = ErrorCodes.PRODUCT_INACTIVE
 
@@ -165,14 +167,17 @@ class ProductCodeAlreadyExistsException(BusinessException):
     Se lanza cuando ya existe un producto
     con el mismo código interno.
     """
+
     default_detail = "El código interno del producto ya existe."
     default_code = ErrorCodes.PRODUCT_CODE_ALREADY_EXISTS
+
 
 class ProductBarcodeAlreadyExistsException(BusinessException):
     """
     Se lanza cuando ya existe un producto
     con el mismo código de barras.
     """
+
     default_detail = "El código de barras del producto ya existe."
     default_code = ErrorCodes.PRODUCT_BARCODE_ALREADY_EXISTS
 
@@ -205,7 +210,9 @@ class InvoiceNotFoundException(BusinessException):
 
 
 class InvalidInvoiceStateException(BusinessException):
-    default_detail = "El estado actual de la factura no permite realizar esta operación."
+    default_detail = (
+        "El estado actual de la factura no permite realizar esta operación."
+    )
     default_code = ErrorCodes.INVALID_INVOICE_STATE
 
 
@@ -221,7 +228,9 @@ class InvoiceHasNoItemsException(BusinessException):
 
 
 class InvalidInvoiceTransitionException(BusinessException):
-    default_detail = "La transición de estado solicitada no es válida para esta factura."
+    default_detail = (
+        "La transición de estado solicitada no es válida para esta factura."
+    )
     default_code = ErrorCodes.INVALID_INVOICE_TRANSITION
 
 
@@ -229,9 +238,11 @@ class InvalidSaleStateException(BusinessException):
     default_detail = "El estado actual de la venta no permite realizar esta operacion."
     default_code = ErrorCodes.INVALID_SALE_STATE
 
+
 class InvalidSaleTransitionException(BusinessException):
     default_detail = "La transacion de estado solicitada no es valida para esta venta."
     default_code = ErrorCodes.INVALID_SALE_TRANSITION
+
 
 class SaleHasNoDetailsException(BusinessException):
     default_detail = "La venta no tiene detalles asociados. No puede ser procesada."

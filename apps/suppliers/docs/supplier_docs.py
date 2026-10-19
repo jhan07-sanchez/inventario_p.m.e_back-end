@@ -18,7 +18,6 @@ from apps.suppliers.serializers.supplier_serializer import (
     SupplierUpdateSerializer,
 )
 
-
 pagination_parameters = [
     OpenApiParameter(
         name="page",

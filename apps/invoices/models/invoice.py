@@ -1,4 +1,5 @@
 from decimal import Decimal
+
 from django.core.validators import MinValueValidator
 from django.db import models
 
@@ -175,7 +176,9 @@ class Invoice(ActiveModel):
         indexes = [
             models.Index(fields=["invoice_number"], name="invoice_number_idx"),
             models.Index(fields=["status"], name="invoice_status_idx"),
-            models.Index(fields=["document_type", "status"], name="invoice_type_status_idx"),
+            models.Index(
+                fields=["document_type", "status"], name="invoice_type_status_idx"
+            ),
             models.Index(fields=["purchase"], name="invoice_purchase_idx"),
             models.Index(fields=["sale"], name="invoice_sale_idx"),
         ]

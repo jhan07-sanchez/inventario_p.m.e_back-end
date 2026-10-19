@@ -393,16 +393,14 @@ class SecurityRegistry:
                                 "code": code,
                                 "description": description,
                             }
-                            for code, description
-                            in module.permissions.items()
+                            for code, description in module.permissions.items()
                         ],
                         "actions": [
                             {
                                 "code": code,
                                 "description": description,
                             }
-                            for code, description
-                            in module.actions.items()
+                            for code, description in module.actions.items()
                         ],
                     }
                 )

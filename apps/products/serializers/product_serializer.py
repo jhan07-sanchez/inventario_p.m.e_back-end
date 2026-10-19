@@ -263,7 +263,6 @@ class ProductUpdateSerializer(serializers.ModelSerializer):
         )
 
 
-
 class ProductSearchSerializer(serializers.ModelSerializer):
     """
     Serializer ligero para autocompletado en el POS.

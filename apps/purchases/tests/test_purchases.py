@@ -1,53 +1,72 @@
-import pytest
 from decimal import Decimal
+
+from django.test import TestCase
 from django.utils import timezone
-from apps.purchases.models import Purchase
+
+from apps.categories.models import Category
+from apps.products.models import Product
 from apps.purchases.dto.purchase_dto import PurchaseCreateDTO, PurchaseDetailCreateDTO
+from apps.purchases.models import Purchase
 from apps.purchases.services.purchase_service import PurchaseService
-from apps.core.exceptions.custom_exceptions import InvalidPurchaseTransitionException
+from apps.suppliers.models import Supplier
 
-@pytest.mark.django_db
-class TestPurchaseService:
-    def test_create_purchase(self, active_supplier, active_product):
-        dto = PurchaseCreateDTO(
-            supplier_id=active_supplier.pk,
-            issue_date=timezone.now().date(),
-            notes="Prueba de compra",
-            details=[
-                PurchaseDetailCreateDTO(
-                    product_id=active_product.pk,
-                    quantity=Decimal("10.00"),
-                    unit_price=Decimal("15.50")
-                )
-            ]
+
+class PurchaseServiceTests(TestCase):
+    def setUp(self):
+        self.supplier = Supplier.objects.create(
+            document_type=Supplier.DocumentType.NIT,
+            document_number="900123456-1",
+            business_name="Proveedor Mayorista S.A.S.",
+            email="contacto@proveedor.com",
         )
-        
-        purchase = PurchaseService.create_purchase(dto)
-        
-        assert purchase is not None
-        assert purchase.status == Purchase.Status.DRAFT
-        assert purchase.subtotal == Decimal("155.00")
-        assert purchase.total == Decimal("155.00")
-        assert purchase.details.count() == 1
+        self.category = Category.objects.create(
+            name="Insumos",
+            description="Categoría de insumos",
+        )
+        self.product = Product.objects.create(
+            code="INS-001",
+            name="Teclado USB",
+            category=self.category,
+            purchase_price=Decimal("15.50"),
+            sale_price=Decimal("25.00"),
+        )
 
-    def test_confirm_purchase(self, active_supplier, active_product):
+    def test_create_purchase(self):
         dto = PurchaseCreateDTO(
-            supplier_id=active_supplier.pk,
+            supplier_id=self.supplier.pk,
             issue_date=timezone.now().date(),
             notes="Prueba de compra",
             details=[
                 PurchaseDetailCreateDTO(
-                    product_id=active_product.pk,
-                    quantity=Decimal("5.00"),
-                    unit_price=Decimal("10.00")
+                    product_id=self.product.pk,
+                    quantity=Decimal("10.00"),
+                    unit_price=Decimal("15.50"),
                 )
-            ]
+            ],
+        )
+
+        purchase = PurchaseService.create_purchase(dto)
+
+        self.assertIsNotNone(purchase)
+        self.assertEqual(purchase.status, Purchase.Status.DRAFT)
+        self.assertEqual(purchase.subtotal, Decimal("155.00"))
+        self.assertEqual(purchase.total, Decimal("155.00"))
+        self.assertEqual(purchase.details.count(), 1)
+
+    def test_confirm_purchase(self):
+        dto = PurchaseCreateDTO(
+            supplier_id=self.supplier.pk,
+            issue_date=timezone.now().date(),
+            notes="Prueba de compra",
+            details=[
+                PurchaseDetailCreateDTO(
+                    product_id=self.product.pk,
+                    quantity=Decimal("5.00"),
+                    unit_price=Decimal("10.00"),
+                )
+            ],
         )
         purchase = PurchaseService.create_purchase(dto)
         purchase = PurchaseService.confirm_purchase(purchase)
-        
-        assert purchase.status == Purchase.Status.PENDING
 
-    def test_invalid_confirm_purchase_without_details(self, active_supplier):
-        # En una compra sin detalles lanzaría error
-        pass # To be fully implemented with factory boy and specific tests
+        self.assertEqual(purchase.status, Purchase.Status.PENDING)

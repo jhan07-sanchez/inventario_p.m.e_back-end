@@ -4,15 +4,19 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('categories', '0001_initial'),
+        ("categories", "0001_initial"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='category',
-            name='is_active',
-            field=models.BooleanField(db_index=True, default=True, help_text='Indica si el registro se encuentra activo.', verbose_name='Estado'),
+            model_name="category",
+            name="is_active",
+            field=models.BooleanField(
+                db_index=True,
+                default=True,
+                help_text="Indica si el registro se encuentra activo.",
+                verbose_name="Estado",
+            ),
         ),
     ]

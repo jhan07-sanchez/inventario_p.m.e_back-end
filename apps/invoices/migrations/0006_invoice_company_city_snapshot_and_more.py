@@ -4,20 +4,26 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('invoices', '0005_invoicetemplate_body_content'),
+        ("invoices", "0005_invoicetemplate_body_content"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='invoice',
-            name='company_city_snapshot',
-            field=models.CharField(blank=True, default='', max_length=100, verbose_name='Ciudad Empresa (Snapshot)'),
+            model_name="invoice",
+            name="company_city_snapshot",
+            field=models.CharField(
+                blank=True,
+                default="",
+                max_length=100,
+                verbose_name="Ciudad Empresa (Snapshot)",
+            ),
         ),
         migrations.AddField(
-            model_name='invoice',
-            name='company_receipt_footer_snapshot',
-            field=models.TextField(blank=True, default='', verbose_name='Pie de Ticket Empresa (Snapshot)'),
+            model_name="invoice",
+            name="company_receipt_footer_snapshot",
+            field=models.TextField(
+                blank=True, default="", verbose_name="Pie de Ticket Empresa (Snapshot)"
+            ),
         ),
     ]

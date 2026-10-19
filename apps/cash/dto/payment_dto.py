@@ -7,6 +7,7 @@ class PaymentCreateDto:
     """
     DTO para la creación de un pago asociado a una venta.
     """
+
     amount: Decimal
     payment_method: str
     sale_id: int | None = None

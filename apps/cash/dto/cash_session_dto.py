@@ -7,6 +7,7 @@ class CashSessionOpenDto:
     """
     DTO para la apertura de una sesión de caja.
     """
+
     cash_register_id: int
     opening_balance: Decimal
     notes: str = ""
@@ -17,5 +18,6 @@ class CashSessionCloseDto:
     """
     DTO para el cierre de una sesión de caja.
     """
+
     counted_balance: Decimal
     notes: str = ""

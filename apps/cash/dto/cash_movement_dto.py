@@ -7,6 +7,7 @@ class CashMovementCreateDto:
     """
     DTO para registrar un movimiento de caja (ingreso o egreso).
     """
+
     cash_session_id: int
     amount: Decimal
     movement_type: str

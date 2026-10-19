@@ -1,6 +1,9 @@
 from rest_framework import serializers
 
-from apps.invoices.dto.invoice_template_dto import InvoiceTemplateCreateDTO, InvoiceTemplateUpdateDTO
+from apps.invoices.dto.invoice_template_dto import (
+    InvoiceTemplateCreateDTO,
+    InvoiceTemplateUpdateDTO,
+)
 from apps.invoices.models import InvoiceTemplate
 
 
@@ -36,10 +39,18 @@ class InvoiceTemplateRetrieveSerializer(serializers.ModelSerializer):
 
 class InvoiceTemplateCreateSerializer(serializers.Serializer):
     name = serializers.CharField(max_length=150, required=True)
-    document_type = serializers.ChoiceField(choices=InvoiceTemplate.DocumentType.choices, required=True)
-    header_content = serializers.CharField(required=False, allow_null=True, allow_blank=True)
-    body_content = serializers.CharField(required=False, allow_null=True, allow_blank=True)
-    footer_content = serializers.CharField(required=False, allow_null=True, allow_blank=True)
+    document_type = serializers.ChoiceField(
+        choices=InvoiceTemplate.DocumentType.choices, required=True
+    )
+    header_content = serializers.CharField(
+        required=False, allow_null=True, allow_blank=True
+    )
+    body_content = serializers.CharField(
+        required=False, allow_null=True, allow_blank=True
+    )
+    footer_content = serializers.CharField(
+        required=False, allow_null=True, allow_blank=True
+    )
     is_default = serializers.BooleanField(required=False, default=False)
 
     def to_dto(self) -> InvoiceTemplateCreateDTO:
@@ -56,9 +67,15 @@ class InvoiceTemplateCreateSerializer(serializers.Serializer):
 
 class InvoiceTemplateUpdateSerializer(serializers.Serializer):
     name = serializers.CharField(max_length=150, required=False)
-    header_content = serializers.CharField(required=False, allow_null=True, allow_blank=True)
-    body_content = serializers.CharField(required=False, allow_null=True, allow_blank=True)
-    footer_content = serializers.CharField(required=False, allow_null=True, allow_blank=True)
+    header_content = serializers.CharField(
+        required=False, allow_null=True, allow_blank=True
+    )
+    body_content = serializers.CharField(
+        required=False, allow_null=True, allow_blank=True
+    )
+    footer_content = serializers.CharField(
+        required=False, allow_null=True, allow_blank=True
+    )
     is_default = serializers.BooleanField(required=False)
 
     def to_dto(self) -> InvoiceTemplateUpdateDTO:

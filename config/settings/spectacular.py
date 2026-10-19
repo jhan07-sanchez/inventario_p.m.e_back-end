@@ -43,13 +43,13 @@ SPECTACULAR_SETTINGS = {
         "## Respuestas Estandarizadas\n\n"
         "Todos los endpoints retornan un objeto JSON con la siguiente estructura:\n\n"
         "```json\n"
-        '{\n'
+        "{\n"
         '  "success": true,\n'
         '  "code": "RESOURCE_ACTION",\n'
         '  "message": "Mensaje legible.",\n'
         '  "data": { ... },\n'
         '  "errors": null\n'
-        '}\n'
+        "}\n"
         "```\n\n"
         "- **`success`** — `true` si la operación fue exitosa, `false` en caso de error.\n"
         "- **`code`** — Código semántico del resultado (ej. `PRODUCT_CREATED`, "
@@ -82,7 +82,16 @@ SPECTACULAR_SETTINGS = {
     "SERVE_INCLUDE_SCHEMA": False,
     "SORT_OPERATIONS": False,
     # Habilita el preprocesamiento de enums para componentes limpios
-    "ENUM_NAME_OVERRIDES": {},
+    "ENUM_NAME_OVERRIDES": {
+        "DocumentTypeEnum": "apps.customers.models.customer.Customer.DocumentType",
+        "InvoiceDocumentTypeEnum": "apps.invoices.models.invoice.Invoice.DocumentType",
+        "InventoryMovementTypeEnum": "apps.inventory.models.inventory_movement.InventoryMovement.MovementType",
+        "CashMovementTypeEnum": "apps.cash.models.cash_movement.CashMovement.MovementType",
+        "PurchaseStatusEnum": "apps.purchases.models.purchase.Purchase.Status",
+        "SaleStatusEnum": "apps.sales.models.sale.Sale.SaleStatus",
+        "InvoiceStatusEnum": "apps.invoices.models.invoice.Invoice.Status",
+        "CashSessionStatusEnum": "apps.cash.models.cash_session.CashSession.SessionStatus",
+    },
     # Configuramos los esquemas globales y componentes de seguridad
     "COMPONENTS": {
         "securitySchemes": {
