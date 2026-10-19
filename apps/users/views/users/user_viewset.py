@@ -308,7 +308,10 @@ class UserViewSet(BaseViewSet):
         Restaura un usuario previamente desactivado.
         """
 
-        user = UserSelector.get_by_id(pk)
+        user = UserSelector.get_by_id(
+            pk,
+            include_deleted=True,
+        )
 
         try:
             UserService.restore_user(user)

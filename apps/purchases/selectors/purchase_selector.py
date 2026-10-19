@@ -16,14 +16,14 @@ class PurchaseSelector(BaseSelector[Purchase]):
     def __init__(self):
         super().__init__(Purchase)
 
-    def get_queryset(self) -> QuerySet[Purchase]:
+    def get_queryset(self, include_deleted: bool = False) -> QuerySet[Purchase]:
         """
         Retorna el queryset base de compras optimizando
         las relaciones necesarias (proveedor y líneas de detalle).
         """
         return (
             super()
-            .get_queryset()
+            .get_queryset(include_deleted=include_deleted)
             .select_related("supplier")
             .prefetch_related("details", "details__product")
             .order_by("-id_purchase")
@@ -44,12 +44,12 @@ class PurchaseSelector(BaseSelector[Purchase]):
         return PurchaseSelector().get_active()
 
     @staticmethod
-    def get_purchase_by_id(purchase_id: int) -> Purchase:
+    def get_purchase_by_id(purchase_id: int, include_deleted: bool = False) -> Purchase:
         """
         Obtiene una compra por su identificador.
         """
         return get_object_or_404(
-            PurchaseSelector().get_queryset(),
+            PurchaseSelector().get_queryset(include_deleted=include_deleted),
             pk=purchase_id,
         )
 

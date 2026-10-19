@@ -16,14 +16,14 @@ class UserRoleSelector(BaseSelector[UserRole]):
     def __init__(self):
         super().__init__(UserRole)
 
-    def get_queryset(self) -> QuerySet[UserRole]:
+    def get_queryset(self, include_deleted: bool = False) -> QuerySet[UserRole]:
         """
         Sobreescribimos get_queryset para asegurar que todas las consultas
         hereden la optimización de select_related y el orden por defecto.
         """
         return (
             super()
-            .get_queryset()
+            .get_queryset(include_deleted=include_deleted)
             .select_related("user", "role")
             .order_by("id_user_role")
         )
@@ -43,12 +43,12 @@ class UserRoleSelector(BaseSelector[UserRole]):
         return UserRoleSelector().get_active()
 
     @staticmethod
-    def get_by_id(id_user_role: int) -> UserRole:
+    def get_by_id(id_user_role: int, include_deleted: bool = False) -> UserRole:
         """
         Obtiene una asignacion por su identificador.
         """
         return get_object_or_404(
-            UserRoleSelector().get_queryset(),
+            UserRoleSelector().get_queryset(include_deleted=include_deleted),
             id_user_role=id_user_role,
         )
 

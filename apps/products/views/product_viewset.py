@@ -341,6 +341,7 @@ class ProductViewSet(BaseViewSet):
 
         product = ProductSelector.get_by_id(
             pk,
+            include_deleted=True,
         )
 
         try:

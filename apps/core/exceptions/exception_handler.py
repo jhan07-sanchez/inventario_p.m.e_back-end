@@ -1,6 +1,9 @@
 import logging
 
-from django.core.exceptions import ValidationError as DjangoValidationError
+from django.core.exceptions import (
+    ObjectDoesNotExist,
+    ValidationError as DjangoValidationError,
+)
 from django.http import Http404
 from rest_framework import status
 from rest_framework.exceptions import (
@@ -44,6 +47,18 @@ def custom_exception_handler(exc, context):
                     "errors": errors,
                 },
                 status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if isinstance(exc, ObjectDoesNotExist):
+            return Response(
+                {
+                    "success": False,
+                    "code": ErrorCodes.NOT_FOUND,
+                    "message": "Recurso no encontrado.",
+                    "data": None,
+                    "errors": None,
+                },
+                status=status.HTTP_404_NOT_FOUND,
             )
 
         logger.error(f"Error interno: {exc}", exc_info=True)

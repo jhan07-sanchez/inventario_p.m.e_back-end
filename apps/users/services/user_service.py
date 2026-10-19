@@ -92,12 +92,15 @@ class UserService(BaseService[User]):
         instance.save()
 
         if roles_ids is not None:
-            # Eliminar roles existentes y asignar los nuevos
-            UserRole.objects.filter(user=instance).delete()
+            from apps.users.services.user_role_service import UserRoleService
+
+            for ur in UserRole.objects.filter(user=instance):
+                ur.delete()
+
             if roles_ids:
                 roles = Role.objects.filter(id_role__in=roles_ids, is_active=True)
                 for role in roles:
-                    UserRole.objects.create(user=instance, role=role)
+                    UserRoleService.create_user_role({"user": instance, "role": role})
 
             from apps.core.security.services.permission_service import PermissionService
 

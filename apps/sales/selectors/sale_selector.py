@@ -47,17 +47,31 @@ class SaleSelector:
         )
 
     @staticmethod
-    def get_by_id(sale_id: int) -> Sale:
+    def get_by_id(sale_id: int, include_deleted: bool = False) -> Sale:
         """
         Obtiene una venta por su identificador.
 
         Lanza Http404 si la venta no existe o está inactiva.
         """
+        base_manager = (
+            Sale.all_objects.all()
+            if include_deleted
+            else Sale.objects.filter(is_active=True)
+        )
+        invoice_qs = (
+            Invoice.all_objects.all()
+            if include_deleted
+            else Invoice.objects.filter(is_active=True).only(
+                "id",
+                "invoice_number",
+                "status",
+                "document_type",
+                "is_active",
+            )
+        )
 
         return get_object_or_404(
-            Sale.objects.filter(
-                is_active=True,
-            )
+            base_manager
             .select_related(
                 "customer",
                 "user",
@@ -66,13 +80,7 @@ class SaleSelector:
                 "details__product",
                 Prefetch(
                     "invoices",
-                    queryset=Invoice.objects.filter(is_active=True).only(
-                        "id",
-                        "invoice_number",
-                        "status",
-                        "document_type",
-                        "is_active",
-                    ),
+                    queryset=invoice_qs,
                     to_attr="prefetched_invoices",
                 ),
             ),

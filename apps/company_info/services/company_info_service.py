@@ -173,6 +173,7 @@ class CompanyInfoService(BaseService[CompanyInfo]):
             company.logo = None
             company.save(update_fields=["logo", "updated_at"])
 
+        cache.delete("company_info_current")
         return company
 
     @staticmethod
@@ -190,6 +191,7 @@ class CompanyInfoService(BaseService[CompanyInfo]):
             )
 
         CompanyInfoService().delete(company)
+        cache.delete("company_info_current")
 
     @staticmethod
     @transaction.atomic
@@ -203,4 +205,6 @@ class CompanyInfoService(BaseService[CompanyInfo]):
         if company.is_active:
             return company
 
-        return CompanyInfoService().restore(company)
+        restored = CompanyInfoService().restore(company)
+        cache.delete("company_info_current")
+        return restored

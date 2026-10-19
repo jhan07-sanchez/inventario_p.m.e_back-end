@@ -97,10 +97,15 @@ class InvoiceService(BaseService[Invoice]):
         tax_sum = Decimal("0.00")
         total_sum = Decimal("0.00")
 
+        product_ids = [item_dto.product_id for item_dto in dto.items]
+        products_by_id = {
+            product.pk: product
+            for product in Product.objects.filter(pk__in=product_ids)
+        }
+
         for item_dto in dto.items:
-            try:
-                product = Product.objects.get(pk=item_dto.product_id)
-            except Product.DoesNotExist:
+            product = products_by_id.get(item_dto.product_id)
+            if not product:
                 raise ValidationError(
                     f"El producto con ID {item_dto.product_id} no existe."
                 )
@@ -192,8 +197,13 @@ class InvoiceService(BaseService[Invoice]):
         except Sale.DoesNotExist as exception:
             raise ValidationError("La venta relacionada no existe.") from exception
 
-        if dto.document_type != Invoice.DocumentType.SALE_INVOICE:
-            raise ValidationError("Las ventas solo pueden generar facturas de venta.")
+        if dto.document_type not in (
+            Invoice.DocumentType.SALE_INVOICE,
+            Invoice.DocumentType.POS_TICKET,
+        ):
+            raise ValidationError(
+                "Las ventas solo pueden generar facturas de venta o tickets POS."
+            )
 
         return None, sale
 

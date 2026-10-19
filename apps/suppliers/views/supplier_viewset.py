@@ -338,6 +338,7 @@ class SupplierViewSet(BaseViewSet):
 
         supplier = SupplierSelector.get_supplier_by_id(
             pk,
+            include_deleted=True,
         )
 
         try:

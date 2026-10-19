@@ -377,7 +377,10 @@ class InventoryViewSet(BaseViewSet):
         Restaura un registro de inventario previamente desactivado.
         """
 
-        inventory = InventorySelector.get_by_id(pk)
+        inventory = InventorySelector.get_by_id(
+            pk,
+            include_deleted=True,
+        )
 
         try:
             InventoryService.restore_inventory(inventory)

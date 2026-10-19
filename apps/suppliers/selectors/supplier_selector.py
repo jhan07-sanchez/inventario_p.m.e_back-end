@@ -22,6 +22,7 @@ class SupplierSelector:
     @staticmethod
     def get_supplier_by_id(
         supplier_id: int,
+        include_deleted: bool = False,
     ) -> Supplier:
         """
         Obtiene un proveedor mediante su identificador.
@@ -30,14 +31,14 @@ class SupplierSelector:
         supplier_id:
             identificador primario del proveedor.
 
-        Returs:
+        Returns:
             Instancia de Supplier.
 
         Raises:
             Supplier.DoesNotExist:
                 Si el proveedor no existe.
         """
-
-        return Supplier.objects.get(
+        manager = Supplier.all_objects if include_deleted else Supplier.objects
+        return manager.get(
             pk=supplier_id,
         )

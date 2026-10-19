@@ -13,13 +13,13 @@ class InvoiceSelector(BaseSelector[Invoice]):
     def __init__(self):
         super().__init__(Invoice)
 
-    def get_queryset(self) -> QuerySet[Invoice]:
+    def get_queryset(self, include_deleted: bool = False) -> QuerySet[Invoice]:
         """
         Retorna el queryset optimizando relaciones de plantilla, origen y detalle.
         """
         return (
             super()
-            .get_queryset()
+            .get_queryset(include_deleted=include_deleted)
             .select_related("template", "purchase", "sale")
             .prefetch_related("items", "items__product")
             .order_by("-created_at")
@@ -44,9 +44,9 @@ class InvoiceSelector(BaseSelector[Invoice]):
         return InvoiceSelector().exists(invoice_number=invoice_number)
 
     @staticmethod
-    def get_by_id(invoice_id: int) -> Invoice:
+    def get_by_id(invoice_id: int, include_deleted: bool = False) -> Invoice:
         return get_object_or_404(
-            InvoiceSelector().get_queryset(),
+            InvoiceSelector().get_queryset(include_deleted=include_deleted),
             id=invoice_id,
         )
 

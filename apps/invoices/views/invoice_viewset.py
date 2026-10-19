@@ -308,7 +308,10 @@ class InvoiceViewSet(BaseViewSet):
         """
         Restaura una factura previamente desactivada.
         """
-        invoice = InvoiceSelector.get_by_id(pk)
+        invoice = InvoiceSelector.get_by_id(
+            pk,
+            include_deleted=True,
+        )
 
         try:
             InvoiceService.restore_invoice(invoice)

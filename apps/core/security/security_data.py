@@ -246,6 +246,27 @@ SECURITY_MODULES = [
         "order": 3,
     },
     {
+        "module_id": "invoices",
+        "label": "Facturación",
+        "icon": "fas fa-file-invoice-dollar",
+        "route": "views/pages/facturacion/index.php",
+        "parent": "operations",
+        "permissions": {
+            "invoices.view": "Ver facturación",
+            "invoices.create": "Crear facturas",
+            "invoices.update": "Actualizar facturas",
+            "invoices.delete": "Eliminar facturas",
+        },
+        "actions": {
+            "invoices.issue": "Emitir facturas",
+            "invoices.cancel": "Anular facturas",
+            "invoices.print": "Imprimir facturas",
+            "invoices.export": "Exportar facturas",
+        },
+        "widgets": ["invoices_summary", "invoices_recent"],
+        "order": 4,
+    },
+    {
         "module_id": "reports",
         "label": "Reportes",
         "icon": "fas fa-chart-bar",

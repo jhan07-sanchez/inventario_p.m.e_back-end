@@ -17,15 +17,22 @@ class BaseSelector(Generic[ModelType]):
     def __init__(self, model: type[ModelType]):
         self.model = model
 
-    def get_queryset(self) -> QuerySet[ModelType]:
+    def get_queryset(self, include_deleted: bool = False) -> QuerySet[ModelType]:
         """
         Origen de toda consulta.
         Ideal para inyectar filtros globales (ej. multi-tenant).
+        Si include_deleted=True y el modelo posee all_objects, consulta all_objects.
         """
+        if include_deleted and hasattr(self.model, "all_objects"):
+            return self.model.all_objects.all()
         return self.model.objects.all()
 
-    def get_all(self, qs: Optional[QuerySet[ModelType]] = None) -> QuerySet[ModelType]:
-        return qs if qs is not None else self.get_queryset()
+    def get_all(
+        self,
+        qs: Optional[QuerySet[ModelType]] = None,
+        include_deleted: bool = False,
+    ) -> QuerySet[ModelType]:
+        return qs if qs is not None else self.get_queryset(include_deleted=include_deleted)
 
     def get_active(
         self, qs: Optional[QuerySet[ModelType]] = None
@@ -39,16 +46,19 @@ class BaseSelector(Generic[ModelType]):
     def get_inactive(
         self, qs: Optional[QuerySet[ModelType]] = None
     ) -> QuerySet[ModelType]:
-        base_qs = self.get_all(qs)
+        base_qs = self.get_all(qs, include_deleted=True)
         if hasattr(self.model, "is_active") or hasattr(self.model(), "is_active"):
             return base_qs.filter(is_active=False)
         return base_qs
 
     def get_by_id(
-        self, record_id: Any, qs: Optional[QuerySet[ModelType]] = None
+        self,
+        record_id: Any,
+        qs: Optional[QuerySet[ModelType]] = None,
+        include_deleted: bool = False,
     ) -> Optional[ModelType]:
         try:
-            return self.get_all(qs).get(pk=record_id)
+            return self.get_all(qs, include_deleted=include_deleted).get(pk=record_id)
         except ObjectDoesNotExist:
             return None
 

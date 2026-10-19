@@ -297,6 +297,7 @@ class UserRoleViewSet(BaseViewSet):
 
         user_role = UserRoleSelector.get_by_id(
             pk,
+            include_deleted=True,
         )
 
         UserRoleService.restore_user_role(

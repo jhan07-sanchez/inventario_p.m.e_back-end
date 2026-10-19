@@ -81,6 +81,7 @@ class InvoiceTemplateService(BaseService[InvoiceTemplate]):
             raise ValidationError("La plantilla ya se encuentra inactiva.")
 
         InvoiceTemplateService().delete(template)
+        cache.delete(f"invoice_default_template_{template.document_type}")
 
     @staticmethod
     @transaction.atomic
@@ -92,4 +93,6 @@ class InvoiceTemplateService(BaseService[InvoiceTemplate]):
         if template.is_active:
             return template
 
-        return InvoiceTemplateService().restore(template)
+        restored = InvoiceTemplateService().restore(template)
+        cache.delete(f"invoice_default_template_{template.document_type}")
+        return restored

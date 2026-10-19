@@ -356,6 +356,7 @@ class CustomerViewSet(BaseViewSet):
 
         customer = CustomerSelector.get_customer_by_id(
             pk,
+            include_deleted=True,
         )
 
         try:

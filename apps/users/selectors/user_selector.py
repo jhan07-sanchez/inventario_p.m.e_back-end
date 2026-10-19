@@ -14,10 +14,10 @@ class UserSelector(BaseSelector[User]):
     def __init__(self):
         super().__init__(User)
 
-    def get_queryset(self) -> QuerySet[User]:
+    def get_queryset(self, include_deleted: bool = False) -> QuerySet[User]:
         return (
             super()
-            .get_queryset()
+            .get_queryset(include_deleted=include_deleted)
             .prefetch_related("user_roles__role")
             .order_by("id_user")
         )
@@ -27,9 +27,9 @@ class UserSelector(BaseSelector[User]):
         return UserSelector().get_all()
 
     @staticmethod
-    def get_by_id(user_id: int):
+    def get_by_id(user_id: int, include_deleted: bool = False):
         return get_object_or_404(
-            UserSelector().get_queryset(),
+            UserSelector().get_queryset(include_deleted=include_deleted),
             pk=user_id,
         )
 

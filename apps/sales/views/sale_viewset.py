@@ -318,7 +318,10 @@ class SaleViewSet(BaseViewSet):
         Restaura una venta previamente desactivada.
         """
 
-        sale = SaleSelector.get_by_id(pk)
+        sale = SaleSelector.get_by_id(
+            pk,
+            include_deleted=True,
+        )
 
         try:
             SaleService.restore_sale(sale)

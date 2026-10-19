@@ -30,14 +30,14 @@ class RoleSelector(BaseSelector[Role]):
         return RoleSelector().get_active().order_by("role_name")
 
     @staticmethod
-    def get_role_by_id(id_role: int) -> Role:
+    def get_role_by_id(id_role: int, include_deleted: bool = False) -> Role:
         """
         Obtiene un rol por su identificador.
 
         Lanza un 404 si no existe.
         """
         return get_object_or_404(
-            RoleSelector().get_queryset(),
+            RoleSelector().get_queryset(include_deleted=include_deleted),
             id_role=id_role,
         )
 

@@ -358,7 +358,10 @@ class PurchaseViewSet(BaseViewSet):
         Restaura una compra previamente desactivada.
         """
 
-        purchase = PurchaseSelector.get_purchase_by_id(pk)
+        purchase = PurchaseSelector.get_purchase_by_id(
+            pk,
+            include_deleted=True,
+        )
 
         try:
             PurchaseService.restore_purchase(purchase)

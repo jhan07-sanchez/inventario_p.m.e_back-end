@@ -338,6 +338,7 @@ class CategoryViewSet(BaseViewSet):
 
         category = CategorySelector.get_category_by_id(
             pk,
+            include_deleted=True,
         )
 
         try:

@@ -274,7 +274,10 @@ class RoleViewSet(BaseViewSet):
         Restaura un rol previamente desactivado.
         """
 
-        role = RoleSelector.get_role_by_id(pk)
+        role = RoleSelector.get_role_by_id(
+            pk,
+            include_deleted=True,
+        )
 
         try:
             RoleService.restore_role(role)

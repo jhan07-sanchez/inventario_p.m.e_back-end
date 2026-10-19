@@ -278,7 +278,10 @@ class InvoiceTemplateViewSet(BaseViewSet):
         """
         Restaura una plantilla de factura previamente desactivada.
         """
-        template = InvoiceTemplateSelector.get_by_id(pk)
+        template = InvoiceTemplateSelector.get_by_id(
+            pk,
+            include_deleted=True,
+        )
 
         try:
             InvoiceTemplateService.restore_template(template)

@@ -16,14 +16,14 @@ class InventorySelector(BaseSelector[Inventory]):
     def __init__(self):
         super().__init__(Inventory)
 
-    def get_queryset(self) -> QuerySet[Inventory]:
+    def get_queryset(self, include_deleted: bool = False) -> QuerySet[Inventory]:
         """
         Retorna el queryset base de inventarios optimizando
         las relaciones necesarias.
         """
         return (
             super()
-            .get_queryset()
+            .get_queryset(include_deleted=include_deleted)
             .select_related("product", "product__category")
             .order_by("id_inventory")
         )
@@ -43,12 +43,12 @@ class InventorySelector(BaseSelector[Inventory]):
         return InventorySelector().get_active()
 
     @staticmethod
-    def get_by_id(id_inventory: int) -> Inventory:
+    def get_by_id(id_inventory: int, include_deleted: bool = False) -> Inventory:
         """
         Obtiene un inventario por su identificador.
         """
         return get_object_or_404(
-            InventorySelector().get_queryset(),
+            InventorySelector().get_queryset(include_deleted=include_deleted),
             id_inventory=id_inventory,
         )
 

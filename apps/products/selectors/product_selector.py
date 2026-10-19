@@ -17,14 +17,14 @@ class ProductSelector(BaseSelector[Product]):
     def __init__(self):
         super().__init__(Product)
 
-    def get_queryset(self) -> QuerySet[Product]:
+    def get_queryset(self, include_deleted: bool = False) -> QuerySet[Product]:
         """
         Retorna el queryset base de productos optimizando
         las relaciones necesarias (incluyendo el inventario).
         """
         return (
             super()
-            .get_queryset()
+            .get_queryset(include_deleted=include_deleted)
             .select_related("category", "inventory")
             .order_by("id_product")
         )
@@ -44,12 +44,12 @@ class ProductSelector(BaseSelector[Product]):
         return ProductSelector().get_active()
 
     @staticmethod
-    def get_by_id(id_product: int) -> Product:
+    def get_by_id(id_product: int, include_deleted: bool = False) -> Product:
         """
         Obtiene un producto por su identificador.
         """
         return get_object_or_404(
-            ProductSelector().get_queryset(),
+            ProductSelector().get_queryset(include_deleted=include_deleted),
             id_product=id_product,
         )
 

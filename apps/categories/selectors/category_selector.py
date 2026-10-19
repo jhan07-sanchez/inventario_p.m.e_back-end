@@ -31,6 +31,7 @@ class CategorySelector:
     @staticmethod
     def get_category_by_id(
         category_id: int,
+        include_deleted: bool = False,
     ) -> Category:
         """
         Obtiene una categoría mediante su identificador.
@@ -38,8 +39,8 @@ class CategorySelector:
         Lanza Category.DoesNotExist si la categoría
         no existe.
         """
-
-        return Category.objects.get(
+        manager = Category.all_objects if include_deleted else Category.objects
+        return manager.get(
             pk=category_id,
         )
 
