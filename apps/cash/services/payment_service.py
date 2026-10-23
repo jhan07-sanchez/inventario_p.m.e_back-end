@@ -1,10 +1,13 @@
 from decimal import Decimal
 
-from django.core.exceptions import ValidationError
 from django.db import transaction
 
 from apps.cash.dto.payment_dto import PaymentCreateDto
 from apps.cash.models.payment import Payment
+from apps.core.exceptions.custom_exceptions import (
+    InvalidPaymentAmountException,
+    SaleNotFoundException,
+)
 from apps.core.services.base_service import BaseService
 from apps.sales.models.sale import Sale
 
@@ -25,10 +28,10 @@ class PaymentService(BaseService[Payment]):
             try:
                 sale = Sale.objects.get(pk=dto.sale_id)
             except Sale.DoesNotExist:
-                raise ValidationError("La venta asociada no existe.")
+                raise SaleNotFoundException()
 
         if dto.amount <= Decimal("0.00"):
-            raise ValidationError("El monto del pago debe ser mayor a cero.")
+            raise InvalidPaymentAmountException()
 
         payment = Payment.objects.create(
             sale=sale,

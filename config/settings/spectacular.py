@@ -177,6 +177,18 @@ SPECTACULAR_SETTINGS = {
             "name": "Company Info",
             "description": "Datos fiscales y de contacto de la empresa.",
         },
+        {
+            "name": "Configuration",
+            "description": "Configuración y administración del sistema.",
+        },
+        {
+            "name": "System",
+            "description": "Monitoreo y estado del sistema.",
+        },
+        {
+            "name": "Configuration Audits",
+            "description": "Historial de auditoría de cambios en la configuración.",
+        },
     ],
     "EXTENSIONS_ROOT": {
         "x-tagGroups": [
@@ -208,7 +220,7 @@ SPECTACULAR_SETTINGS = {
             },
             {
                 "name": "Sistema",
-                "tags": ["Company Info"],
+                "tags": ["Company Info", "Configuration", "Configuration Audits", "System"],
             },
         ]
     },

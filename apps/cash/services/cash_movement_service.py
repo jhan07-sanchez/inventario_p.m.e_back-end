@@ -1,6 +1,5 @@
 from decimal import Decimal
 
-from django.core.exceptions import ValidationError
 from django.db import transaction
 
 from apps.cash.dto.cash_movement_dto import CashMovementCreateDto
@@ -8,6 +7,13 @@ from apps.cash.models.cash_movement import CashMovement
 from apps.cash.models.cash_session import CashSession
 from apps.cash.models.payment import Payment
 from apps.core.enums import PaymentMethod
+from apps.core.exceptions.custom_exceptions import (
+    CashSessionClosedException,
+    CashSessionNotFoundException,
+    InsufficientCashException,
+    InvalidCashAmountException,
+    PaymentNotFoundException,
+)
 from apps.core.services.base_service import BaseService
 
 
@@ -27,10 +33,10 @@ class CashMovementService(BaseService[CashMovement]):
                 pk=dto.cash_session_id
             )
         except CashSession.DoesNotExist:
-            raise ValidationError("La sesión de caja no existe.")
+            raise CashSessionNotFoundException()
 
         if session.status != CashSession.SessionStatus.OPEN:
-            raise ValidationError(
+            raise CashSessionClosedException(
                 "No se pueden registrar movimientos en una sesión cerrada."
             )
 
@@ -39,7 +45,7 @@ class CashMovementService(BaseService[CashMovement]):
             try:
                 payment = Payment.objects.get(pk=dto.payment_id)
             except Payment.DoesNotExist:
-                raise ValidationError("El pago asociado no existe.")
+                raise PaymentNotFoundException()
 
             import dataclasses
 
@@ -47,11 +53,13 @@ class CashMovementService(BaseService[CashMovement]):
             dto = dataclasses.replace(dto, is_cash=is_cash)
 
         if dto.amount <= Decimal("0.00"):
-            raise ValidationError("El monto del movimiento debe ser mayor a cero.")
+            raise InvalidCashAmountException(
+                "El monto del movimiento debe ser mayor a cero."
+            )
 
         if dto.is_cash and dto.movement_type == CashMovement.MovementType.OUT:
             if dto.amount > session.expected_balance:
-                raise ValidationError(
+                raise InsufficientCashException(
                     f"El monto del retiro (${dto.amount}) supera el efectivo disponible en caja (${session.expected_balance})."
                 )
 

@@ -247,3 +247,73 @@ class InvalidSaleTransitionException(BusinessException):
 class SaleHasNoDetailsException(BusinessException):
     default_detail = "La venta no tiene detalles asociados. No puede ser procesada."
     default_code = ErrorCodes.SALE_HAS_NO_DETAILS
+
+
+# ==========================================
+# Excepciones de Configuration
+# ==========================================
+class GlobalParameterAlreadyExistsException(BusinessException):
+    default_detail = "El parámetro con esa clave ya existe en el sistema."
+    default_code = ErrorCodes.GLOBAL_PARAMETER_ALREADY_EXISTS
+
+
+class GlobalParameterInactiveException(BusinessException):
+    default_detail = "El parámetro ya se encuentra desactivado."
+    default_code = ErrorCodes.GLOBAL_PARAMETER_INACTIVE
+
+
+# ==========================================
+# Excepciones de Cash (Caja y Pagos)
+# ==========================================
+class CashSessionNotFoundException(BusinessException):
+    default_detail = "La sesión de caja no existe."
+    default_code = ErrorCodes.CASH_SESSION_NOT_FOUND
+    status_code = 404
+
+
+class CashSessionAlreadyOpenException(BusinessException):
+    default_detail = "El usuario ya tiene una sesión de caja abierta."
+    default_code = ErrorCodes.CASH_SESSION_ALREADY_OPEN
+
+
+class CashRegisterNotFoundException(BusinessException):
+    default_detail = "La caja seleccionada no existe o está inactiva."
+    default_code = ErrorCodes.CASH_REGISTER_NOT_FOUND
+    status_code = 404
+
+
+class CashRegisterAlreadyOpenException(BusinessException):
+    default_detail = "La caja seleccionada ya está abierta por otro usuario."
+    default_code = ErrorCodes.CASH_REGISTER_ALREADY_OPEN
+
+
+class InvalidCashAmountException(BusinessException):
+    default_detail = "El monto ingresado no es válido."
+    default_code = ErrorCodes.INVALID_CASH_AMOUNT
+
+
+class CashSessionClosedException(BusinessException):
+    default_detail = "La sesión de caja ya se encuentra cerrada."
+    default_code = ErrorCodes.CASH_SESSION_CLOSED
+
+
+class InsufficientCashException(BusinessException):
+    default_detail = "El monto del retiro supera el efectivo disponible en caja."
+    default_code = ErrorCodes.INSUFFICIENT_CASH
+
+
+class PaymentNotFoundException(BusinessException):
+    default_detail = "El pago asociado no existe."
+    default_code = ErrorCodes.PAYMENT_NOT_FOUND
+    status_code = 404
+
+
+class SaleNotFoundException(BusinessException):
+    default_detail = "La venta asociada no existe."
+    default_code = ErrorCodes.SALE_NOT_FOUND
+    status_code = 404
+
+
+class InvalidPaymentAmountException(BusinessException):
+    default_detail = "El monto del pago debe ser mayor a cero."
+    default_code = ErrorCodes.INVALID_PAYMENT_AMOUNT

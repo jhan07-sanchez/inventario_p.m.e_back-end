@@ -1,12 +1,18 @@
 from decimal import Decimal
 
-from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.utils import timezone
 
 from apps.cash.dto.cash_session_dto import CashSessionCloseDto, CashSessionOpenDto
 from apps.cash.models.cash_register import CashRegister
 from apps.cash.models.cash_session import CashSession
+from apps.core.exceptions.custom_exceptions import (
+    CashRegisterAlreadyOpenException,
+    CashRegisterNotFoundException,
+    CashSessionAlreadyOpenException,
+    CashSessionClosedException,
+    InvalidCashAmountException,
+)
 from apps.core.services.base_service import BaseService
 
 
@@ -24,26 +30,26 @@ class CashSessionService(BaseService[CashSession]):
         if CashSession.objects.filter(
             user=user, status=CashSession.SessionStatus.OPEN, is_active=True
         ).exists():
-            raise ValidationError("El usuario ya tiene una sesión de caja abierta.")
+            raise CashSessionAlreadyOpenException()
 
         try:
             register = CashRegister.objects.select_for_update().get(
                 pk=dto.cash_register_id, is_active=True
             )
         except CashRegister.DoesNotExist:
-            raise ValidationError("La caja seleccionada no existe o está inactiva.")
+            raise CashRegisterNotFoundException()
 
         if CashSession.objects.filter(
             cash_register=register,
             status=CashSession.SessionStatus.OPEN,
             is_active=True,
         ).exists():
-            raise ValidationError(
-                "La caja seleccionada ya está abierta por otro usuario."
-            )
+            raise CashRegisterAlreadyOpenException()
 
         if dto.opening_balance < Decimal("0.00"):
-            raise ValidationError("El efectivo inicial no puede ser negativo.")
+            raise InvalidCashAmountException(
+                "El efectivo inicial no puede ser negativo."
+            )
 
         session = CashSession.objects.create(
             cash_register=register,
@@ -63,10 +69,12 @@ class CashSessionService(BaseService[CashSession]):
         session = CashSession.objects.select_for_update().get(pk=session.pk)
 
         if session.status != CashSession.SessionStatus.OPEN:
-            raise ValidationError("La sesión ya se encuentra cerrada.")
+            raise CashSessionClosedException()
 
         if dto.counted_balance < Decimal("0.00"):
-            raise ValidationError("El efectivo contado no puede ser negativo.")
+            raise InvalidCashAmountException(
+                "El efectivo contado no puede ser negativo."
+            )
 
         session.end_time = timezone.now()
         session.counted_balance = dto.counted_balance
