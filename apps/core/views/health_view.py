@@ -4,10 +4,9 @@ from django.core.cache import cache
 from django.db import connection
 from django.http import JsonResponse
 from drf_spectacular.utils import extend_schema, inline_serializer
-from rest_framework import serializers, status
+from rest_framework import serializers, status, viewsets
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
-from rest_framework.views import APIView
 
 logger = logging.getLogger(__name__)
 
@@ -48,7 +47,7 @@ def check_system_health():
     return is_healthy, health_status
 
 
-class HealthCheckView(APIView):
+class HealthCheckView(viewsets.ViewSet):
     """
     Endpoint de comprobación de salud para la API (/api/v1/health/).
     Documentado en Swagger/OpenAPI.
@@ -81,7 +80,7 @@ class HealthCheckView(APIView):
             ),
         },
     )
-    def get(self, request, *args, **kwargs):
+    def list(self, request, *args, **kwargs):
         is_healthy, health_status = check_system_health()
         http_status = (
             status.HTTP_200_OK if is_healthy else status.HTTP_503_SERVICE_UNAVAILABLE

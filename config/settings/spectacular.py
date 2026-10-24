@@ -189,6 +189,10 @@ SPECTACULAR_SETTINGS = {
             "name": "Configuration Audits",
             "description": "Historial de auditoría de cambios en la configuración.",
         },
+        {
+            "name": "System History",
+            "description": "Historial de auditoria unificado para todos los modelos del sistema.",
+        },
     ],
     "EXTENSIONS_ROOT": {
         "x-tagGroups": [
@@ -220,7 +224,13 @@ SPECTACULAR_SETTINGS = {
             },
             {
                 "name": "Sistema",
-                "tags": ["Company Info", "Configuration", "Configuration Audits", "System"],
+                "tags": [
+                    "Company Info",
+                    "Configuration",
+                    "Configuration Audits",
+                    "System History",
+                    "System",
+                ],
             },
         ]
     },

@@ -25,11 +25,8 @@ from drf_spectacular.views import (
     SpectacularSwaggerView,
 )
 
-from apps.core.views.health_view import root_health_check
 
 urlpatterns = [
-    # Health check for Render / load balancers
-    path("health/", root_health_check, name="health-check"),
     path("admin/", admin.site.urls),
     # OpenAPI Schema (YAML/JSON)
     path("api/schema/", SpectacularAPIView.as_view(), name="schema"),

@@ -1,4 +1,5 @@
 from django.db import models
+from simple_history.models import HistoricalRecords
 
 from apps.core.models.base_model import BaseModel
 
@@ -34,6 +35,7 @@ class Role(BaseModel):
         verbose_name="Estado",
         help_text="Indica si el registro está activo.",
     )
+    history = HistoricalRecords()
 
     class Meta:
         db_table = "roles"

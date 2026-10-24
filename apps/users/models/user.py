@@ -1,5 +1,6 @@
 from django.contrib.auth.models import AbstractUser
 from django.db import models
+from simple_history.models import HistoricalRecords
 
 from apps.core.models.base_model import BaseModel
 
@@ -31,6 +32,7 @@ class User(AbstractUser, BaseModel):
         verbose_name="Teléfono",
         help_text="Número telefónico del usuario.",
     )
+    history = HistoricalRecords(excluded_fields=["password", "last_login", "date_joined"])
 
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = ["username"]

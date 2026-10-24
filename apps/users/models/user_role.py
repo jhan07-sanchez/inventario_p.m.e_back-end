@@ -1,4 +1,5 @@
 from django.db import models
+from simple_history.models import HistoricalRecords
 
 from apps.core.models.base_model import BaseModel
 from apps.users.models.role import Role
@@ -31,6 +32,7 @@ class UserRole(BaseModel):
         verbose_name="Rol",
         help_text="Rol asignado al usuario.",
     )
+    history = HistoricalRecords()
 
     class Meta:
         db_table = "user_roles"
