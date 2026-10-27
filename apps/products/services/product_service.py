@@ -218,8 +218,9 @@ class ProductService(BaseService[Product]):
         product = ProductService().create(**validated_data)
 
         # Delegar la creación del inventario inicial al InventoryService
-        # from apps.inventory.services.inventory_service import InventoryService
-        # InventoryService.create_inventory({"product": product})
+        from apps.inventory.services.inventory_service import InventoryService
+
+        InventoryService.create_inventory({"product": product})
 
         DashboardMetricsService.invalidate_inventory_cache()
 

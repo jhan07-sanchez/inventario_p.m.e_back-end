@@ -16,9 +16,11 @@ from .invoice_template_docs import (
     invoice_template_delete_schema,
     invoice_template_list_schema,
     invoice_template_patch_schema,
+    invoice_template_preview_schema,
     invoice_template_put_schema,
     invoice_template_restore_schema,
     invoice_template_retrieve_schema,
+    invoice_template_set_default_schema,
 )
 
 __all__ = [
@@ -38,4 +40,6 @@ __all__ = [
     "invoice_template_put_schema",
     "invoice_template_restore_schema",
     "invoice_template_retrieve_schema",
+    "invoice_template_preview_schema",
+    "invoice_template_set_default_schema",
 ]

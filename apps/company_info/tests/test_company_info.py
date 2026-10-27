@@ -48,6 +48,13 @@ class CompanyInfoTests(TestCase):
 
     def tearDown(self):
         cache.clear()
+        if hasattr(self, "company"):
+            try:
+                self.company.refresh_from_db()
+                if self.company.logo:
+                    self.company.logo.delete(save=False)
+            except Exception:
+                pass
 
     def test_selector_get_current_caches_result(self):
         self.assertIsNone(cache.get("company_info_current"))
@@ -99,3 +106,91 @@ class CompanyInfoTests(TestCase):
         res = self.client.get(url)
         self.assertEqual(res.status_code, status.HTTP_200_OK)
         self.assertEqual(res.data["data"]["tax_id"], "901234567-8")
+
+    def test_singleton_creation_rejected_when_company_already_exists(self):
+        from django.core.exceptions import ValidationError
+
+        from apps.company_info.dto.company_info_dto import CompanyInfoCreateDto
+
+        dto = CompanyInfoCreateDto(
+            business_name="Segunda Empresa S.A.",
+            tax_id="999888777-1",
+        )
+        with self.assertRaises(ValidationError) as ctx:
+            CompanyInfoService.create_company_info(dto)
+        self.assertIn("Ya existe una empresa configurada", str(ctx.exception))
+
+    def test_upload_logo_validation_rejects_invalid_file_extension(self):
+        from django.core.files.uploadedfile import SimpleUploadedFile
+
+        fake_exe = SimpleUploadedFile(
+            "malware.exe",
+            b"MZ\x90\x00\x03\x00\x00\x00",
+            content_type="application/x-msdownload",
+        )
+        url = reverse("company-info-upload-logo", kwargs={"pk": self.company.pk})
+        res = self.client.post(url, {"logo": fake_exe}, format="multipart")
+        self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertFalse(res.data["success"])
+
+    def test_upload_logo_validation_rejects_oversized_file(self):
+        from django.core.files.uploadedfile import SimpleUploadedFile
+
+        # 3 MB file (exceeds 2 MB limit)
+        oversized = SimpleUploadedFile(
+            "huge_logo.png", b"0" * (3 * 1024 * 1024), content_type="image/png"
+        )
+        url = reverse("company-info-upload-logo", kwargs={"pk": self.company.pk})
+        res = self.client.post(url, {"logo": oversized}, format="multipart")
+        self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertFalse(res.data["success"])
+
+    def test_upload_logo_success_with_valid_image(self):
+        from django.core.files.uploadedfile import SimpleUploadedFile
+
+        # Minimal 1x1 transparent PNG
+        valid_png = (
+            b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01"
+            b"\x08\x06\x00\x00\x00\x1f\x15c4\x00\x00\x00\rIDATx\x9cc`\x00\x00\x00"
+            b"\x02\x00\x01H\xaf\xa4q\x00\x00\x00\x00IEND\xaeB`\x82"
+        )
+        logo = SimpleUploadedFile("logo_pme.png", valid_png, content_type="image/png")
+        url = reverse("company-info-upload-logo", kwargs={"pk": self.company.pk})
+        res = self.client.post(url, {"logo": logo}, format="multipart")
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertTrue(res.data["success"])
+
+        self.company.refresh_from_db()
+        if self.company.logo:
+            self.company.logo.delete(save=False)
+
+    def test_unauthorized_user_cannot_update_company_info(self):
+        # Create viewer user without update permission
+        viewer = User.objects.create_user(
+            username="company_viewer",
+            password="viewerpassword123",
+            email="viewer@example.com",
+            document_number="99887766",
+        )
+        viewer_role = Role.objects.create(
+            role_name="settings_viewer",
+            permissions={"settings.view": True},
+        )
+        UserRole.objects.create(user=viewer, role=viewer_role)
+
+        viewer_client = APIClient()
+        login_res = viewer_client.post(
+            reverse("auth-login"),
+            {"username": "company_viewer", "password": "viewerpassword123"},
+        )
+        token = login_res.data["data"]["access_token"]
+        viewer_client.credentials(HTTP_AUTHORIZATION=f"Bearer {token}")
+
+        # GET current works for viewer
+        curr_res = viewer_client.get(reverse("company-info-current"))
+        self.assertEqual(curr_res.status_code, status.HTTP_200_OK)
+
+        # PATCH fails with 403 Forbidden
+        update_url = reverse("company-info-detail", kwargs={"pk": self.company.pk})
+        patch_res = viewer_client.patch(update_url, {"trade_name": "Nuevo Nombre"})
+        self.assertEqual(patch_res.status_code, status.HTTP_403_FORBIDDEN)

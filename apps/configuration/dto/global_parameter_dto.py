@@ -2,8 +2,6 @@ from dataclasses import dataclass
 from typing import Optional
 
 
-
-
 @dataclass(frozen=True, slots=True)
 class GlobalParameterCreateDto:
     """
@@ -14,6 +12,7 @@ class GlobalParameterCreateDto:
     value: str
     data_type: str
     description: Optional[str] = None
+
 
 @dataclass(frozen=True, slots=True)
 class GlobalParameterUpdateDto:

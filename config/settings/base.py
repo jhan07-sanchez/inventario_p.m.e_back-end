@@ -131,6 +131,7 @@ def get_database_config():
             "PORT": db_port,
             "CONN_MAX_AGE": config("CONN_MAX_AGE", default=60, cast=int),
             "CONN_HEALTH_CHECKS": config("CONN_HEALTH_CHECKS", default=True, cast=bool),
+            "DISABLE_SERVER_SIDE_CURSORS": config("DISABLE_SERVER_SIDE_CURSORS", default=True, cast=bool),
             "OPTIONS": options,
         }
 
@@ -155,6 +156,7 @@ def get_database_config():
         "PORT": config("DB_PORT", default=""),
         "CONN_MAX_AGE": config("CONN_MAX_AGE", default=60, cast=int),
         "CONN_HEALTH_CHECKS": config("CONN_HEALTH_CHECKS", default=True, cast=bool),
+        "DISABLE_SERVER_SIDE_CURSORS": config("DISABLE_SERVER_SIDE_CURSORS", default=True, cast=bool),
         "OPTIONS": options,
     }
 

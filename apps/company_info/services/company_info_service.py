@@ -138,6 +138,54 @@ class CompanyInfoService(BaseService[CompanyInfo]):
         cache.delete("company_info_current")
         return company
 
+    ALLOWED_LOGO_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".svg"}
+    ALLOWED_LOGO_CONTENT_TYPES = {
+        "image/jpeg",
+        "image/png",
+        "image/webp",
+        "image/svg+xml",
+        "image/pjpeg",
+        "image/x-png",
+    }
+    MAX_LOGO_SIZE_BYTES = 2 * 1024 * 1024  # 2 MB
+
+    @classmethod
+    def validate_logo_file(cls, logo_file) -> None:
+        """
+        Valida que el archivo del logo cumpla con los requisitos de seguridad,
+        tamaño máximo y formato de imagen permitido.
+        """
+        import os
+
+        if not logo_file:
+            raise ValidationError("No se proporcionó ningún archivo de logo.")
+
+        # Validar tamaño
+        if hasattr(logo_file, "size") and logo_file.size > cls.MAX_LOGO_SIZE_BYTES:
+            raise ValidationError(
+                f"El archivo del logo excede el tamaño máximo permitido de {cls.MAX_LOGO_SIZE_BYTES // (1024 * 1024)}MB."
+            )
+
+        # Validar extensión
+        filename = getattr(logo_file, "name", "")
+        _, ext = os.path.splitext(filename.lower())
+        if ext not in cls.ALLOWED_LOGO_EXTENSIONS:
+            allowed_str = ", ".join(
+                sorted(
+                    ext.replace(".", "").upper() for ext in cls.ALLOWED_LOGO_EXTENSIONS
+                )
+            )
+            raise ValidationError(
+                f"Formato de archivo '{ext}' no permitido. Formatos permitidos: {allowed_str}."
+            )
+
+        # Validar Content-Type
+        content_type = getattr(logo_file, "content_type", None)
+        if content_type and content_type.lower() not in cls.ALLOWED_LOGO_CONTENT_TYPES:
+            raise ValidationError(
+                f"Tipo MIME '{content_type}' no permitido para imágenes de logo."
+            )
+
     @staticmethod
     @transaction.atomic
     def update_logo(
@@ -149,6 +197,7 @@ class CompanyInfoService(BaseService[CompanyInfo]):
 
         Si ya existe un logo anterior, se reemplaza.
         """
+        CompanyInfoService.validate_logo_file(logo_file)
 
         if company.logo:
             company.logo.delete(save=False)

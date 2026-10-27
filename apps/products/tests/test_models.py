@@ -1,4 +1,5 @@
 from decimal import Decimal
+
 from django.test import TestCase
 
 from apps.categories.models.category import Category

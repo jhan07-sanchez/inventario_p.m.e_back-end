@@ -4,12 +4,15 @@ from rest_framework.decorators import action
 from rest_framework.filters import OrderingFilter, SearchFilter
 
 from apps.configuration.docs import (
+    global_parameter_by_key_schema,
+    global_parameter_catalog_schema,
     global_parameter_create_schema,
     global_parameter_delete_schema,
     global_parameter_detail_schema,
     global_parameter_list_schema,
     global_parameter_partial_update_schema,
     global_parameter_restore_schema,
+    global_parameter_system_summary_schema,
     global_parameter_update_schema,
 )
 from apps.configuration.models import GlobalParameter
@@ -43,6 +46,12 @@ class GlobalParameterViewSet(BaseViewSet):
         permission_map = {
             "list": (IsAuthenticatedAndActive, HasPermission("settings.view")),
             "retrieve": (IsAuthenticatedAndActive, HasPermission("settings.view")),
+            "by_key": (IsAuthenticatedAndActive, HasPermission("settings.view")),
+            "catalog": (IsAuthenticatedAndActive, HasPermission("settings.view")),
+            "system_summary": (
+                IsAuthenticatedAndActive,
+                HasPermission("settings.view"),
+            ),
             "create": (IsAuthenticatedAndActive, HasPermission("settings.update")),
             "update": (IsAuthenticatedAndActive, HasPermission("settings.update")),
             "partial_update": (
@@ -118,7 +127,9 @@ class GlobalParameterViewSet(BaseViewSet):
         serializer.is_valid(raise_exception=True)
 
         try:
-            param = GlobalParameterService.create_parameter(serializer.to_dto(), user=request.user)
+            param = GlobalParameterService.create_parameter(
+                serializer.to_dto(), user=request.user
+            )
             response_serializer = GlobalParameterSerializer(param)
             return self.success_response(
                 message="Parámetro creado correctamente.",
@@ -142,7 +153,9 @@ class GlobalParameterViewSet(BaseViewSet):
         serializer.is_valid(raise_exception=True)
 
         try:
-            param = GlobalParameterService.update_parameter(param, serializer.to_dto(), user=request.user)
+            param = GlobalParameterService.update_parameter(
+                param, serializer.to_dto(), user=request.user
+            )
             response_serializer = GlobalParameterSerializer(param)
             return self.success_response(
                 message="Parámetro actualizado correctamente.",
@@ -166,7 +179,9 @@ class GlobalParameterViewSet(BaseViewSet):
         serializer.is_valid(raise_exception=True)
 
         try:
-            param = GlobalParameterService.update_parameter(param, serializer.to_dto(), user=request.user)
+            param = GlobalParameterService.update_parameter(
+                param, serializer.to_dto(), user=request.user
+            )
             response_serializer = GlobalParameterSerializer(param)
             return self.success_response(
                 message="Parámetro actualizado parcialmente.",
@@ -222,3 +237,96 @@ class GlobalParameterViewSet(BaseViewSet):
                 exception,
                 message="No fue posible restaurar el parámetro.",
             )
+
+    @global_parameter_by_key_schema
+    @action(detail=False, methods=["get"], url_path="by-key/(?P<key>[a-zA-Z0-9_-]+)")
+    def by_key(self, request, key=None):
+        """
+        Obtiene un parámetro global por su clave única.
+        """
+        param = GlobalParameterSelector.get_by_key(key)
+        if not param:
+            return self.error_response(
+                message=f"Parámetro con clave '{key}' no encontrado o inactivo.",
+                code="NOT_FOUND",
+                status_code=status.HTTP_404_NOT_FOUND,
+            )
+        serializer = GlobalParameterSerializer(param)
+        return self.success_response(
+            message="Parámetro obtenido correctamente.",
+            code="GLOBAL_PARAMETER_FETCHED",
+            data=serializer.data,
+            status_code=status.HTTP_200_OK,
+        )
+
+    @global_parameter_catalog_schema
+    @action(detail=False, methods=["get"], url_path="catalog")
+    def catalog(self, request):
+        """
+        Retorna el catálogo estándar de parámetros reconocidos por el sistema.
+        """
+        catalog_data = GlobalParameterService.get_catalog()
+        return self.success_response(
+            message="Catálogo de parámetros obtenido exitosamente.",
+            code="GLOBAL_PARAMETERS_CATALOG_FETCHED",
+            data=catalog_data,
+            status_code=status.HTTP_200_OK,
+        )
+
+    @global_parameter_system_summary_schema
+    @action(detail=False, methods=["get"], url_path="system-summary")
+    def system_summary(self, request):
+        """
+        Retorna una vista holística del centro de configuración:
+        - Datos corporativos activos (CompanyInfo)
+        - Plantillas de facturas predeterminadas por tipo de documento
+        - Conteo y listado de parámetros globales
+        """
+        from apps.company_info.selectors.company_info_selector import (
+            CompanyInfoSelector,
+        )
+        from apps.company_info.serializers.company_info_serializer import (
+            CompanyInfoSerializer,
+        )
+        from apps.invoices.models import InvoiceTemplate
+        from apps.invoices.selectors.invoice_template_selector import (
+            InvoiceTemplateSelector,
+        )
+
+        # 1. Información corporativa
+        company = CompanyInfoSelector.get_current()
+        company_data = (
+            CompanyInfoSerializer(company, context={"request": request}).data
+            if company
+            else None
+        )
+
+        # 2. Plantillas predeterminadas
+        default_templates = {}
+        for doc_type_choice in InvoiceTemplate.DocumentType.choices:
+            doc_type = doc_type_choice[0]
+            tmpl = InvoiceTemplateSelector.get_default_template(doc_type)
+            default_templates[doc_type] = {
+                "id": tmpl.id if tmpl else None,
+                "name": tmpl.name if tmpl else None,
+                "document_type": doc_type,
+                "is_configured": tmpl is not None,
+            }
+
+        # 3. Parámetros globales
+        parameters_qs = self.get_queryset()
+        parameters_data = GlobalParameterSerializer(parameters_qs, many=True).data
+
+        summary = {
+            "company_info": company_data,
+            "default_templates": default_templates,
+            "parameters_count": parameters_qs.count(),
+            "parameters": parameters_data,
+        }
+
+        return self.success_response(
+            message="Resumen del sistema obtenido exitosamente.",
+            code="SYSTEM_SUMMARY_FETCHED",
+            data=summary,
+            status_code=status.HTTP_200_OK,
+        )

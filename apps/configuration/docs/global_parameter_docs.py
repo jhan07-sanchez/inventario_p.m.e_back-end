@@ -210,3 +210,66 @@ global_parameter_restore_schema = extend_schema(
         404: OpenApiResponse(response=ApiErrorResponseSerializer),
     },
 )
+
+global_parameter_by_key_schema = extend_schema(
+    tags=["Configuration"],
+    summary="Obtener Parámetro por Clave",
+    description="Obtiene los detalles de un parámetro global a partir de su clave única.",
+    parameters=[
+        OpenApiParameter(
+            name="key",
+            type=OpenApiTypes.STR,
+            location=OpenApiParameter.PATH,
+            required=True,
+            description="Clave única del parámetro (ej. DEFAULT_TAX_RATE).",
+        )
+    ],
+    responses={
+        200: OpenApiResponse(
+            response=build_api_response_schema(
+                name="GlobalParameterByKeyApiResponse",
+                data_serializer=GlobalParameterSerializer,
+            ),
+            description="Parámetro obtenido correctamente.",
+        ),
+        401: OpenApiResponse(response=ApiErrorResponseSerializer),
+        403: OpenApiResponse(response=ApiErrorResponseSerializer),
+        404: OpenApiResponse(response=ApiErrorResponseSerializer),
+    },
+)
+
+global_parameter_catalog_schema = extend_schema(
+    tags=["Configuration"],
+    summary="Catálogo de Parámetros del Sistema",
+    description="Retorna el catálogo estándar de parámetros configurables predefinidos para el ERP.",
+    responses={
+        200: OpenApiResponse(
+            response=build_api_response_schema(
+                name="GlobalParameterCatalogApiResponse",
+            ),
+            description="Catálogo de parámetros obtenido exitosamente.",
+        ),
+        401: OpenApiResponse(response=ApiErrorResponseSerializer),
+        403: OpenApiResponse(response=ApiErrorResponseSerializer),
+    },
+)
+
+global_parameter_system_summary_schema = extend_schema(
+    tags=["Configuration"],
+    summary="Resumen Central de Configuración ERP",
+    description=(
+        "Proporciona una vista consolidada para el Centro de Configuración: "
+        "información de la empresa, plantillas documentales predeterminadas y "
+        "parámetros operativos esenciales, sin duplicidad de modelos."
+    ),
+    responses={
+        200: OpenApiResponse(
+            response=build_api_response_schema(
+                name="GlobalParameterSystemSummaryApiResponse",
+            ),
+            description="Resumen de configuración obtenido correctamente.",
+        ),
+        401: OpenApiResponse(response=ApiErrorResponseSerializer),
+        403: OpenApiResponse(response=ApiErrorResponseSerializer),
+    },
+)

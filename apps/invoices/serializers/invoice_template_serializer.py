@@ -87,3 +87,30 @@ class InvoiceTemplateUpdateSerializer(serializers.Serializer):
             footer_content=validated_data.get("footer_content"),
             is_default=validated_data.get("is_default"),
         )
+
+
+class InvoiceTemplatePreviewSerializer(serializers.Serializer):
+    """
+    Serializer para solicitar una vista previa de la plantilla
+    con datos de muestra personalizados opcionales.
+    """
+
+    sample_data = serializers.DictField(
+        required=False,
+        allow_null=True,
+        help_text="Datos personalizados de ejemplo para renderizar la plantilla.",
+    )
+
+
+class InvoiceTemplatePreviewResponseSerializer(serializers.Serializer):
+    """
+    Serializer de respuesta para la vista previa de la plantilla.
+    """
+
+    template_id = serializers.IntegerField()
+    name = serializers.CharField()
+    document_type = serializers.CharField()
+    rendered_header = serializers.CharField()
+    rendered_body = serializers.CharField()
+    rendered_footer = serializers.CharField()
+    full_html = serializers.CharField()

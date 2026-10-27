@@ -320,6 +320,11 @@ class CompanyInfoViewSet(BaseViewSet):
                 data=response_serializer.data,
                 status_code=status.HTTP_200_OK,
             )
+        except ValidationError as exception:
+            return self.handle_validation_error(
+                exception,
+                message="No fue posible actualizar el logo.",
+            )
         except Exception as e:
             import logging
 

@@ -7,10 +7,12 @@ from apps.core.docs.error_schemas import (
     ValidationErrorResponseSerializer,
 )
 from apps.invoices.serializers import (
-    InvoiceTemplateCreateSerializer,  # Asegúrate de importarlo o ajustarlo según tus serializers de plantillas
+    InvoiceTemplateCreateSerializer,
     InvoiceTemplateListSerializer,
+    InvoiceTemplatePreviewResponseSerializer,
+    InvoiceTemplatePreviewSerializer,
     InvoiceTemplateRetrieveSerializer,
-    InvoiceTemplateUpdateSerializer,  # Asegúrate de importarlo o ajustarlo según tus serializers de plantillas
+    InvoiceTemplateUpdateSerializer,
 )
 
 pagination_parameters = [
@@ -288,6 +290,70 @@ invoice_template_restore_schema = extend_schema(
                 name="InvoiceTemplateRestoreApiResponse",
             ),
             description="Plantilla restaurada correctamente.",
+        ),
+        400: OpenApiResponse(response=ValidationErrorResponseSerializer),
+        401: OpenApiResponse(response=ApiErrorResponseSerializer),
+        403: OpenApiResponse(response=ApiErrorResponseSerializer),
+        404: OpenApiResponse(response=ApiErrorResponseSerializer),
+    },
+)
+
+invoice_template_preview_schema = extend_schema(
+    tags=["Invoice Templates"],
+    summary="Vista Previa de Plantilla",
+    description=(
+        "Renderiza una vista previa del documento HTML con datos de prueba "
+        "y la información corporativa activa, sin crear ninguna factura."
+    ),
+    parameters=[
+        OpenApiParameter(
+            name="id",
+            type=OpenApiTypes.INT,
+            location=OpenApiParameter.PATH,
+            required=True,
+            description="ID de la plantilla a previsualizar.",
+        )
+    ],
+    request=InvoiceTemplatePreviewSerializer,
+    responses={
+        200: OpenApiResponse(
+            response=build_api_response_schema(
+                name="InvoiceTemplatePreviewApiResponse",
+                data_serializer=InvoiceTemplatePreviewResponseSerializer,
+            ),
+            description="Vista previa renderizada exitosamente.",
+        ),
+        400: OpenApiResponse(response=ValidationErrorResponseSerializer),
+        401: OpenApiResponse(response=ApiErrorResponseSerializer),
+        403: OpenApiResponse(response=ApiErrorResponseSerializer),
+        404: OpenApiResponse(response=ApiErrorResponseSerializer),
+    },
+)
+
+invoice_template_set_default_schema = extend_schema(
+    tags=["Invoice Templates"],
+    summary="Establecer Plantilla Predeterminada",
+    description=(
+        "Establece la plantilla especificada como la predeterminada para su "
+        "tipo de documento (ej. FACTURA_VENTA, TICKET_POS, etc.). "
+        "Desactiva automáticamente cualquier otra plantilla predeterminada del mismo tipo."
+    ),
+    parameters=[
+        OpenApiParameter(
+            name="id",
+            type=OpenApiTypes.INT,
+            location=OpenApiParameter.PATH,
+            required=True,
+            description="ID de la plantilla a marcar como predeterminada.",
+        )
+    ],
+    responses={
+        200: OpenApiResponse(
+            response=build_api_response_schema(
+                name="InvoiceTemplateSetDefaultApiResponse",
+                data_serializer=InvoiceTemplateRetrieveSerializer,
+            ),
+            description="Plantilla establecida como predeterminada correctamente.",
         ),
         400: OpenApiResponse(response=ValidationErrorResponseSerializer),
         401: OpenApiResponse(response=ApiErrorResponseSerializer),

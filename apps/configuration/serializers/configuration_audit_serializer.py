@@ -1,4 +1,6 @@
+from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
+
 from apps.configuration.models import ConfigurationAudit
 
 
@@ -18,7 +20,8 @@ class ConfigurationAuditSerializer(serializers.ModelSerializer):
             "created_at",
         )
 
-    def get_user_name(self, obj):
+    @extend_schema_field(serializers.CharField)
+    def get_user_name(self, obj) -> str:
         if obj.user:
             return (
                 f"{obj.user.first_name} {obj.user.last_name}".strip()

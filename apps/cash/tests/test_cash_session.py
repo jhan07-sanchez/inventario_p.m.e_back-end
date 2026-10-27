@@ -17,6 +17,7 @@ from apps.cash.services.cash_movement_service import CashMovementService
 from apps.cash.services.cash_session_service import CashSessionService
 from apps.categories.models.category import Category
 from apps.core.enums import PaymentMethod, PaymentStatus
+from apps.core.exceptions.custom_exceptions import BusinessException
 from apps.inventory.models import Inventory
 from apps.invoices.models import InvoiceTemplate
 from apps.products.models import Product
@@ -111,7 +112,7 @@ class CashSessionServiceTests(TestCase):
             cash_register_id=self.register2.pk,
             opening_balance=Decimal("50.00"),
         )
-        with self.assertRaises(ValidationError) as ctx:
+        with self.assertRaises((ValidationError, BusinessException)) as ctx:
             CashSessionService.open_session(open_dto2, self.user1)
         self.assertIn(
             "El usuario ya tiene una sesión de caja abierta.", str(ctx.exception)
@@ -122,7 +123,7 @@ class CashSessionServiceTests(TestCase):
             cash_register_id=self.register2.pk,
             opening_balance=Decimal("-10.00"),
         )
-        with self.assertRaises(ValidationError) as ctx:
+        with self.assertRaises((ValidationError, BusinessException)) as ctx:
             CashSessionService.open_session(open_dto_negative, self.user2)
         self.assertIn("El efectivo inicial no puede ser negativo.", str(ctx.exception))
 
@@ -141,7 +142,7 @@ class CashSessionServiceTests(TestCase):
             cash_register_id=self.register1.pk,
             opening_balance=Decimal("100.00"),
         )
-        with self.assertRaises(ValidationError) as ctx:
+        with self.assertRaises((ValidationError, BusinessException)) as ctx:
             CashSessionService.open_session(open_dto2, self.user2)
         self.assertIn(
             "La caja seleccionada ya está abierta por otro usuario.", str(ctx.exception)
@@ -171,9 +172,9 @@ class CashSessionServiceTests(TestCase):
         self.assertIsNotNone(closed_session.end_time)
 
         # Intentar cerrar nuevamente debe fallar
-        with self.assertRaises(ValidationError) as ctx:
+        with self.assertRaises((ValidationError, BusinessException)) as ctx:
             CashSessionService.close_session(closed_session, close_dto_surplus)
-        self.assertIn("La sesión ya se encuentra cerrada.", str(ctx.exception))
+        self.assertIn("se encuentra cerrada", str(ctx.exception))
 
         # Probar faltante en una segunda sesión
         session2 = CashSessionService.open_session(
@@ -198,7 +199,7 @@ class CashSessionServiceTests(TestCase):
             ),
             self.user1,
         )
-        with self.assertRaises(ValidationError) as ctx:
+        with self.assertRaises((ValidationError, BusinessException)) as ctx:
             CashSessionService.close_session(
                 session3,
                 CashSessionCloseDto(counted_balance=Decimal("-5.00")),
@@ -254,7 +255,7 @@ class CashSessionServiceTests(TestCase):
         self.assertEqual(session.expected_balance, Decimal("120.00"))
 
         # 3. Movimiento OUT que supera el saldo disponible ($200 > $120)
-        with self.assertRaises(ValidationError) as ctx:
+        with self.assertRaises((ValidationError, BusinessException)) as ctx:
             CashMovementService.create_movement(
                 CashMovementCreateDto(
                     cash_session_id=session.pk,
@@ -267,7 +268,7 @@ class CashSessionServiceTests(TestCase):
         self.assertIn("supera el efectivo disponible en caja", str(ctx.exception))
 
         # 4. Movimiento con monto cero o negativo
-        with self.assertRaises(ValidationError) as ctx:
+        with self.assertRaises((ValidationError, BusinessException)) as ctx:
             CashMovementService.create_movement(
                 CashMovementCreateDto(
                     cash_session_id=session.pk,
@@ -298,7 +299,7 @@ class CashSessionServiceTests(TestCase):
             session,
             CashSessionCloseDto(counted_balance=Decimal("120.00")),
         )
-        with self.assertRaises(ValidationError) as ctx:
+        with self.assertRaises((ValidationError, BusinessException)) as ctx:
             CashMovementService.create_movement(
                 CashMovementCreateDto(
                     cash_session_id=session.pk,

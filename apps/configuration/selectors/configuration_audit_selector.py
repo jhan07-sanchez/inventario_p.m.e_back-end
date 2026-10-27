@@ -1,8 +1,8 @@
 from django.db.models import QuerySet
 from django.shortcuts import get_object_or_404
 
-from apps.core.selectors.base_selector import BaseSelector
 from apps.configuration.models import ConfigurationAudit
+from apps.core.selectors.base_selector import BaseSelector
 
 
 class ConfigurationAuditSelector(BaseSelector[ConfigurationAudit]):
@@ -14,14 +14,16 @@ class ConfigurationAuditSelector(BaseSelector[ConfigurationAudit]):
     def __init__(self):
         super().__init__(ConfigurationAudit)
 
-    def get_queryset(self) -> QuerySet[ConfigurationAudit]:
+    def get_queryset(
+        self, include_deleted: bool = False
+    ) -> QuerySet[ConfigurationAudit]:
         """
         Retorna el queryset base de auditorías optimizando
         las relaciones con el usuario y el parámetro.
         """
         return (
             super()
-            .get_queryset()
+            .get_queryset(include_deleted=include_deleted)
             .select_related("user", "parameter")
             .order_by("-created_at")
         )

@@ -1,4 +1,4 @@
-from django.db.models import QuerySet
+from django.db.models import Prefetch, QuerySet
 from django.shortcuts import get_object_or_404
 
 from apps.core.selectors.base_selector import BaseSelector
@@ -19,13 +19,36 @@ class PurchaseSelector(BaseSelector[Purchase]):
     def get_queryset(self, include_deleted: bool = False) -> QuerySet[Purchase]:
         """
         Retorna el queryset base de compras optimizando
-        las relaciones necesarias (proveedor y líneas de detalle).
+        las relaciones necesarias (proveedor, líneas de detalle y facturas asociadas).
         """
+        from apps.invoices.models import Invoice
+
+        invoice_qs = (
+            Invoice.all_objects.all()
+            if include_deleted
+            else Invoice.objects.filter(is_active=True).only(
+                "id",
+                "invoice_number",
+                "status",
+                "document_type",
+                "purchase_id",
+                "is_active",
+            )
+        )
+
         return (
             super()
             .get_queryset(include_deleted=include_deleted)
             .select_related("supplier")
-            .prefetch_related("details", "details__product")
+            .prefetch_related(
+                "details",
+                "details__product",
+                Prefetch(
+                    "invoices",
+                    queryset=invoice_qs,
+                    to_attr="prefetched_invoices",
+                ),
+            )
             .order_by("-id_purchase")
         )
 

@@ -1,4 +1,5 @@
 from decimal import Decimal
+
 from django.core.cache import cache
 from django.test import TestCase
 from django.urls import reverse
@@ -182,7 +183,9 @@ class InvoiceTests(TestCase):
         cache_key = f"invoice_default_template_{self.template.document_type}"
 
         # Fetch and warm cache
-        selected = InvoiceTemplateSelector.get_default_template(self.template.document_type)
+        selected = InvoiceTemplateSelector.get_default_template(
+            self.template.document_type
+        )
         self.assertEqual(selected.pk, self.template.pk)
         self.assertIsNotNone(cache.get(cache_key))
 

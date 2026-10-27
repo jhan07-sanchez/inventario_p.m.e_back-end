@@ -1,7 +1,6 @@
 from rest_framework import serializers
 
 
-
 class GenericHistorySerializer(serializers.Serializer):
     """
     Serializer generico para leer el historial de cualquier modelo que impplemente django-simple-history.

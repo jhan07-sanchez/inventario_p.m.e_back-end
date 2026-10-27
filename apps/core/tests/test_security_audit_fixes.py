@@ -1,7 +1,5 @@
 from django.test import TestCase
 
-from apps.core.permissions.base_permission import BaseRolePermission
-from apps.core.security.security_data import SECURITY_MODULES
 from apps.core.security.registry import SecurityRegistry
 from apps.core.security.services.permission_service import PermissionService
 from apps.users.models import Role, User, UserRole

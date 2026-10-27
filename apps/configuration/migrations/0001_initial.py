@@ -4,32 +4,100 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     initial = True
 
-    dependencies = [
-    ]
+    dependencies = []
 
     operations = [
         migrations.CreateModel(
-            name='GlobalParameter',
+            name="GlobalParameter",
             fields=[
-                ('created_at', models.DateTimeField(auto_now_add=True, verbose_name='Fecha de creación')),
-                ('updated_at', models.DateTimeField(auto_now=True, verbose_name='Fecha de actualización')),
-                ('deleted_at', models.DateTimeField(blank=True, null=True, verbose_name='Fecha de eliminación')),
-                ('is_active', models.BooleanField(db_index=True, default=True, help_text='Indica si el registro se encuentra activo.', verbose_name='Estado')),
-                ('id_parameter', models.BigAutoField(primary_key=True, serialize=False, verbose_name='ID')),
-                ('key', models.CharField(db_index=True, help_text='Identificador unico del parametro (ej. DEFAULT_TAX_RATE).', max_length=100, unique=True, verbose_name='Clave')),
-                ('value', models.TextField(help_text='Valor del parametro, puede ser de cualquier tipo (string, int, decimal, boolean).', verbose_name='Valor')),
-                ('data_type', models.CharField(choices=[('string', 'Cadena de texto'), ('integer', 'Número entero'), ('decimal', 'Número decimal'), ('boolean', 'Booleano')], default='string', help_text='Tipo de dato del valor del parametro.', max_length=20, verbose_name='Tipo de dato')),
-                ('description', models.TextField(blank=True, help_text='Descripción del parametro, para que sirve y como se utiliza.', null=True, verbose_name='Descripción')),
+                (
+                    "created_at",
+                    models.DateTimeField(
+                        auto_now_add=True, verbose_name="Fecha de creación"
+                    ),
+                ),
+                (
+                    "updated_at",
+                    models.DateTimeField(
+                        auto_now=True, verbose_name="Fecha de actualización"
+                    ),
+                ),
+                (
+                    "deleted_at",
+                    models.DateTimeField(
+                        blank=True, null=True, verbose_name="Fecha de eliminación"
+                    ),
+                ),
+                (
+                    "is_active",
+                    models.BooleanField(
+                        db_index=True,
+                        default=True,
+                        help_text="Indica si el registro se encuentra activo.",
+                        verbose_name="Estado",
+                    ),
+                ),
+                (
+                    "id_parameter",
+                    models.BigAutoField(
+                        primary_key=True, serialize=False, verbose_name="ID"
+                    ),
+                ),
+                (
+                    "key",
+                    models.CharField(
+                        db_index=True,
+                        help_text="Identificador unico del parametro (ej. DEFAULT_TAX_RATE).",
+                        max_length=100,
+                        unique=True,
+                        verbose_name="Clave",
+                    ),
+                ),
+                (
+                    "value",
+                    models.TextField(
+                        help_text="Valor del parametro, puede ser de cualquier tipo (string, int, decimal, boolean).",
+                        verbose_name="Valor",
+                    ),
+                ),
+                (
+                    "data_type",
+                    models.CharField(
+                        choices=[
+                            ("string", "Cadena de texto"),
+                            ("integer", "Número entero"),
+                            ("decimal", "Número decimal"),
+                            ("boolean", "Booleano"),
+                        ],
+                        default="string",
+                        help_text="Tipo de dato del valor del parametro.",
+                        max_length=20,
+                        verbose_name="Tipo de dato",
+                    ),
+                ),
+                (
+                    "description",
+                    models.TextField(
+                        blank=True,
+                        help_text="Descripción del parametro, para que sirve y como se utiliza.",
+                        null=True,
+                        verbose_name="Descripción",
+                    ),
+                ),
             ],
             options={
-                'verbose_name': 'Parámetro Global',
-                'verbose_name_plural': 'Parámetros Globales',
-                'db_table': 'global_parameters',
-                'ordering': ['key'],
-                'indexes': [models.Index(fields=['key'], name='idx_global_param_key'), models.Index(fields=['is_active'], name='idx_global_param_is_active')],
+                "verbose_name": "Parámetro Global",
+                "verbose_name_plural": "Parámetros Globales",
+                "db_table": "global_parameters",
+                "ordering": ["key"],
+                "indexes": [
+                    models.Index(fields=["key"], name="idx_global_param_key"),
+                    models.Index(
+                        fields=["is_active"], name="idx_global_param_is_active"
+                    ),
+                ],
             },
         ),
     ]

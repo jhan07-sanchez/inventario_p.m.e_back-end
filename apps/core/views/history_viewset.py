@@ -1,11 +1,11 @@
-from rest_framework import viewsets, status
-from rest_framework.response import Response
 from django.apps import apps
+from rest_framework import status, viewsets
+from rest_framework.response import Response
 
-from apps.core.serializers.history_serializer import GenericHistorySerializer
-from apps.core.security import HasPermission
-from apps.users.permissions import IsAuthenticatedAndActive
 from apps.core.docs.history_docs import history_list_schema
+from apps.core.security import HasPermission
+from apps.core.serializers.history_serializer import GenericHistorySerializer
+from apps.users.permissions import IsAuthenticatedAndActive
 
 
 class SystemHistoryViewSet(viewsets.GenericViewSet):

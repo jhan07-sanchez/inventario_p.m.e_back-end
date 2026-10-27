@@ -5,13 +5,13 @@ from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.db import transaction
 
+from apps.configuration.dto import GlobalParameterCreateDto, GlobalParameterUpdateDto
+from apps.configuration.models import ConfigurationAudit, GlobalParameter
 from apps.core.exceptions.custom_exceptions import (
     GlobalParameterAlreadyExistsException,
     GlobalParameterInactiveException,
 )
 from apps.core.services.base_service import BaseService
-from apps.configuration.dto import GlobalParameterCreateDto, GlobalParameterUpdateDto
-from apps.configuration.models import GlobalParameter, ConfigurationAudit
 from apps.users.models import User
 
 
@@ -43,6 +43,49 @@ class GlobalParameterService(BaseService[GlobalParameter]):
             )
 
     @staticmethod
+    def cast_value(value: str, data_type: str):
+        """
+        Convierte el valor textual al tipo nativo de Python correspondiente.
+        """
+        if value is None:
+            return None
+        try:
+            if data_type == GlobalParameter.DataType.INTEGER:
+                return int(value)
+            if data_type == GlobalParameter.DataType.DECIMAL:
+                return Decimal(value)
+            if data_type == GlobalParameter.DataType.BOOLEAN:
+                return value.lower() in ("true", "1")
+            return str(value)
+        except (ValueError, InvalidOperation):
+            return value
+
+    @staticmethod
+    def get_typed_value(key: str, default=None):
+        """
+        Obtiene el valor tipado en Python para un parámetro a partir de su clave.
+        Si el parámetro no existe o está inactivo, retorna el valor default.
+        """
+        from apps.configuration.selectors.global_parameter_selector import (
+            GlobalParameterSelector,
+        )
+
+        param = GlobalParameterSelector.get_by_key(key)
+        if not param or not param.is_active:
+            return default
+
+        return GlobalParameterService.cast_value(param.value, param.data_type)
+
+    @staticmethod
+    def get_catalog() -> dict:
+        """
+        Retorna el catálogo predefinido de parámetros del ERP.
+        """
+        from apps.configuration.constants import SYSTEM_PARAMETERS_CATALOG
+
+        return SYSTEM_PARAMETERS_CATALOG
+
+    @staticmethod
     @transaction.atomic
     def create_parameter(
         dto: GlobalParameterCreateDto, user: Optional[User] = None
@@ -62,7 +105,7 @@ class GlobalParameterService(BaseService[GlobalParameter]):
             description=dto.description or "",
         )
 
-        #Registrar auditoría de creación
+        # Registrar auditoría de creación
         ConfigurationAudit.objects.create(
             parameter=parameter,
             parameter_key=parameter.key,
@@ -117,7 +160,7 @@ class GlobalParameterService(BaseService[GlobalParameter]):
         parameter.full_clean()
         parameter.save(update_fields=update_fields)
 
-        #Registrar auditoría de actualización (solo si el valor cambió)
+        # Registrar auditoría de actualización (solo si el valor cambió)
         if old_value != parameter.value:
             ConfigurationAudit.objects.create(
                 parameter=parameter,
@@ -146,7 +189,7 @@ class GlobalParameterService(BaseService[GlobalParameter]):
         GlobalParameterService().delete(parameter)
         cache.delete(f"global_param_{parameter.key}")
 
-        #Registrar auditoría de desactivación
+        # Registrar auditoría de desactivación
         ConfigurationAudit.objects.create(
             parameter=parameter,
             parameter_key=parameter.key,
@@ -171,7 +214,7 @@ class GlobalParameterService(BaseService[GlobalParameter]):
         restored = GlobalParameterService().restore(parameter)
         cache.delete(f"global_param_{restored.key}")
 
-        #Registrar auditoría de restauración
+        # Registrar auditoría de restauración
         ConfigurationAudit.objects.create(
             parameter=restored,
             parameter_key=restored.key,

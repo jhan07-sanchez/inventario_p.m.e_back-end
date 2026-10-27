@@ -2,8 +2,8 @@ from django.core.cache import cache
 from django.db.models import QuerySet
 from django.shortcuts import get_object_or_404
 
-from apps.core.selectors.base_selector import BaseSelector
 from apps.configuration.models import GlobalParameter
+from apps.core.selectors.base_selector import BaseSelector
 
 
 class GlobalParameterSelector(BaseSelector[GlobalParameter]):

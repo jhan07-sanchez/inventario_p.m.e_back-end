@@ -1,7 +1,7 @@
 from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 
-from apps.configuration.views import GlobalParameterViewSet, ConfigurationAuditViewSet
+from apps.configuration.views import ConfigurationAuditViewSet, GlobalParameterViewSet
 
 router = DefaultRouter()
 router.register(r"parameters", GlobalParameterViewSet, basename="global-parameters")

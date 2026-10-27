@@ -10,15 +10,19 @@ from apps.invoices.docs.invoice_template_docs import (
     invoice_template_delete_schema,
     invoice_template_list_schema,
     invoice_template_patch_schema,
+    invoice_template_preview_schema,
     invoice_template_put_schema,
     invoice_template_restore_schema,
     invoice_template_retrieve_schema,
+    invoice_template_set_default_schema,
 )
 from apps.invoices.models import InvoiceTemplate
 from apps.invoices.selectors.invoice_template_selector import InvoiceTemplateSelector
 from apps.invoices.serializers.invoice_template_serializer import (
     InvoiceTemplateCreateSerializer,
     InvoiceTemplateListSerializer,
+    InvoiceTemplatePreviewResponseSerializer,
+    InvoiceTemplatePreviewSerializer,
     InvoiceTemplateRetrieveSerializer,
     InvoiceTemplateUpdateSerializer,
 )
@@ -50,6 +54,10 @@ class InvoiceTemplateViewSet(BaseViewSet):
                 IsAuthenticatedAndActive,
                 HasPermission("invoices.view"),
             ),
+            "preview": (
+                IsAuthenticatedAndActive,
+                HasPermission("invoices.view"),
+            ),
             "create": (
                 IsAuthenticatedAndActive,
                 HasPermission("invoices.create"),
@@ -59,6 +67,10 @@ class InvoiceTemplateViewSet(BaseViewSet):
                 HasPermission("invoices.update"),
             ),
             "partial_update": (
+                IsAuthenticatedAndActive,
+                HasPermission("invoices.update"),
+            ),
+            "set_default": (
                 IsAuthenticatedAndActive,
                 HasPermission("invoices.update"),
             ),
@@ -104,6 +116,9 @@ class InvoiceTemplateViewSet(BaseViewSet):
 
         if self.action in ("update", "partial_update"):
             return InvoiceTemplateUpdateSerializer
+
+        if self.action == "preview":
+            return InvoiceTemplatePreviewSerializer
 
         return InvoiceTemplateRetrieveSerializer
 
@@ -298,4 +313,65 @@ class InvoiceTemplateViewSet(BaseViewSet):
             return self.handle_validation_error(
                 exception,
                 message="No fue posible restaurar la plantilla.",
+            )
+
+    @invoice_template_preview_schema
+    @action(
+        detail=True,
+        methods=["post"],
+        url_path="preview",
+    )
+    def preview(self, request, pk=None):
+        """
+        Genera una vista previa HTML de la plantilla utilizando datos de muestra.
+        """
+        template = InvoiceTemplateSelector.get_by_id(pk)
+        serializer = InvoiceTemplatePreviewSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        sample_data = serializer.validated_data.get("sample_data")
+
+        try:
+            preview_data = InvoiceTemplateService.preview_template(
+                template=template,
+                sample_data=sample_data,
+            )
+            response_serializer = InvoiceTemplatePreviewResponseSerializer(preview_data)
+            return self.success_response(
+                message="Vista previa de plantilla generada correctamente.",
+                code="INVOICE_TEMPLATE_PREVIEW_GENERATED",
+                data=response_serializer.data,
+                status_code=status.HTTP_200_OK,
+            )
+        except ValidationError as exception:
+            return self.handle_validation_error(
+                exception,
+                message="No fue posible generar la vista previa.",
+            )
+
+    @invoice_template_set_default_schema
+    @action(
+        detail=True,
+        methods=["post"],
+        url_path="set-default",
+    )
+    def set_default(self, request, pk=None):
+        """
+        Establece esta plantilla como la predeterminada para su tipo de documento.
+        """
+        template = InvoiceTemplateSelector.get_by_id(pk)
+
+        try:
+            updated_template = InvoiceTemplateService.set_default(template)
+            serializer = InvoiceTemplateRetrieveSerializer(updated_template)
+            return self.success_response(
+                message=f"Plantilla establecida como predeterminada para {template.get_document_type_display()}.",
+                code="INVOICE_TEMPLATE_SET_DEFAULT_SUCCESS",
+                data=serializer.data,
+                status_code=status.HTTP_200_OK,
+            )
+        except ValidationError as exception:
+            return self.handle_validation_error(
+                exception,
+                message="No fue posible establecer la plantilla como predeterminada.",
             )

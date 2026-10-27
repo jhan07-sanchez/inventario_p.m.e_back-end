@@ -77,6 +77,17 @@ class PurchaseRetrieveSerializer(serializers.ModelSerializer):
 
     @extend_schema_field(serializers.ListField(child=serializers.DictField()))
     def get_invoices_summary(self, obj):
+        if hasattr(obj, "prefetched_invoices"):
+            return [
+                {
+                    "id": inv.id,
+                    "invoice_number": inv.invoice_number,
+                    "status": inv.status,
+                    "document_type": inv.document_type,
+                }
+                for inv in obj.prefetched_invoices
+                if getattr(inv, "is_active", True)
+            ]
         invoices = obj.invoices.filter(is_active=True).values(
             "id", "invoice_number", "status", "document_type"
         )

@@ -9,7 +9,7 @@ from typing import Any
 
 from django.conf import settings
 from django.core.cache import cache as django_cache
-from django.db.models import Case, F, IntegerField, Q, Sum, Value, When
+from django.db.models import Case, Count, F, IntegerField, Q, Sum, Value, When
 from django.db.models.functions import TruncDate, TruncMonth
 from django.utils import timezone
 
@@ -25,6 +25,7 @@ from apps.users.models import Role, User
 # Claves de cache del dashboard que están relacionadas con ventas.
 _SALES_CACHE_KEYS = [
     "dashboard_metric_sales_summary",
+    "dashboard_metric_sales_monthly",
     "dashboard_metric_latest_sales",
     "dashboard_metric_payment_methods",
     "dashboard_metric_top_selling_products",
@@ -38,12 +39,14 @@ _INVENTORY_CACHE_KEYS = [
     "dashboard_metric_inventory_alerts",
     "dashboard_metric_inventory_total_value",
     "dashboard_metric_inventory_stock_distribution",
+    "dashboard_metric_needs_attention",
 ]
 
 # Claves de cache del dashboard relacionadas con compras.
 _PURCHASES_CACHE_KEYS = [
     "dashboard_metric_purchases_summary",
     "dashboard_metric_purchases_pending",
+    "dashboard_metric_purchases_monthly",
 ]
 
 
@@ -201,28 +204,35 @@ class DashboardMetricsService:
                     }
 
                 elif key == "inventory_stock_distribution":
-                    # Base: inventario activos de productos activos
+                    # Base: inventarios activos de productos activos (1 sola consulta agregada condicional en SQL)
                     base_qs = Inventory.objects.filter(
                         is_active=True,
                         product__is_active=True,
                     )
 
-                    # Stock critico: agotados
-                    critical = base_qs.filter(current_stock=0).count()
+                    counts = base_qs.aggregate(
+                        critical=Count("id_inventory", filter=Q(current_stock=0)),
+                        low=Count(
+                            "id_inventory",
+                            filter=Q(
+                                current_stock__gt=0,
+                                current_stock__lte=F("minimum_stock"),
+                            ),
+                        ),
+                        almost_low=Count(
+                            "id_inventory",
+                            filter=Q(
+                                current_stock__gt=F("minimum_stock"),
+                                current_stock__lte=F("minimum_stock") + 5,
+                            ),
+                        ),
+                        total=Count("id_inventory"),
+                    )
 
-                    # Bajo stock: Tiene algo pero por debajo o igual al minimo.
-                    low = base_qs.filter(
-                        current_stock__gt=0, current_stock__lte=F("minimum_stock")
-                    ).count()
-
-                    # Casi bajo stock: por encima del minimo pero hasta 5 unidades mas.
-                    almost_low = base_qs.filter(
-                        current_stock__gt=F("minimum_stock"),
-                        current_stock__lte=F("minimum_stock") + 5,
-                    ).count()
-
-                    # Total con inventario registrado
-                    total_with_inventory = base_qs.count()
+                    critical = counts["critical"] or 0
+                    low = counts["low"] or 0
+                    almost_low = counts["almost_low"] or 0
+                    total_with_inventory = counts["total"] or 0
 
                     # Normal = el resto (garantiza que todos los estados sumen el total)
                     normal = max(0, total_with_inventory - critical - low - almost_low)
@@ -251,25 +261,170 @@ class DashboardMetricsService:
                     PAYMENT_LABELS = {
                         choice.value: choice.label for choice in PaymentMethod
                     }
-                    invoices = Sale.objects.filter(
-                        status=Sale.SaleStatus.COMPLETED,
-                        updated_at__gte=thirty_days_ago,
+
+                    # Agrupación y suma directamente en PostgreSQL en lugar de cargar objetos en memoria Python
+                    pm_aggregates = (
+                        Sale.objects.filter(
+                            status=Sale.SaleStatus.COMPLETED,
+                            updated_at__gte=thirty_days_ago,
+                            payment_method__isnull=False,
+                        )
+                        .values("payment_method")
+                        .annotate(total=Sum("total"))
+                        .order_by("-total")
                     )
 
                     buckets: dict[str, float] = {}
-                    for sale_obj in invoices:
-                        pm_raw = sale_obj.payment_method
-                        if not pm_raw:
-                            continue
+                    for item in pm_aggregates:
+                        pm_raw = item["payment_method"]
                         label = PAYMENT_LABELS.get(pm_raw, pm_raw)
                         buckets[label] = buckets.get(label, Decimal("0")) + (
-                            sale_obj.total or Decimal("0")
+                            item["total"] or Decimal("0")
                         )
 
                     cache[key] = [
-                        {"label": label, "value": round(total, 2)}
+                        {"label": label, "value": round(float(total), 2)}
                         for label, total in sorted(buckets.items(), key=lambda x: -x[1])
                     ]
+
+                elif key == "purchases_monthly":
+                    # Ventas vs Compras del año actual por meses
+                    now_yr = timezone.now().year
+                    sales_by_month = list(
+                        Sale.objects.filter(
+                            status=Sale.SaleStatus.COMPLETED, updated_at__year=now_yr
+                        )
+                        .annotate(month=TruncMonth("updated_at"))
+                        .values("month")
+                        .annotate(total_sales=Sum("total"))
+                        .order_by("month")
+                    )
+
+                    purchases_by_month = list(
+                        Purchase.objects.filter(issue_date__year=now_yr)
+                        .annotate(month=TruncMonth("issue_date"))
+                        .values("month")
+                        .annotate(total_purchases=Sum("total"))
+                        .order_by("month")
+                    )
+
+                    monthly_data = []
+                    for i in range(1, 13):
+                        month_label = calendar.month_abbr[i]
+                        sales_val = sum(
+                            item["total_sales"]
+                            for item in sales_by_month
+                            if item["month"] and item["month"].month == i
+                        )
+                        purchases_val = sum(
+                            item["total_purchases"]
+                            for item in purchases_by_month
+                            if item["month"] and item["month"].month == i
+                        )
+                        monthly_data.append(
+                            {
+                                "label": month_label.capitalize(),
+                                "ventas": float(sales_val or 0),
+                                "compras": float(purchases_val or 0),
+                            }
+                        )
+                    cache[key] = monthly_data
+
+                elif key == "sales_monthly":
+                    # Ventas diarias de los últimos 30 días (gráfica de línea)
+                    now_local = timezone.localtime(timezone.now())
+                    thirty_days_ago = now_local - datetime.timedelta(days=30)
+                    start_of_30_days = thirty_days_ago.replace(
+                        hour=0, minute=0, second=0, microsecond=0
+                    )
+
+                    daily_sales = list(
+                        Sale.objects.filter(
+                            status=Sale.SaleStatus.COMPLETED,
+                            updated_at__gte=start_of_30_days,
+                        )
+                        .annotate(day=TruncDate("updated_at"))
+                        .values("day")
+                        .annotate(total=Sum("total"))
+                        .order_by("day")
+                    )
+
+                    sales_map = {
+                        item["day"]: float(item["total"] or 0) for item in daily_sales
+                    }
+
+                    value_pts = []
+                    for offset in range(30, -1, -1):
+                        day = (now_local - datetime.timedelta(days=offset)).date()
+                        value_pts.append(
+                            {
+                                "label": day.strftime("%d/%m"),
+                                "value": sales_map.get(day, 0),
+                            }
+                        )
+                    cache[key] = value_pts
+
+                elif key == "needs_attention":
+                    alerts_query = (
+                        Inventory.objects.filter(is_active=True, product__is_active=True)
+                        .annotate(
+                            alert_priority=Case(
+                                When(current_stock=0, then=Value(1)),
+                                When(
+                                    current_stock__lte=F("minimum_stock"), then=Value(2)
+                                ),
+                                When(
+                                    current_stock__lte=F("minimum_stock") + 5,
+                                    then=Value(3),
+                                ),
+                                When(
+                                    Q(maximum_stock__isnull=False)
+                                    & Q(current_stock__gt=F("maximum_stock")),
+                                    then=Value(4),
+                                ),
+                                default=Value(0),
+                                output_field=IntegerField(),
+                            )
+                        )
+                        .filter(alert_priority__gt=0)
+                        .select_related("product")
+                    )
+
+                    total_alerts_count = alerts_query.count()
+                    top_alerts = alerts_query.order_by(
+                        "alert_priority", "product__name"
+                    )[:8]
+
+                    items = []
+                    for inv in top_alerts:
+                        if inv.alert_priority == 1:
+                            lbl = "Agotado"
+                            clr = "danger"
+                        elif inv.alert_priority == 2:
+                            lbl = "Bajo stock"
+                            clr = "warning"
+                        elif inv.alert_priority == 3:
+                            lbl = "Casi bajo"
+                            clr = "primary"
+                        else:
+                            lbl = "Sobrestock"
+                            clr = "info"
+
+                        items.append(
+                            {
+                                "label": inv.product.name,
+                                "subtitle": f"Stock actual: {inv.current_stock}",
+                                "value": lbl,
+                                "color": clr,
+                                "icon": "fas fa-exclamation-circle"
+                                if inv.alert_priority <= 2
+                                else "fas fa-info-circle",
+                            }
+                        )
+                    cache[key] = {
+                        "value": items,
+                        "count": total_alerts_count,
+                    }
 
                 elif key == "top_selling_products":
                     thirty_days_ago = timezone.now() - datetime.timedelta(days=30)
@@ -382,8 +537,6 @@ class DashboardMetricsService:
             "inventory_stock_distribution",
         }
 
-        now = timezone.now()
-
         for code in visible_widgets:
             value: Any = 0
 
@@ -418,81 +571,11 @@ class DashboardMetricsService:
             elif code == "purchases_pending":
                 value = get_cached("purchases_pending")
             elif code == "purchases_monthly":
-                # Ventas vs Compras del año actual por meses
-                sales_by_month = list(
-                    Sale.objects.filter(
-                        status=Sale.SaleStatus.COMPLETED, updated_at__year=now.year
-                    )
-                    .annotate(month=TruncMonth("updated_at"))
-                    .values("month")
-                    .annotate(total_sales=Sum("total"))
-                    .order_by("month")
-                )
-
-                purchases_by_month = list(
-                    Purchase.objects.filter(issue_date__year=now.year)
-                    .annotate(month=TruncMonth("issue_date"))
-                    .values("month")
-                    .annotate(total_purchases=Sum("total"))
-                    .order_by("month")
-                )
-
-                monthly_data = []
-                for i in range(1, 13):
-                    month_label = calendar.month_abbr[i]
-                    sales_val = sum(
-                        item["total_sales"]
-                        for item in sales_by_month
-                        if item["month"] and item["month"].month == i
-                    )
-                    purchases_val = sum(
-                        item["total_purchases"]
-                        for item in purchases_by_month
-                        if item["month"] and item["month"].month == i
-                    )
-                    monthly_data.append(
-                        {
-                            "label": month_label.capitalize(),
-                            "ventas": float(sales_val),
-                            "compras": float(purchases_val),
-                        }
-                    )
-                value = monthly_data
+                value = get_cached("purchases_monthly")
 
             elif code == "sales_monthly":
-                # Ventas diarias de los últimos 30 días (gráfica de línea)
-                now_local = timezone.localtime(timezone.now())
-                thirty_days_ago = now_local - datetime.timedelta(days=30)
-                start_of_30_days = thirty_days_ago.replace(
-                    hour=0, minute=0, second=0, microsecond=0
-                )
+                value = get_cached("sales_monthly")
 
-                daily_sales = list(
-                    Sale.objects.filter(
-                        status=Sale.SaleStatus.COMPLETED,
-                        updated_at__gte=start_of_30_days,
-                    )
-                    .annotate(day=TruncDate("updated_at"))
-                    .values("day")
-                    .annotate(total=Sum("total"))
-                    .order_by("day")
-                )
-
-                # Mapa de totales por día
-                sales_map = {
-                    item["day"]: float(item["total"] or 0) for item in daily_sales
-                }
-
-                # Generar 30 puntos (uno por día) para la gráfica usando la fecha local
-                value = []
-                for offset in range(30, -1, -1):
-                    day = (now_local - datetime.timedelta(days=offset)).date()
-                    value.append(
-                        {
-                            "label": day.strftime("%d/%m"),
-                            "value": sales_map.get(day, 0),
-                        }
-                    )
             elif code == "erp_activity":
                 inventory_val = cache.get("inventory_total_value", 0)
                 formatted_inventory_val = f"${inventory_val:,.0f}".replace(",", ".")
@@ -524,62 +607,13 @@ class DashboardMetricsService:
                     },
                 ]
             elif code == "needs_attention":
-                alerts_query = (
-                    Inventory.objects.filter(is_active=True, product__is_active=True)
-                    .annotate(
-                        alert_priority=Case(
-                            When(current_stock=0, then=Value(1)),
-                            When(current_stock__lte=F("minimum_stock"), then=Value(2)),
-                            When(
-                                current_stock__lte=F("minimum_stock") + 5, then=Value(3)
-                            ),
-                            When(
-                                Q(maximum_stock__isnull=False)
-                                & Q(current_stock__gt=F("maximum_stock")),
-                                then=Value(4),
-                            ),
-                            default=Value(0),
-                            output_field=IntegerField(),
-                        )
-                    )
-                    .filter(alert_priority__gt=0)
-                    .select_related("product")
-                )
-
-                total_alerts_count = alerts_query.count()
-                top_alerts = alerts_query.order_by("alert_priority", "product__name")[
-                    :8
-                ]
-
-                items = []
-                for inv in top_alerts:
-                    if inv.alert_priority == 1:
-                        lbl = "Agotado"
-                        clr = "danger"
-                    elif inv.alert_priority == 2:
-                        lbl = "Bajo stock"
-                        clr = "warning"
-                    elif inv.alert_priority == 3:
-                        lbl = "Casi bajo"
-                        clr = "primary"
-                    else:
-                        lbl = "Sobrestock"
-                        clr = "info"
-
-                    items.append(
-                        {
-                            "label": inv.product.name,
-                            "subtitle": f"Stock actual: {inv.current_stock}",
-                            "value": lbl,
-                            "color": clr,
-                            "icon": "fas fa-exclamation-circle"
-                            if inv.alert_priority <= 2
-                            else "fas fa-info-circle",
-                        }
-                    )
-
+                attn_data = get_cached("needs_attention") or {}
                 metrics.append(
-                    {"code": code, "value": items, "count": total_alerts_count}
+                    {
+                        "code": code,
+                        "value": attn_data.get("value", []),
+                        "count": attn_data.get("count", 0),
+                    }
                 )
                 continue
 

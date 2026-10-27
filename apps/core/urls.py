@@ -10,5 +10,6 @@ router.register(r"history", SystemHistoryViewSet, basename="system-history")
 
 
 urlpatterns = [
+    path("health/", HealthCheckView.as_view({"get": "list"}), name="api-health-check"),
     path("", include(router.urls)),
 ]

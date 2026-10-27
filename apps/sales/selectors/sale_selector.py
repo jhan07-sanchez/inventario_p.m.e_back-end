@@ -1,11 +1,12 @@
 from django.db.models import Prefetch, QuerySet
 from django.shortcuts import get_object_or_404
 
+from apps.core.selectors.base_selector import BaseSelector
 from apps.invoices.models import Invoice
 from apps.sales.models import Sale, SaleDetail
 
 
-class SaleSelector:
+class SaleSelector(BaseSelector[Sale]):
     """
     Selector encargado de realizar consultas de lectura relacionadas
     con las ventas.
@@ -14,50 +15,14 @@ class SaleSelector:
     persistencia.
     """
 
-    @staticmethod
-    def get_all() -> QuerySet[Sale]:
-        """
-        Obtiene todas las ventas activas.
+    def __init__(self):
+        super().__init__(Sale)
 
-        Se utilizan relaciones optimizadas para evitar consultas
-        innecesarias a la base de datos.
+    def get_queryset(self, include_deleted: bool = False) -> QuerySet[Sale]:
         """
-
-        return (
-            Sale.objects.filter(is_active=True)
-            .select_related(
-                "customer",
-                "user",
-            )
-            .prefetch_related(
-                "details__product",
-                Prefetch(
-                    "invoices",
-                    queryset=Invoice.objects.filter(is_active=True).only(
-                        "id",
-                        "invoice_number",
-                        "status",
-                        "document_type",
-                        "is_active",
-                    ),
-                    to_attr="prefetched_invoices",
-                ),
-            )
-            .order_by("-created_at")
-        )
-
-    @staticmethod
-    def get_by_id(sale_id: int, include_deleted: bool = False) -> Sale:
+        Retorna el queryset base de ventas optimizando las relaciones
+        con cliente, usuario, detalles de productos y facturas asociadas.
         """
-        Obtiene una venta por su identificador.
-
-        Lanza Http404 si la venta no existe o está inactiva.
-        """
-        base_manager = (
-            Sale.all_objects.all()
-            if include_deleted
-            else Sale.objects.filter(is_active=True)
-        )
         invoice_qs = (
             Invoice.all_objects.all()
             if include_deleted
@@ -69,9 +34,9 @@ class SaleSelector:
                 "is_active",
             )
         )
-
-        return get_object_or_404(
-            base_manager
+        return (
+            super()
+            .get_queryset(include_deleted=include_deleted)
             .select_related(
                 "customer",
                 "user",
@@ -83,7 +48,35 @@ class SaleSelector:
                     queryset=invoice_qs,
                     to_attr="prefetched_invoices",
                 ),
-            ),
+            )
+            .order_by("-created_at")
+        )
+
+    @staticmethod
+    def get_all(qs=None, include_deleted: bool = False) -> QuerySet[Sale]:
+        """
+        Obtiene todas las ventas activas.
+
+        Se utilizan relaciones optimizadas para evitar consultas
+        innecesarias a la base de datos.
+        """
+        if qs is not None:
+            return qs.filter(is_active=True) if not include_deleted else qs
+        return (
+            SaleSelector().get_queryset(include_deleted=include_deleted)
+            if include_deleted
+            else SaleSelector().get_queryset().filter(is_active=True)
+        )
+
+    @staticmethod
+    def get_by_id(sale_id: int, include_deleted: bool = False) -> Sale:
+        """
+        Obtiene una venta por su identificador.
+
+        Lanza Http404 si la venta no existe o está inactiva.
+        """
+        return get_object_or_404(
+            SaleSelector().get_queryset(include_deleted=include_deleted),
             id_sale=sale_id,
         )
 

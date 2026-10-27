@@ -1,13 +1,27 @@
 from django.db.models import QuerySet
 
 from apps.categories.models import Category
+from apps.core.selectors.base_selector import BaseSelector
 
 
-class CategorySelector:
+class CategorySelector(BaseSelector[Category]):
     """
     Selector encargado de centralizar las consultas
     relacionadas con las categorías.
     """
+
+    def __init__(self):
+        super().__init__(Category)
+
+    def get_queryset(self, include_deleted: bool = False) -> QuerySet[Category]:
+        """
+        Retorna el queryset base de categorías ordenadas por nombre.
+        """
+        return (
+            super()
+            .get_queryset(include_deleted=include_deleted)
+            .order_by("name")
+        )
 
     @staticmethod
     def get_categories() -> QuerySet[Category]:
@@ -15,18 +29,14 @@ class CategorySelector:
         Retorna todas las categorías ordenadas según
         la configuración del modelo.
         """
-
-        return Category.objects.all()
+        return CategorySelector().get_all()
 
     @staticmethod
     def get_active_categories() -> QuerySet[Category]:
         """
         Retorna únicamente las categorías activas.
         """
-
-        return Category.objects.filter(
-            is_active=True,
-        )
+        return CategorySelector().get_active()
 
     @staticmethod
     def get_category_by_id(
@@ -53,7 +63,6 @@ class CategorySelector:
 
         Lanza Category.DoesNotExist si no existe o está inactiva.
         """
-
         return Category.objects.get(
             pk=category_id,
             is_active=True,
@@ -65,8 +74,7 @@ class CategorySelector:
         Retorna las categorías principales que no tienen
         una categoría padre.
         """
-
-        return Category.objects.filter(
+        return CategorySelector().filter(
             parent__isnull=True,
         )
 
@@ -77,7 +85,6 @@ class CategorySelector:
         """
         Retorna las categorías hijas de una categoría.
         """
-
-        return Category.objects.filter(
+        return CategorySelector().filter(
             parent=category,
         )

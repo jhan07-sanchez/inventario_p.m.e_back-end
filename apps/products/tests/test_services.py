@@ -1,12 +1,11 @@
 from decimal import Decimal
-from django.core.exceptions import ValidationError
+
 from django.test import TestCase
 
 from apps.categories.models.category import Category
 from apps.core.exceptions.custom_exceptions import (
     CategoryInactiveException,
     ProductAlreadyExistsException,
-    ProductInactiveException,
 )
 from apps.products.models.product import Product
 from apps.products.selectors.product_selector import ProductSelector

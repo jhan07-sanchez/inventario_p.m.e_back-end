@@ -25,9 +25,12 @@ from drf_spectacular.views import (
     SpectacularSwaggerView,
 )
 
+from apps.core.views.health_view import root_health_check
 
 urlpatterns = [
     path("admin/", admin.site.urls),
+    # Endpoint de verificación de salud para Render y balanceadores
+    path("health/", root_health_check, name="health-check"),
     # OpenAPI Schema (YAML/JSON)
     path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
     # Swagger UI

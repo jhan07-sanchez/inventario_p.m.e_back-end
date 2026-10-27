@@ -3,27 +3,46 @@ from django.shortcuts import get_object_or_404
 
 from apps.cash.models.cash_movement import CashMovement
 from apps.cash.models.cash_session import CashSession
+from apps.core.selectors.base_selector import BaseSelector
 
 
-class CashSessionSelector:
+class CashSessionSelector(BaseSelector[CashSession]):
     """
     Selector de sesiones de caja.
     """
 
-    @staticmethod
-    def get_all() -> QuerySet[CashSession]:
+    def __init__(self):
+        super().__init__(CashSession)
+
+    def get_queryset(self, include_deleted: bool = False) -> QuerySet[CashSession]:
+        """
+        Retorna el queryset base de sesiones optimizando las relaciones
+        con caja y usuario.
+        """
         return (
-            CashSession.objects.filter(is_active=True)
+            super()
+            .get_queryset(include_deleted=include_deleted)
             .select_related("cash_register", "user")
             .order_by("-start_time")
         )
 
     @staticmethod
+    def get_all(qs=None, include_deleted: bool = False) -> QuerySet[CashSession]:
+        """
+        Retorna todas las sesiones de caja activas.
+        """
+        if qs is not None:
+            return qs.filter(is_active=True) if not include_deleted else qs
+        return (
+            CashSessionSelector().get_queryset(include_deleted=include_deleted)
+            if include_deleted
+            else CashSessionSelector().get_queryset().filter(is_active=True)
+        )
+
+    @staticmethod
     def get_by_id(session_id: int) -> CashSession:
         return get_object_or_404(
-            CashSession.objects.filter(is_active=True).select_related(
-                "cash_register", "user"
-            ),
+            CashSessionSelector().get_queryset().filter(is_active=True),
             pk=session_id,
         )
 

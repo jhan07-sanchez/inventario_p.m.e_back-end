@@ -1,9 +1,9 @@
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema
 
+from apps.configuration.serializers import ConfigurationAuditSerializer
 from apps.core.docs.api_response_schema import build_api_response_schema
 from apps.core.docs.error_schemas import ApiErrorResponseSerializer
-from apps.configuration.serializers import ConfigurationAuditSerializer
 
 pagination_parameters = [
     OpenApiParameter(

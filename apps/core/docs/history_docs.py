@@ -1,5 +1,6 @@
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema
+
 from apps.core.docs.api_response_schema import build_api_response_schema
 from apps.core.docs.error_schemas import ApiErrorResponseSerializer
 from apps.core.serializers.history_serializer import GenericHistorySerializer

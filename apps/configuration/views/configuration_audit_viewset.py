@@ -1,10 +1,10 @@
+from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import viewsets
 from rest_framework.filters import OrderingFilter, SearchFilter
-from django_filters.rest_framework import DjangoFilterBackend
 
 from apps.configuration.docs import (
-    configuration_audit_list_schema,
     configuration_audit_detail_schema,
+    configuration_audit_list_schema,
 )
 from apps.configuration.selectors import ConfigurationAuditSelector
 from apps.configuration.serializers import ConfigurationAuditSerializer
