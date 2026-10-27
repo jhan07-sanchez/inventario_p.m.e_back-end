@@ -23,9 +23,11 @@ from apps.purchases.selectors.purchase_selector import PurchaseSelector
 from apps.purchases.serializers.purchase_serializer import (
     PurchaseCreateSerializer,
     PurchaseListSerializer,
+    PurchasePaySerializer,
     PurchaseRetrieveSerializer,
     PurchaseUpdateSerializer,
 )
+from apps.purchases.services.purchase_payment_service import PurchasePaymentService
 from apps.purchases.services.purchase_service import PurchaseService
 from apps.users.permissions import IsAuthenticatedAndActive
 
@@ -98,6 +100,14 @@ class PurchaseViewSet(BaseViewSet):
                 IsAuthenticatedAndActive,
                 HasPermission("purchases.update"),
             ),
+            "pay": (
+                IsAuthenticatedAndActive,
+                HasPermission("purchases.update"),
+            ),
+            "payments": (
+                IsAuthenticatedAndActive,
+                HasPermission("purchases.view"),
+            ),
         }
 
         classes = permission_map.get(
@@ -133,6 +143,9 @@ class PurchaseViewSet(BaseViewSet):
 
         if self.action == "create":
             return PurchaseCreateSerializer
+
+        if self.action == "pay":
+            return PurchasePaySerializer
 
         if self.action in (
             "update",
@@ -490,3 +503,50 @@ class PurchaseViewSet(BaseViewSet):
                 exception,
                 message="No fue posible cancelar la compra.",
             )
+
+    @action(
+        detail=True,
+        methods=["post"],
+        url_path="pay",
+    )
+    def pay(self, request, pk=None):
+        """
+        Registra el pago de una compra a proveedor, afectando la caja chica o banco.
+        """
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        try:
+            result = PurchasePaymentService.pay_purchase(
+                purchase_id=pk,
+                dto=serializer.to_dto(),
+                user=request.user,
+            )
+            return self.success_response(
+                message="Pago a proveedor registrado correctamente.",
+                code="PURCHASE_PAYMENT_REGISTERED",
+                data=result,
+                status_code=status.HTTP_201_CREATED,
+            )
+        except ValidationError as exception:
+            return self.handle_validation_error(
+                exception,
+                message="Error al procesar el pago de la compra.",
+            )
+
+    @action(
+        detail=True,
+        methods=["get"],
+        url_path="payments",
+    )
+    def payments(self, request, pk=None):
+        """
+        Obtiene el historial y estado consolidado de pagos de una compra.
+        """
+        summary = PurchasePaymentService.get_purchase_payment_summary(pk)
+        return self.success_response(
+            message="Pagos de la compra obtenidos con éxito.",
+            code="PURCHASE_PAYMENTS_FETCHED",
+            data=summary,
+            status_code=status.HTTP_200_OK,
+        )

@@ -58,6 +58,9 @@ class InvoiceListSerializer(serializers.ModelSerializer):
 class InvoiceRetrieveSerializer(serializers.ModelSerializer):
     template = InvoiceTemplateRetrieveSerializer(read_only=True)
     items = InvoiceItemSerializer(many=True, read_only=True)
+    total_paid = serializers.SerializerMethodField()
+    pending_balance = serializers.SerializerMethodField()
+    payment_status = serializers.SerializerMethodField()
 
     class Meta:
         model = Invoice
@@ -75,6 +78,9 @@ class InvoiceRetrieveSerializer(serializers.ModelSerializer):
             "discount",
             "tax",
             "total",
+            "total_paid",
+            "pending_balance",
+            "payment_status",
             "notes",
             "company_name_snapshot",
             "company_tax_id_snapshot",
@@ -86,6 +92,58 @@ class InvoiceRetrieveSerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
         )
+
+    def _get_payment_info(self, obj):
+        if not hasattr(obj, "_cached_payment_info"):
+            from decimal import Decimal
+            from django.db.models import Sum
+            from apps.cash.models.payment import Payment
+
+            paid = Decimal("0.00")
+            if obj.purchase_id:
+                ref_prefix = f"COMPRA #{obj.purchase_id}"
+                paid = (
+                    Payment.objects.filter(
+                        reference__startswith=ref_prefix,
+                        status=Payment.PaymentStatus.COMPLETED,
+                        is_active=True,
+                    ).aggregate(total=Sum("amount"))["total"]
+                    or Decimal("0.00")
+                )
+            elif obj.sale_id:
+                paid = (
+                    Payment.objects.filter(
+                        sale_id=obj.sale_id,
+                        status=Payment.PaymentStatus.COMPLETED,
+                        is_active=True,
+                    ).aggregate(total=Sum("amount"))["total"]
+                    or Decimal("0.00")
+                )
+
+            diff = obj.total - paid
+            pending = diff if diff > Decimal("0.00") else Decimal("0.00")
+            if paid >= obj.total and obj.total > Decimal("0.00"):
+                p_status = "PAID"
+            elif paid > Decimal("0.00"):
+                p_status = "PARTIAL"
+            else:
+                p_status = "UNPAID"
+
+            obj._cached_payment_info = {
+                "total_paid": paid,
+                "pending_balance": pending,
+                "payment_status": p_status,
+            }
+        return obj._cached_payment_info
+
+    def get_total_paid(self, obj):
+        return self._get_payment_info(obj)["total_paid"]
+
+    def get_pending_balance(self, obj):
+        return self._get_payment_info(obj)["pending_balance"]
+
+    def get_payment_status(self, obj):
+        return self._get_payment_info(obj)["payment_status"]
 
 
 class InvoiceItemCreateSerializer(serializers.Serializer):

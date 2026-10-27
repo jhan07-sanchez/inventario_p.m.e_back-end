@@ -21,3 +21,4 @@ class CashSessionCloseDto:
 
     counted_balance: Decimal
     notes: str = ""
+    denominations: dict | None = None

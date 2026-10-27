@@ -1,9 +1,10 @@
 from decimal import Decimal
 
-from django.db import transaction
+from django.db import models, transaction
 from django.utils import timezone
 
 from apps.cash.dto.cash_session_dto import CashSessionCloseDto, CashSessionOpenDto
+from apps.cash.models.cash_movement import CashMovement
 from apps.cash.models.cash_register import CashRegister
 from apps.cash.models.cash_session import CashSession
 from apps.core.exceptions.custom_exceptions import (
@@ -76,17 +77,47 @@ class CashSessionService(BaseService[CashSession]):
                 "El efectivo contado no puede ser negativo."
             )
 
+        # Recálculo exacto del saldo esperado en base a movimientos reales en efectivo
+        cash_in = (
+            session.movements.filter(
+                is_active=True,
+                is_cash=True,
+                movement_type=CashMovement.MovementType.IN,
+            ).aggregate(total=models.Sum("amount"))["total"]
+            or Decimal("0.00")
+        )
+        cash_out = (
+            session.movements.filter(
+                is_active=True,
+                is_cash=True,
+                movement_type=CashMovement.MovementType.OUT,
+            ).aggregate(total=models.Sum("amount"))["total"]
+            or Decimal("0.00")
+        )
+        real_expected = session.opening_balance + cash_in - cash_out
+        session.expected_balance = real_expected
+
         session.end_time = timezone.now()
         session.counted_balance = dto.counted_balance
         session.difference = dto.counted_balance - session.expected_balance
         session.status = CashSession.SessionStatus.CLOSED
 
+        notes_parts = []
+        if session.notes:
+            notes_parts.append(session.notes)
         if dto.notes:
-            session.notes = f"{session.notes}\nCierre: {dto.notes}".strip()
+            notes_parts.append(f"Cierre: {dto.notes}")
+        if dto.denominations:
+            import json
+
+            notes_parts.append(f"DENOMINATIONS: {json.dumps(dto.denominations)}")
+
+        session.notes = "\n".join(notes_parts).strip()
 
         session.save(
             update_fields=[
                 "end_time",
+                "expected_balance",
                 "counted_balance",
                 "difference",
                 "status",

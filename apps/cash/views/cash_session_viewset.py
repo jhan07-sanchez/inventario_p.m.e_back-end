@@ -47,6 +47,9 @@ class CashSessionViewSet(BaseGenericViewSet):
             "current": (IsAuthenticatedAndActive, HasPermission("cash.view")),
             "add_movement": (IsAuthenticatedAndActive, HasPermission("cash.movement")),
             "movements": (IsAuthenticatedAndActive, HasPermission("cash.view")),
+            "audit_summary": (IsAuthenticatedAndActive, HasPermission("cash.view")),
+            "financial_summary": (IsAuthenticatedAndActive, HasPermission("cash.view")),
+            "last_closing_balance": (IsAuthenticatedAndActive, HasPermission("cash.view")),
         }
         classes = permission_map.get(
             self.action, (IsAuthenticatedAndActive, HasPermission("cash.view"))
@@ -199,5 +202,60 @@ class CashSessionViewSet(BaseGenericViewSet):
             message="Movimientos obtenidos correctamente.",
             code="CASH_MOVEMENTS_FETCHED",
             data=serializer.data,
+            status_code=status.HTTP_200_OK,
+        )
+
+    @action(detail=False, methods=["get"], url_path="last-closing-balance")
+    def last_closing_balance(self, request):
+        cash_register_id = request.query_params.get("cash_register_id")
+        if not cash_register_id:
+            return self.error_response(
+                message="Se requiere el parámetro cash_register_id.",
+                code="MISSING_REGISTER_ID",
+                status_code=status.HTTP_400_BAD_REQUEST,
+            )
+
+        last_session = CashSessionSelector.get_last_closed_session(int(cash_register_id))
+        if not last_session:
+            return self.success_response(
+                message="No hay sesiones cerradas previas para esta caja.",
+                code="NO_PREVIOUS_SESSION",
+                data={
+                    "last_closing_balance": "0.00",
+                    "session_id": None,
+                    "closed_at": None,
+                },
+                status_code=status.HTTP_200_OK,
+            )
+
+        balance = last_session.counted_balance or last_session.expected_balance
+        return self.success_response(
+            message="Último saldo de cierre obtenido.",
+            code="LAST_CLOSING_BALANCE_FETCHED",
+            data={
+                "last_closing_balance": str(balance),
+                "session_id": last_session.id_cash_session,
+                "closed_at": last_session.end_time,
+            },
+            status_code=status.HTTP_200_OK,
+        )
+
+    @action(detail=True, methods=["get"], url_path="audit-summary")
+    def audit_summary(self, request, pk=None):
+        summary = CashSessionSelector.get_session_audit_summary(pk)
+        return self.success_response(
+            message="Resumen de auditoría de sesión obtenido.",
+            code="SESSION_AUDIT_SUMMARY_FETCHED",
+            data=summary,
+            status_code=status.HTTP_200_OK,
+        )
+
+    @action(detail=False, methods=["get"], url_path="financial-summary")
+    def financial_summary(self, request):
+        summary = CashSessionSelector.get_financial_summary()
+        return self.success_response(
+            message="Resumen financiero obtenido.",
+            code="FINANCIAL_SUMMARY_FETCHED",
+            data=summary,
             status_code=status.HTTP_200_OK,
         )

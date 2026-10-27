@@ -29,3 +29,14 @@ class PurchaseUpdateDTO:
 
     issue_date: Optional[date]
     notes: Optional[str]
+
+
+@dataclass(frozen=True, slots=True)
+class PurchasePayDTO:
+    """DTO para registrar el pago de una compra a proveedor."""
+
+    amount: Decimal
+    payment_method: str
+    cash_session_id: Optional[int] = None
+    reference: str = ""
+    notes: str = ""
