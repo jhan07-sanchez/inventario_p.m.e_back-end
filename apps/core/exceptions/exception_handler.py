@@ -84,7 +84,7 @@ def custom_exception_handler(exc, context):
             "code": exc.default_code,
             "message": str(exc.detail),
             "data": None,
-            "errors": None,
+            "errors": getattr(exc, "extra_data", None),
         }
 
         return response

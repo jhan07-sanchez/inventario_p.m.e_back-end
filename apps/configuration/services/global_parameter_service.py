@@ -12,7 +12,10 @@ from apps.core.exceptions.custom_exceptions import (
     GlobalParameterInactiveException,
 )
 from apps.core.services.base_service import BaseService
-from apps.users.models import User
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from apps.users.models import User
 
 
 class GlobalParameterService(BaseService[GlobalParameter]):
@@ -88,7 +91,7 @@ class GlobalParameterService(BaseService[GlobalParameter]):
     @staticmethod
     @transaction.atomic
     def create_parameter(
-        dto: GlobalParameterCreateDto, user: Optional[User] = None
+        dto: GlobalParameterCreateDto, user: Optional["User"] = None
     ) -> GlobalParameter:
         """
         Crea un nuevo parámetro global en el sistema y registra la auditoría.
@@ -123,7 +126,7 @@ class GlobalParameterService(BaseService[GlobalParameter]):
     def update_parameter(
         parameter: GlobalParameter,
         dto: GlobalParameterUpdateDto,
-        user: Optional[User] = None,
+        user: Optional["User"] = None,
     ) -> GlobalParameter:
         """
         Actualiza los campos permitidos de un parámetro existente y registra la auditoría.
@@ -178,7 +181,7 @@ class GlobalParameterService(BaseService[GlobalParameter]):
     @staticmethod
     @transaction.atomic
     def deactivate_parameter(
-        parameter: GlobalParameter, user: Optional[User] = None
+        parameter: GlobalParameter, user: Optional["User"] = None
     ) -> None:
         """
         Realiza un borrado lógico del parámetro y registra la auditoría.
@@ -203,7 +206,7 @@ class GlobalParameterService(BaseService[GlobalParameter]):
     @staticmethod
     @transaction.atomic
     def restore_parameter(
-        parameter: GlobalParameter, user: Optional[User] = None
+        parameter: GlobalParameter, user: Optional["User"] = None
     ) -> GlobalParameter:
         """
         Restaura un parámetro previamente desactivado y registra la auditoría.

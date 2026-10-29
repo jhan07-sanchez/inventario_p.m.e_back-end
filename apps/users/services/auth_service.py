@@ -1,8 +1,13 @@
+from datetime import timedelta
+
 from django.contrib.auth import authenticate
+from django.utils import timezone
 from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.tokens import RefreshToken
 
+from apps.configuration.services.global_parameter_service import GlobalParameterService
 from apps.core.exceptions.custom_exceptions import (
+    AccountLockedException,
     InvalidCredentialsException,
     InvalidTokenException,
     NoActiveRoleException,
@@ -22,62 +27,78 @@ class AuthService:
         - Autenticar credenciales.
         - Validar estado del usuario, roles y permisos efectivos.
         - Generar y gestionar tokens JWT.
+        - Gestionar bloqueo por intentos fallidos y expiración dinámica.
     """
 
     @staticmethod
     def login(email: str, password: str) -> LoginResult:
         """
         Autentica un usuario y genera los tokens JWT.
-
-        Validaciones (en orden):
-            1. Credenciales válidas.
-            2. Usuario activo.
-            3. Al menos un rol activo asignado.
-            4. Al menos un permiso efectivo.
-
-        Args:
-            email:
-                Correo electrónico del usuario.
-            password:
-                Contraseña del usuario.
-
-        Returns:
-            ``LoginResult`` con usuario y tokens JWT.
-
-        Raises:
-            InvalidCredentialsException:
-                Credenciales inválidas.
-            UserInactiveException:
-                Usuario inactivo.
-            NoActiveRoleException:
-                Sin roles activos.
-            NoPermissionsException:
-                Sin permisos efectivos.
         """
+        # 1. Buscamos al usuario primero para verificar si está bloqueado
+        user = User.objects.filter(email=email).first()
 
-        user = authenticate(
-            email=email,
-            password=password,
-        )
+        if user and user.is_locked_out:
+            #Calculamos el tiempo exacto
+            remaining_time = user.lockout_until - timezone.now()
+            remaining_minutes = max(1, int(remaining_time.total_seconds() / 60))
+            raise AccountLockedException(remaining_minutes=remaining_minutes)
 
-        if user is None:
+        # 2. Autenticamos las credenciales
+        authenticated_user = authenticate(email=email, password=password)
+
+        if authenticated_user is None:
+            # 3. Manejo de intentos fallidos (solo si el usuario existe en la BD)
+            if user:
+                user.failed_login_attempts += 1
+                max_attempts = GlobalParameterService.get_typed_value(
+                    "SECURITY_MAX_LOGIN_ATTEMPTS", default=5
+                )
+
+                if user.failed_login_attempts >= max_attempts:
+                    # Bloqueo por 15 minutos
+                    user.lockout_until = timezone.now() + timedelta(minutes=15)
+                    user.failed_login_attempts = (
+                        0  # Reiniciamos el contador tras bloquear
+                    )
+
+                user.save(update_fields=["failed_login_attempts", "lockout_until"])
+
             raise InvalidCredentialsException()
 
-        if not user.is_active:
+        # 4. Login Exitoso: Si tenía intentos fallidos previos, los reiniciamos
+        if user and (user.failed_login_attempts > 0 or user.lockout_until):
+            user.failed_login_attempts = 0
+            user.lockout_until = None
+            user.save(update_fields=["failed_login_attempts", "lockout_until"])
+
+        # 5. Validaciones de negocio estandar
+        if not authenticated_user.is_active:
             raise UserInactiveException()
 
-        if not PermissionService.has_any_active_role(user):
+        if not PermissionService.has_any_active_role(authenticated_user):
             raise NoActiveRoleException()
 
-        effective_permissions = PermissionService.get_effective_permissions(user)
+        effective_permissions = PermissionService.get_effective_permissions(
+            authenticated_user
+        )
 
         if not PermissionService.has_any_permission(effective_permissions):
             raise NoPermissionsException()
 
-        refresh = RefreshToken.for_user(user)
+        # 6. Generación del Token Dinámico
+        refresh = RefreshToken.for_user(authenticated_user)
+
+        # Leemos el parámetro del tiempo desde la base de datos
+        timeout_minutes = GlobalParameterService.get_typed_value(
+            "SECURITY_SESSION_TIMEOUT_MINUTES", default=30
+        )
+
+        # Sobreescribimos la expiración del Access Token
+        refresh.access_token.set_exp(lifetime=timedelta(minutes=timeout_minutes))
 
         return LoginResult(
-            user=user,
+            user=authenticated_user,
             access_token=str(refresh.access_token),
             refresh_token=str(refresh),
         )
@@ -86,15 +107,7 @@ class AuthService:
     def me(user: User) -> MeResult:
         """
         Retorna la información del usuario autenticado.
-
-        Args:
-            user:
-                Usuario autenticado obtenido desde ``request.user``.
-
-        Returns:
-            ``MeResult`` con la información del usuario.
         """
-
         return MeResult(user=user)
 
     @staticmethod

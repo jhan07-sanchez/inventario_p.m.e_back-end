@@ -317,3 +317,16 @@ class SaleNotFoundException(BusinessException):
 class InvalidPaymentAmountException(BusinessException):
     default_detail = "El monto del pago debe ser mayor a cero."
     default_code = ErrorCodes.INVALID_PAYMENT_AMOUNT
+
+
+class AccountLockedException(BusinessException):
+    """Se lanza cuando la cuenta esta bloqueada temporalmente."""
+    default_detail = "La cuenta esta bloqueada temporalmente por demaciados intentos fallidos. Intente mas tarde."
+    default_code = ErrorCodes.ACCOUNT_LOCKED
+    status_code = 403
+    def __init__(self, remaining_minutes: int = 15, detail: str = None):
+        if detail is None:
+            detail = self.default_detail
+        super().__init__(detail)
+        #Aqui guardamos los datos crudos
+        self.extra_data = {"remaining_minutes": remaining_minutes}

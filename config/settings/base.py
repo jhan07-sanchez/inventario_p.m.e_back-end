@@ -287,3 +287,10 @@ LOGGING = {
         },
     },
 }
+
+
+AUTH_PASSWORD_VALIDATORS= [
+    {
+        "NAME": "apps.users.validators.DynamicPasswordLengthValidator"
+    },
+]
