@@ -52,6 +52,22 @@ class GlobalParameter(ActiveModel):
             models.Index(fields=["is_active"], name="idx_global_param_is_active"),
         ]
 
+    def clean(self) -> None:
+        """
+        Valida que el valor sea compatible con el tipo de dato y normaliza la clave.
+        """
+        super().clean()
+        if self.key:
+            self.key = self.key.strip().upper()
+        if self.value is not None and self.data_type:
+            from apps.configuration.services.global_parameter_service import (
+                GlobalParameterService,
+            )
+
+            GlobalParameterService.validate_value_by_data_type(
+                self.value, self.data_type
+            )
+
     def __str__(self) -> str:
         """Retorna una representación legible del parámetro."""
         return f"{self.key} = {self.value}"

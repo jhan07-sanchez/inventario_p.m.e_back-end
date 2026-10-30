@@ -24,11 +24,13 @@ class GlobalParameterSelector(BaseSelector[GlobalParameter]):
         return super().get_queryset(include_deleted=include_deleted).order_by("key")
 
     @staticmethod
-    def get_parameters() -> QuerySet[GlobalParameter]:
+    def get_parameters(include_deleted: bool = False) -> QuerySet[GlobalParameter]:
         """
-        Retorna todos los parámetros globales.
+        Retorna los parámetros globales (activos por defecto).
         """
-        return GlobalParameterSelector().get_all()
+        if include_deleted:
+            return GlobalParameterSelector().get_all(include_deleted=True)
+        return GlobalParameterSelector().get_active()
 
     @staticmethod
     def get_parameter_by_id(
@@ -46,15 +48,19 @@ class GlobalParameterSelector(BaseSelector[GlobalParameter]):
     def get_by_key(key: str) -> GlobalParameter | None:
         """
         Obtiene un parámetro por su clave (key).
-        Utiliza caché para mejorar el rendimiento.
+        Normaliza la clave y utiliza caché para máximo rendimiento.
         """
-        cache_key = f"global_param_{key}"
+        if not key:
+            return None
+
+        norm_key = key.strip().upper()
+        cache_key = f"global_param_{norm_key}"
         cached_val = cache.get(cache_key)
 
         if cached_val is not None:
             return cached_val
 
-        val = GlobalParameter.objects.filter(key=key, is_active=True).first()
+        val = GlobalParameter.objects.filter(key=norm_key, is_active=True).first()
 
         if val:
             cache.set(cache_key, val, timeout=3600)  # 1 hora

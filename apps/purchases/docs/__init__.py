@@ -10,6 +10,8 @@ from .purchase_docs import (
     purchase_receive_schema,
     purchase_restore_schema,
     purchase_update_schema,
+    purchase_pay_schema,
+    purchase_payments_schema,
 )
 
 __all__ = [
@@ -24,4 +26,6 @@ __all__ = [
     "purchase_receive_schema",
     "purchase_restore_schema",
     "purchase_update_schema",
+    "purchase_pay_schema",
+    "purchase_payments_schema",
 ]

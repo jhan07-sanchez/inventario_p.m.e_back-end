@@ -441,3 +441,61 @@ cash_session_movements_schema = extend_schema(
         ),
     },
 )
+
+cash_session_financial_summary_schema = extend_schema(
+    tags=["Cash"],
+    summary="Resumen financiero global",
+    description="Obtiene el resumen financiero global de las cajas.",
+    responses={
+        200: OpenApiResponse(
+            response=build_api_response_schema(name="CashFinancialSummaryResponse"),
+            description="Resumen financiero obtenido.",
+        ),
+        401: OpenApiResponse(response=ApiErrorResponseSerializer),
+    },
+)
+
+cash_session_last_closing_balance_schema = extend_schema(
+    tags=["Cash"],
+    summary="Obtener último saldo de cierre",
+    description="Obtiene el último saldo de cierre registrado para una caja específica.",
+    parameters=[
+        OpenApiParameter(
+            name="cash_register_id",
+            type=OpenApiTypes.INT,
+            location=OpenApiParameter.QUERY,
+            description="ID de la caja registradora.",
+            required=True,
+        )
+    ],
+    responses={
+        200: OpenApiResponse(
+            response=build_api_response_schema(name="LastClosingBalanceResponse"),
+            description="Último saldo obtenido.",
+        ),
+        400: OpenApiResponse(response=ValidationErrorResponseSerializer),
+        401: OpenApiResponse(response=ApiErrorResponseSerializer),
+    },
+)
+
+cash_session_audit_summary_schema = extend_schema(
+    tags=["Cash"],
+    summary="Resumen de auditoría de sesión",
+    description="Obtiene un resumen detallado de auditoría para una sesión de caja específica.",
+    parameters=[
+        OpenApiParameter(
+            name="id",
+            type=OpenApiTypes.INT,
+            location=OpenApiParameter.PATH,
+            description="Identificador de la sesión.",
+            required=True,
+        )
+    ],
+    responses={
+        200: OpenApiResponse(
+            response=build_api_response_schema(name="CashAuditSummaryResponse"),
+            description="Resumen de auditoría obtenido.",
+        ),
+        401: OpenApiResponse(response=ApiErrorResponseSerializer),
+    },
+)

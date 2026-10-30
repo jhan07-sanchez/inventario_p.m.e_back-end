@@ -210,3 +210,145 @@ class GlobalParameterTests(TestCase):
         payload = {"key": "HACK", "value": "val", "data_type": "STRING"}
         res_post = viewer_client.post(reverse("global-parameters-list"), payload)
         self.assertEqual(res_post.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_strict_type_validation_edge_cases(self):
+        from django.core.exceptions import ValidationError
+
+        # Boolean passed as integer must fail
+        with self.assertRaises(ValidationError):
+            GlobalParameterService.validate_value_by_data_type(
+                True, GlobalParameter.DataType.INTEGER
+            )
+
+        # Boolean passed as decimal must fail
+        with self.assertRaises(ValidationError):
+            GlobalParameterService.validate_value_by_data_type(
+                False, GlobalParameter.DataType.DECIMAL
+            )
+
+        # NaN or Infinity for decimal must fail
+        with self.assertRaises(ValidationError):
+            GlobalParameterService.validate_value_by_data_type(
+                "NaN", GlobalParameter.DataType.DECIMAL
+            )
+        with self.assertRaises(ValidationError):
+            GlobalParameterService.validate_value_by_data_type(
+                "Infinity", GlobalParameter.DataType.DECIMAL
+            )
+
+        # None value must fail
+        with self.assertRaises(ValidationError):
+            GlobalParameterService.validate_value_by_data_type(
+                None, GlobalParameter.DataType.STRING
+            )
+
+        # Unsupported data type must fail
+        with self.assertRaises(ValidationError):
+            GlobalParameterService.validate_value_by_data_type("foo", "UNKNOWN_TYPE")
+
+    def test_cross_validation_on_update_rejects_incompatible_change(self):
+        from django.core.exceptions import ValidationError
+        from apps.configuration.dto import GlobalParameterCreateDto
+
+        # Create string parameter with non-numeric text
+        dto_create = GlobalParameterCreateDto(
+            key="APP_BANNER_TEXT",
+            value="Welcome to PME ERP",
+            data_type=GlobalParameter.DataType.STRING,
+            description="Banner text",
+        )
+        param = GlobalParameterService.create_parameter(dto_create, user=self.user)
+
+        # Attempt to change data_type to INTEGER without changing value -> must fail cross validation
+        dto_update = GlobalParameterUpdateDto(data_type=GlobalParameter.DataType.INTEGER)
+        with self.assertRaises(ValidationError):
+            GlobalParameterService.update_parameter(param, dto_update, user=self.user)
+
+    def test_key_validation_rejects_invalid_format(self):
+        from django.core.exceptions import ValidationError
+        from apps.configuration.dto import GlobalParameterCreateDto
+
+        # Lowercase or invalid characters must fail regex
+        dto_invalid = GlobalParameterCreateDto(
+            key="invalid-key-with-dashes",
+            value="10",
+            data_type=GlobalParameter.DataType.INTEGER,
+        )
+        with self.assertRaises(ValidationError):
+            GlobalParameterService.create_parameter(dto_invalid, user=self.user)
+
+        # API also rejects invalid key
+        url = reverse("global-parameters-list")
+        res = self.client.post(
+            url,
+            {"key": "invalid-key!", "value": "10", "data_type": "INTEGER"},
+        )
+        self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_duplicate_key_rejected(self):
+        from apps.core.exceptions.custom_exceptions import GlobalParameterAlreadyExistsException
+        from apps.configuration.dto import GlobalParameterCreateDto
+
+        dto_dup = GlobalParameterCreateDto(
+            key="DEFAULT_TAX_RATE",
+            value="0.19",
+            data_type=GlobalParameter.DataType.DECIMAL,
+        )
+        with self.assertRaises(GlobalParameterAlreadyExistsException):
+            GlobalParameterService.create_parameter(dto_dup, user=self.user)
+
+    def test_catalog_fallback_in_get_typed_value(self):
+        # Query parameter not created in DB but present in SYSTEM_PARAMETERS_CATALOG
+        allow_neg = GlobalParameterService.get_typed_value("INVENTORY_ALLOW_NEGATIVE_STOCK")
+        self.assertIs(allow_neg, False)
+
+        timeout = GlobalParameterService.get_typed_value("SESSION_TIMEOUT_MINUTES")
+        self.assertEqual(timeout, 60)
+        self.assertIsInstance(timeout, int)
+
+    def test_deactivate_and_restore_parameter_lifecycle(self):
+        from apps.configuration.models import ConfigurationAudit
+
+        # Deactivate
+        GlobalParameterService.deactivate_parameter(self.parameter, user=self.user)
+        self.parameter.refresh_from_db()
+        self.assertFalse(self.parameter.is_active)
+
+        # Cache must be empty
+        self.assertIsNone(cache.get("global_param_DEFAULT_TAX_RATE"))
+
+        # Deactivate audit recorded
+        deact_audit = ConfigurationAudit.objects.filter(
+            parameter_key="DEFAULT_TAX_RATE", action=ConfigurationAudit.Action.DEACTIVATE
+        ).first()
+        self.assertIsNotNone(deact_audit)
+
+        # Restore
+        restored = GlobalParameterService.restore_parameter(self.parameter, user=self.user)
+        self.assertTrue(restored.is_active)
+
+        # Restore audit recorded
+        restore_audit = ConfigurationAudit.objects.filter(
+            parameter_key="DEFAULT_TAX_RATE", action=ConfigurationAudit.Action.RESTORE
+        ).first()
+        self.assertIsNotNone(restore_audit)
+
+    def test_configuration_audits_endpoint(self):
+        # Trigger an update to have audit records
+        dto = GlobalParameterUpdateDto(value="0.25")
+        GlobalParameterService.update_parameter(self.parameter, dto, user=self.user)
+
+        res = self.client.get("/api/v1/audits/")
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        results = res.data["data"]["results"] if "results" in res.data["data"] else res.data["data"]
+        self.assertGreaterEqual(len(results), 1)
+
+        # Filter by parameter_key
+        res_filtered = self.client.get("/api/v1/audits/?parameter_key=DEFAULT_TAX_RATE")
+        self.assertEqual(res_filtered.status_code, status.HTTP_200_OK)
+        filtered_results = (
+            res_filtered.data["data"]["results"]
+            if "results" in res_filtered.data["data"]
+            else res_filtered.data["data"]
+        )
+        self.assertTrue(all(item["parameter_key"] == "DEFAULT_TAX_RATE" for item in filtered_results))

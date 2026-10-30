@@ -17,6 +17,8 @@ from apps.purchases.docs.purchase_docs import (
     purchase_receive_schema,
     purchase_restore_schema,
     purchase_update_schema,
+    purchase_pay_schema,
+    purchase_payments_schema,
 )
 from apps.purchases.models import Purchase
 from apps.purchases.selectors.purchase_selector import PurchaseSelector
@@ -504,6 +506,7 @@ class PurchaseViewSet(BaseViewSet):
                 message="No fue posible cancelar la compra.",
             )
 
+    @purchase_pay_schema
     @action(
         detail=True,
         methods=["post"],
@@ -534,6 +537,7 @@ class PurchaseViewSet(BaseViewSet):
                 message="Error al procesar el pago de la compra.",
             )
 
+    @purchase_payments_schema
     @action(
         detail=True,
         methods=["get"],

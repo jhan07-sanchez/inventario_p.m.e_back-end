@@ -16,6 +16,7 @@ from apps.purchases.serializers.purchase_serializer import (
     PurchaseListSerializer,
     PurchaseRetrieveSerializer,
     PurchaseUpdateSerializer,
+    PurchasePaySerializer,
 )
 
 # Parámetros de paginación reutilizables
@@ -448,5 +449,51 @@ purchase_cancel_schema = extend_schema(
             response=ApiErrorResponseSerializer,
             description="Compra no encontrada.",
         ),
+    },
+)
+
+purchase_pay_schema = extend_schema(
+    tags=["Purchases"],
+    summary="Registrar pago a proveedor",
+    description="Registra un pago parcial o total de una compra, afectando caja o banco.",
+    parameters=[
+        OpenApiParameter(
+            name="id_purchase",
+            type=OpenApiTypes.INT,
+            location=OpenApiParameter.PATH,
+            description="Identificador único de la compra.",
+            required=True,
+        )
+    ],
+    request=PurchasePaySerializer,
+    responses={
+        201: OpenApiResponse(
+            response=build_api_response_schema(name="PurchasePayResponse"),
+            description="Pago registrado correctamente.",
+        ),
+        400: OpenApiResponse(response=ValidationErrorResponseSerializer),
+        401: OpenApiResponse(response=ApiErrorResponseSerializer),
+    },
+)
+
+purchase_payments_schema = extend_schema(
+    tags=["Purchases"],
+    summary="Listar pagos de compra",
+    description="Obtiene el historial consolidado de pagos de una compra.",
+    parameters=[
+        OpenApiParameter(
+            name="id_purchase",
+            type=OpenApiTypes.INT,
+            location=OpenApiParameter.PATH,
+            description="Identificador único de la compra.",
+            required=True,
+        )
+    ],
+    responses={
+        200: OpenApiResponse(
+            response=build_api_response_schema(name="PurchasePaymentsResponse"),
+            description="Pagos obtenidos correctamente.",
+        ),
+        401: OpenApiResponse(response=ApiErrorResponseSerializer),
     },
 )

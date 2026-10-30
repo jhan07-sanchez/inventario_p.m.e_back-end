@@ -10,6 +10,9 @@ from apps.cash.docs.cash_docs import (
     cash_session_list_schema,
     cash_session_movements_schema,
     cash_session_open_schema,
+    cash_session_financial_summary_schema,
+    cash_session_last_closing_balance_schema,
+    cash_session_audit_summary_schema,
 )
 from apps.cash.models.cash_session import CashSession
 from apps.cash.selectors.cash_session_selector import CashSessionSelector
@@ -205,6 +208,7 @@ class CashSessionViewSet(BaseGenericViewSet):
             status_code=status.HTTP_200_OK,
         )
 
+    @cash_session_last_closing_balance_schema
     @action(detail=False, methods=["get"], url_path="last-closing-balance")
     def last_closing_balance(self, request):
         cash_register_id = request.query_params.get("cash_register_id")
@@ -240,6 +244,7 @@ class CashSessionViewSet(BaseGenericViewSet):
             status_code=status.HTTP_200_OK,
         )
 
+    @cash_session_audit_summary_schema
     @action(detail=True, methods=["get"], url_path="audit-summary")
     def audit_summary(self, request, pk=None):
         summary = CashSessionSelector.get_session_audit_summary(pk)
@@ -250,6 +255,7 @@ class CashSessionViewSet(BaseGenericViewSet):
             status_code=status.HTTP_200_OK,
         )
 
+    @cash_session_financial_summary_schema
     @action(detail=False, methods=["get"], url_path="financial-summary")
     def financial_summary(self, request):
         summary = CashSessionSelector.get_financial_summary()
