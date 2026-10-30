@@ -36,18 +36,23 @@ class ApiResponse:
         code="ERROR",
         errors=None,
         status_code=status.HTTP_400_BAD_REQUEST,
+        meta=None,
     ):
         """
         Retorna una respuesta de error.
         """
 
+        payload = {
+            "success": False,
+            "code": code,
+            "message": message,
+            "data": None,
+            "errors": errors,
+        }
+        if meta is not None:
+            payload["meta"] = meta
+
         return Response(
-            {
-                "success": False,
-                "code": code,
-                "message": message,
-                "data": None,
-                "errors": errors,
-            },
+            payload,
             status=status_code,
         )

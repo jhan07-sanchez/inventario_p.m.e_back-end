@@ -321,7 +321,7 @@ class InvalidPaymentAmountException(BusinessException):
 
 class AccountLockedException(BusinessException):
     """Se lanza cuando la cuenta esta bloqueada temporalmente."""
-    default_detail = "La cuenta esta bloqueada temporalmente por demaciados intentos fallidos. Intente mas tarde."
+    default_detail = "La cuenta está bloqueada temporalmente por demasiados intentos fallidos. Intente más tarde."
     default_code = ErrorCodes.ACCOUNT_LOCKED
     status_code = 403
     def __init__(self, remaining_minutes: int = 15, detail: str = None):

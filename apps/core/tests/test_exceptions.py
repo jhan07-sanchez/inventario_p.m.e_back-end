@@ -21,3 +21,30 @@ class ExceptionHandlerTests(TestCase):
             response.data["message"], "Ha ocurrido un error interno en el servidor."
         )
         self.assertIsNone(response.data["errors"])
+
+    def test_account_locked_exception_includes_meta(self):
+        from apps.core.exceptions.custom_exceptions import AccountLockedException
+
+        exc = AccountLockedException(remaining_minutes=12)
+        response = custom_exception_handler(exc, None)
+
+        self.assertIsNotNone(response)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertFalse(response.data["success"])
+        self.assertEqual(response.data["code"], "ACCOUNT_LOCKED")
+        self.assertEqual(response.data["meta"], {"remaining_minutes": 12})
+        self.assertIsNone(response.data["errors"])
+
+    def test_api_response_error_with_meta(self):
+        from apps.core.utils.api_response import ApiResponse
+
+        response = ApiResponse.error(
+            message="Error con metadata",
+            code="TEST_ERROR",
+            meta={"retry_after": 60},
+        )
+
+        self.assertFalse(response.data["success"])
+        self.assertEqual(response.data["code"], "TEST_ERROR")
+        self.assertEqual(response.data["meta"], {"retry_after": 60})
+

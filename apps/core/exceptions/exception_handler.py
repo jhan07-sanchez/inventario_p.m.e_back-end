@@ -79,13 +79,16 @@ def custom_exception_handler(exc, context):
     # Excepciones de negocio
     # ==========================================================
     if isinstance(exc, BusinessException):
+        extra_data = getattr(exc, "extra_data", None)
         response.data = {
             "success": False,
             "code": exc.default_code,
             "message": str(exc.detail),
             "data": None,
-            "errors": getattr(exc, "extra_data", None),
+            "errors": None,
         }
+        if extra_data is not None:
+            response.data["meta"] = extra_data
 
         return response
 
