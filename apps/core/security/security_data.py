@@ -30,7 +30,7 @@ SECURITY_MODULES = [
         "module_id": "dashboard",
         "label": "Dashboard",
         "icon": "fas fa-home",
-        "route": "index.php",
+        "route": "dashboard",
         "parent": None,
         "permissions": {"dashboard.view": "Ver dashboard"},
         "actions": {"dashboard.refresh": "Refrescar datos"},
@@ -46,7 +46,7 @@ SECURITY_MODULES = [
         "module_id": "users",
         "label": "Usuarios",
         "icon": "fas fa-users",
-        "route": "views/pages/usuarios/index.php",
+        "route": "usuarios",
         "parent": "security",
         "permissions": {
             "users.view": "Ver usuarios",
@@ -65,7 +65,7 @@ SECURITY_MODULES = [
         "module_id": "roles",
         "label": "Roles",
         "icon": "fas fa-user-shield",
-        "route": "views/pages/roles/index.php",
+        "route": "roles",
         "parent": "security",
         "permissions": {
             "roles.view": "Ver roles",
@@ -81,7 +81,7 @@ SECURITY_MODULES = [
         "module_id": "user_roles",
         "label": "Asignación de Roles",
         "icon": "fas fa-user-tag",
-        "route": "views/pages/asignacion-roles/index.php",
+        "route": "views/pages/sasignacion-roles",
         "parent": "security",
         "permissions": {
             "user_roles.view": "Ver asignaciones",
@@ -97,7 +97,7 @@ SECURITY_MODULES = [
         "module_id": "customers",
         "label": "Clientes",
         "icon": "fas fa-user-tie",
-        "route": "views/pages/clientes/index.php",
+        "route": "clientes",
         "parent": "contacts",
         "permissions": {
             "customers.view": "Ver clientes",
@@ -116,7 +116,7 @@ SECURITY_MODULES = [
         "module_id": "suppliers",
         "label": "Proveedores",
         "icon": "fas fa-truck",
-        "route": "views/pages/proveedores/index.php",
+        "route": "suppliers",
         "parent": "contacts",
         "permissions": {
             "suppliers.view": "Ver proveedores",
@@ -135,7 +135,7 @@ SECURITY_MODULES = [
         "module_id": "categories",
         "label": "Categorías",
         "icon": "fas fa-tags",
-        "route": "views/pages/categorias/index.php",
+        "route": "categorias",
         "parent": "inventory",
         "permissions": {
             "categories.view": "Ver categorías",
@@ -151,7 +151,7 @@ SECURITY_MODULES = [
         "module_id": "products",
         "label": "Productos",
         "icon": "fas fa-box",
-        "route": "views/pages/productos/index.php",
+        "route": "productos",
         "parent": "inventory",
         "permissions": {
             "products.view": "Ver productos",
@@ -170,7 +170,7 @@ SECURITY_MODULES = [
         "module_id": "inventory",
         "label": "Inventario",
         "icon": "fas fa-warehouse",
-        "route": "views/pages/inventario/index.php",
+        "route": "inventario",
         "parent": "inventory",
         "permissions": {
             "inventory.view": "Ver inventario",
@@ -189,7 +189,7 @@ SECURITY_MODULES = [
         "module_id": "purchases",
         "label": "Compras",
         "icon": "fas fa-shopping-cart",
-        "route": "views/pages/compras/index.php",
+        "route": "compras",
         "parent": "operations",
         "permissions": {
             "purchases.view": "Ver compras",
@@ -209,7 +209,7 @@ SECURITY_MODULES = [
         "module_id": "sales",
         "label": "Ventas",
         "icon": "fas fa-cash-register",
-        "route": "views/pages/ventas/index.php",
+        "route": "ventas",
         "parent": "operations",
         "permissions": {
             "sales.view": "Ver ventas",
@@ -232,7 +232,7 @@ SECURITY_MODULES = [
         "module_id": "cash",
         "label": "Caja",
         "icon": "fas fa-cash-register",
-        "route": "views/pages/caja/index.php",
+        "route": "caja",
         "parent": "operations",
         "permissions": {
             "cash.view": "Ver caja",
@@ -249,7 +249,7 @@ SECURITY_MODULES = [
         "module_id": "invoices",
         "label": "Facturación",
         "icon": "fas fa-file-invoice-dollar",
-        "route": "views/pages/facturacion/index.php",
+        "route": "facturacion",
         "parent": "operations",
         "permissions": {
             "invoices.view": "Ver facturación",
@@ -270,7 +270,7 @@ SECURITY_MODULES = [
         "module_id": "reports",
         "label": "Reportes",
         "icon": "fas fa-chart-bar",
-        "route": "views/pages/reportes/index.php",
+        "route": "reportes",
         "parent": None,
         "permissions": {"reports.view": "Ver reportes"},
         "actions": {
@@ -284,7 +284,7 @@ SECURITY_MODULES = [
         "module_id": "settings",
         "label": "Configuración",
         "icon": "fas fa-cog",
-        "route": "views/pages/configuracion/index.php",
+        "route": "configuracion",
         "parent": None,
         "permissions": {
             "settings.view": "Ver configuración",
