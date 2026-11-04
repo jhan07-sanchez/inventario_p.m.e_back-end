@@ -330,3 +330,91 @@ class AccountLockedException(BusinessException):
         super().__init__(detail)
         #Aqui guardamos los datos crudos
         self.extra_data = {"remaining_minutes": remaining_minutes}
+
+
+# ==========================================
+# Excepciones de Finance (Tesorería y Finanzas)
+# ==========================================
+class FinancialAccountNotFoundException(BusinessException):
+    default_detail = "La cuenta financiera especificada no existe o está inactiva."
+    default_code = ErrorCodes.FINANCIAL_ACCOUNT_NOT_FOUND
+    status_code = 404
+
+
+class FinancialAccountAlreadyExistsException(BusinessException):
+    default_detail = "Ya existe una cuenta financiera activa con ese nombre."
+    default_code = ErrorCodes.FINANCIAL_ACCOUNT_ALREADY_EXISTS
+
+
+class FinancialCategoryNotFoundException(BusinessException):
+    default_detail = "La categoría financiera especificada no existe o está inactiva."
+    default_code = ErrorCodes.FINANCIAL_CATEGORY_NOT_FOUND
+    status_code = 404
+
+
+class FinancialCategoryAlreadyExistsException(BusinessException):
+    default_detail = "Ya existe una categoría financiera activa con ese nombre."
+    default_code = ErrorCodes.FINANCIAL_CATEGORY_ALREADY_EXISTS
+
+
+class FinancialMovementNotFoundException(BusinessException):
+    default_detail = "El movimiento financiero especificado no existe o está inactivo."
+    default_code = ErrorCodes.FINANCIAL_MOVEMENT_NOT_FOUND
+    status_code = 404
+
+
+class InsufficientAccountFundsException(BusinessException):
+    default_detail = "Fondos insuficientes en la cuenta financiera para realizar esta operación."
+    default_code = ErrorCodes.INSUFFICIENT_ACCOUNT_FUNDS
+
+
+class InvalidFinancialAmountException(BusinessException):
+    default_detail = "El monto ingresado debe ser estrictamente mayor a cero."
+    default_code = ErrorCodes.INVALID_FINANCIAL_AMOUNT
+
+
+class FinancialMovementAlreadyReversedException(BusinessException):
+    default_detail = "El movimiento financiero ya ha sido reversado previamente."
+    default_code = ErrorCodes.FINANCIAL_MOVEMENT_ALREADY_REVERSED
+
+
+class InvalidFinancialMovementStateException(BusinessException):
+    default_detail = "El estado actual del movimiento financiero no permite realizar esta operación."
+    default_code = ErrorCodes.INVALID_FINANCIAL_MOVEMENT_STATE
+
+
+class InvalidFinancialMovementTypeException(BusinessException):
+    default_detail = "El tipo de movimiento financiero no es válido."
+    default_code = ErrorCodes.INVALID_FINANCIAL_MOVEMENT_TYPE
+
+
+class FinancialTransferNotFoundException(BusinessException):
+    default_detail = "La transferencia financiera no existe o está inactiva."
+    default_code = ErrorCodes.FINANCIAL_TRANSFER_NOT_FOUND
+    status_code = 404
+
+
+class InvalidFinancialTransferException(BusinessException):
+    default_detail = "La cuenta de origen y destino no pueden ser la misma."
+    default_code = ErrorCodes.INVALID_FINANCIAL_TRANSFER
+
+
+class InvalidFinancialTransferStateException(BusinessException):
+    default_detail = "El estado actual de la transferencia no permite cancelarla."
+    default_code = ErrorCodes.INVALID_FINANCIAL_TRANSFER_STATE
+
+
+class FinancialReconciliationNotFoundException(BusinessException):
+    default_detail = "La conciliación financiera no existe o está inactiva."
+    default_code = ErrorCodes.FINANCIAL_RECONCILIATION_NOT_FOUND
+    status_code = 404
+
+
+class FinancialReconciliationAlreadyClosedException(BusinessException):
+    default_detail = "La conciliación ya se encuentra cerrada y conciliada."
+    default_code = ErrorCodes.FINANCIAL_RECONCILIATION_ALREADY_CLOSED
+
+
+class InvalidFinancialReconciliationDatesException(BusinessException):
+    default_detail = "La fecha de inicio no puede ser posterior a la fecha de corte."
+    default_code = ErrorCodes.INVALID_FINANCIAL_RECONCILIATION_DATES

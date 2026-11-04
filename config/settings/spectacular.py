@@ -91,6 +91,11 @@ SPECTACULAR_SETTINGS = {
         "SaleStatusEnum": "apps.sales.models.sale.Sale.SaleStatus",
         "InvoiceStatusEnum": "apps.invoices.models.invoice.Invoice.Status",
         "CashSessionStatusEnum": "apps.cash.models.cash_session.CashSession.SessionStatus",
+        "FinancialAccountTypeEnum": "apps.finance.models.financial_account.FinancialAccount.AccountType",
+        "FinancialMovementTypeEnum": "apps.finance.models.financial_movement.FinancialMovement.MovementType",
+        "FinancialMovementStatusEnum": "apps.finance.models.financial_movement.FinancialMovement.MovementStatus",
+        "FinancialTransferStatusEnum": "apps.finance.models.financial_transfer.FinancialTransfer.TransferStatus",
+        "FinancialReconciliationStatusEnum": "apps.finance.models.financial_reconciliation.FinancialReconciliation.ReconciliationStatus",
     },
     # Configuramos los esquemas globales y componentes de seguridad
     "COMPONENTS": {
@@ -172,6 +177,10 @@ SPECTACULAR_SETTINGS = {
             "name": "Purchases",
             "description": "Órdenes de compra y su ciclo de vida.",
         },
+        {
+            "name": "Finance",
+            "description": "Gestión de tesorería, cuentas financieras, movimientos, transferencias, conciliaciones y métricas.",
+        },
         # ── Sistema ──
         {
             "name": "Company Info",
@@ -221,6 +230,10 @@ SPECTACULAR_SETTINGS = {
             {
                 "name": "Proveedores y Compras",
                 "tags": ["Suppliers", "Purchases"],
+            },
+            {
+                "name": "Finanzas y Tesorería",
+                "tags": ["Finance"],
             },
             {
                 "name": "Sistema",
