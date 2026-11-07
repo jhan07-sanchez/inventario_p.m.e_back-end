@@ -202,6 +202,14 @@ SPECTACULAR_SETTINGS = {
             "name": "System History",
             "description": "Historial de auditoria unificado para todos los modelos del sistema.",
         },
+        {
+            "name": "System_Info",
+            "description": "Información general del sistema.",
+        },
+        {
+            "name": "Software Versions",
+            "description": "Historial de versiones del software y lanzamientos.",
+        },
     ],
     "EXTENSIONS_ROOT": {
         "x-tagGroups": [

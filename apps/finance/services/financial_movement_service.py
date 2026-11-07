@@ -13,6 +13,7 @@ from apps.core.exceptions.custom_exceptions import (
     InvalidFinancialMovementTypeException,
 )
 from apps.core.services.base_service import BaseService
+from apps.finance.services.finance_cache_service import FinanceCacheService
 from apps.finance.dto.financial_dto import FinancialMovementCreateDTO
 from apps.finance.models.financial_account import FinancialAccount
 from apps.finance.models.financial_category import FinancialCategory
@@ -93,6 +94,11 @@ class FinancialMovementService(BaseService[FinancialMovement]):
             user=user,
             notes=dto.notes.strip(),
         )
+        # Romper la cache del dashboard financiero para reflejar el nuevo movimiento
+        FinanceCacheService.invalidate_dashboard_cache(
+            company_id=account.company_id,
+        )
+
         return movement
 
     @classmethod
@@ -168,6 +174,10 @@ class FinancialMovementService(BaseService[FinancialMovement]):
             reversal_of=original,
             user=user,
             notes=f"Reverso justificado por {user.username}: {reason.strip()}",
+        )
+        # Romper la cache del dashboard financiero para reflejar el movimiento reversado
+        FinanceCacheService.invalidate_dashboard_cache(
+            company_id=account.company_id,
         )
 
         return counter_movement

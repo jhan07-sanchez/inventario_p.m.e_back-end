@@ -41,7 +41,7 @@ from apps.core.security.services.permission_service import PermissionService
 
 def HasPermission(permission_code: str):
     """
-    Factory que genera una clase dinámica de permisos.
+    Factory que genera una clase dinámica de permisos para un código específico.
     """
 
     class DynamicPermission(BasePermission):
@@ -64,3 +64,35 @@ def HasPermission(permission_code: str):
     DynamicPermission.__name__ = f"HasPermission_{permission_code.replace('.', '_')}"
 
     return DynamicPermission
+
+
+def HasAnyPermission(*permission_codes: str):
+    """
+    Factory que genera una clase dinámica que valida si el usuario posee
+    AL MENOS UNO de los códigos de permiso suministrados (unión lógica OR).
+    """
+
+    class DynamicAnyPermission(BasePermission):
+        message = "No tiene permisos suficientes para realizar esta acción."
+
+        def has_permission(self, request, view):
+            user = request.user
+
+            if not (user and user.is_authenticated and user.is_active):
+                return False
+
+            if user.is_superuser:
+                return True
+
+            return any(
+                PermissionService.user_has_permission(
+                    user=user,
+                    permission_code=code,
+                )
+                for code in permission_codes
+            )
+
+    names = "_or_".join(c.replace(".", "_") for c in permission_codes)
+    DynamicAnyPermission.__name__ = f"HasAnyPermission_{names}"
+
+    return DynamicAnyPermission

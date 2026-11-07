@@ -248,6 +248,7 @@ class GlobalParameterTests(TestCase):
 
     def test_cross_validation_on_update_rejects_incompatible_change(self):
         from django.core.exceptions import ValidationError
+
         from apps.configuration.dto import GlobalParameterCreateDto
 
         # Create string parameter with non-numeric text
@@ -266,6 +267,7 @@ class GlobalParameterTests(TestCase):
 
     def test_key_validation_rejects_invalid_format(self):
         from django.core.exceptions import ValidationError
+
         from apps.configuration.dto import GlobalParameterCreateDto
 
         # Lowercase or invalid characters must fail regex
@@ -286,8 +288,10 @@ class GlobalParameterTests(TestCase):
         self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_duplicate_key_rejected(self):
-        from apps.core.exceptions.custom_exceptions import GlobalParameterAlreadyExistsException
         from apps.configuration.dto import GlobalParameterCreateDto
+        from apps.core.exceptions.custom_exceptions import (
+            GlobalParameterAlreadyExistsException,
+        )
 
         dto_dup = GlobalParameterCreateDto(
             key="DEFAULT_TAX_RATE",

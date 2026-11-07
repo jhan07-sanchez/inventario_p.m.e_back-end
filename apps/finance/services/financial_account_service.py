@@ -8,6 +8,7 @@ from apps.core.exceptions.custom_exceptions import (
     InvalidFinancialAmountException,
 )
 from apps.core.services.base_service import BaseService
+from apps.finance.services.finance_cache_service import FinanceCacheService
 from apps.finance.dto.financial_dto import (
     FinancialAccountCreateDTO,
     FinancialAccountUpdateDTO,
@@ -54,6 +55,12 @@ class FinancialAccountService(BaseService[FinancialAccount]):
             description=dto.description.strip(),
             company_id=dto.company_id,
         )
+
+        # Romper la cache del dashboard financiero para reflejar la nueva cuenta
+        FinanceCacheService.invalidate_dashboard_cache(
+            company_id=dto.company_id,
+        )
+
         return account
 
     @classmethod
@@ -94,6 +101,12 @@ class FinancialAccountService(BaseService[FinancialAccount]):
             account.description = dto.description.strip()
 
         account.save()
+
+        # Romper la cache del dashboard financiero para reflejar los cambios
+        FinanceCacheService.invalidate_dashboard_cache(
+            company_id=account.company_id,
+        )
+
         return account
 
     @classmethod

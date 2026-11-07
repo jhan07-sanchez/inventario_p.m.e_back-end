@@ -12,6 +12,7 @@ from apps.core.exceptions.custom_exceptions import (
     InvalidFinancialTransferStateException,
 )
 from apps.core.services.base_service import BaseService
+from apps.finance.services.finance_cache_service import FinanceCacheService
 from apps.finance.dto.financial_dto import FinancialTransferCreateDTO
 from apps.finance.models.financial_account import FinancialAccount
 from apps.finance.models.financial_movement import FinancialMovement
@@ -124,6 +125,11 @@ class FinancialTransferService(BaseService[FinancialTransfer]):
             notes=dto.notes.strip(),
         )
 
+        # Romper la cache del dashboard financiero para reflejar la nueva transferencia
+        FinanceCacheService.invalidate_dashboard_cache(
+            company_id=source_acc.company_id,
+        )
+
         return transfer
 
     @classmethod
@@ -179,5 +185,10 @@ class FinancialTransferService(BaseService[FinancialTransfer]):
 
         # Marcar movimientos asociados como CANCELLED
         transfer.movements.update(status=FinancialMovement.MovementStatus.CANCELLED)
+
+        # Romper la cache del dashboard financiero para reflejar la transferencia cancelada
+        FinanceCacheService.invalidate_dashboard_cache(
+            company_id=source_acc.company_id,
+        )
 
         return transfer

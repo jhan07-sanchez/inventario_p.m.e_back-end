@@ -321,6 +321,7 @@ SECURITY_MODULES = [
         "actions": {
             "settings.backup": "Respaldar sistema",
             "settings.restore": "Restaurar sistema",
+            "system.manage_releases": "Gestionar versiones y publicaciones del ERP",
         },
         "widgets": [],
         "order": 60,

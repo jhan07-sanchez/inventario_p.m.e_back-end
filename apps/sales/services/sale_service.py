@@ -664,6 +664,34 @@ class SaleService(BaseService[Sale]):
             )
             CashMovementService.create_movement(movement_dto)
 
+        #--- Integración con módulo financiero ---
+        try:
+            from apps.finance.models import FinancialAccount, FinancialMovement
+            from apps.finance.services import FinancialMovementService
+            from apps.finance.dto import FinancialMovementCreateDTO
+            from apps.core.enums import PaymentMethod
+
+            #Buscamos la cuenta contable segun el metodo de pago
+            account_type = FinancialAccount.AccountType.CASH if PaymentMethod.is_cash(sale.payment_method) else FinancialAccount.AccountType.BANK
+            account = FinancialAccount.objects.filter(account_type=account_type, is_active=True).first()
+
+            if account:
+                movement_dto = FinancialMovementCreateDTO(
+                    account_id=account.id_financial_account,
+                    movement_type=FinancialMovement.MovementType.INFLOW,
+                    amount=sale.total,
+                    movement_date=sale.sale_date or timezone.now().date(),
+                    description=f"Ingreso por venta {sale.sale_number}",
+                    origin_type=FinancialMovement.OriginType.SALE,
+                    origin_id=sale.id_sale,
+                    payment_method=sale.payment_method,
+                )
+                FinancialMovementService.record_movement(movement_dto, user=user)
+
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).error(f"Error al registrar movimiento financiero para la venta {sale.sale_number}: {str(e)}")
+
     @staticmethod
     def _reverse_sale_payment(sale: Sale, user):
         """

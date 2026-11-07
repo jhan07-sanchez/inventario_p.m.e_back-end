@@ -20,6 +20,8 @@ services:
         value: config.settings.production
       - key: DEBUG
         value: "False"
+      - key: APP_VERSION
+        sync: false
       - key: SECRET_KEY
         generateValue: true
       - key: ALLOWED_HOSTS

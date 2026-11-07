@@ -418,3 +418,51 @@ class FinancialReconciliationAlreadyClosedException(BusinessException):
 class InvalidFinancialReconciliationDatesException(BusinessException):
     default_detail = "La fecha de inicio no puede ser posterior a la fecha de corte."
     default_code = ErrorCodes.INVALID_FINANCIAL_RECONCILIATION_DATES
+
+
+class FinancialAccountInactiveException(BusinessException):
+    default_detail = "No es posible realizar esta operación porque la cuenta financiera se encuentra inactiva."
+    default_code = ErrorCodes.FINANCIAL_ACCOUNT_INACTIVE
+    status_code = 400
+
+
+class FinancialCategoryInactiveException(BusinessException):
+    default_detail = "No es posible realizar esta operación porque la categoría financiera se encuentra inactiva."
+    default_code = ErrorCodes.FINANCIAL_CATEGORY_INACTIVE
+    status_code = 400
+
+class SoftwareVersionNotFoundException(BusinessException):
+    default_detail = "La versión de software especificada no existe."
+    default_code = ErrorCodes.SOFTWARE_VERSION_NOT_FOUND
+    status_code = 404
+
+
+class SoftwareVersionAlreadyExistsException(BusinessException):
+    default_detail = "Ya existe un registro con este número de versión."
+    default_code = ErrorCodes.SOFTWARE_VERSION_ALREADY_EXISTS
+    status_code = 400
+
+
+class SoftwareVersionAlreadyPublishedException(BusinessException):
+    default_detail = "La versión ya se encuentra publicada y no puede ser modificada directamente."
+    default_code = ErrorCodes.SOFTWARE_VERSION_ALREADY_PUBLISHED
+    status_code = 400
+
+
+class SoftwareVersionInvalidSemverException(BusinessException):
+    default_detail = "El formato de versión no es válido. Debe cumplir con el estándar SemVer (MAJOR.MINOR.PATCH)."
+    default_code = ErrorCodes.SOFTWARE_VERSION_INVALID_SEMVER
+    status_code = 400
+
+
+class SoftwareVersionDowngradeException(BusinessException):
+    default_detail = "La versión a publicar no puede ser menor o igual a la última versión publicada."
+    default_code = ErrorCodes.SOFTWARE_VERSION_DOWNGRADE_NOT_ALLOWED
+    status_code = 400
+
+
+class SoftwareVersionCannotWithdrawException(BusinessException):
+    default_detail = "Solo se pueden retirar versiones que se encuentren en estado publicado."
+    default_code = ErrorCodes.SOFTWARE_VERSION_CANNOT_WITHDRAW
+    status_code = 400
+

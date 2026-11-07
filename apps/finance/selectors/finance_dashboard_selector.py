@@ -2,13 +2,13 @@ from datetime import date
 from decimal import Decimal
 from typing import Optional
 
-from django.db.models import Sum
+from django.db.models import Sum, F, Q, Value, DecimalField
+from django.db.models.functions import Coalesce
 from django.utils import timezone
 
 from apps.cash.models.cash_session import CashSession
 from apps.cash.models.payment import Payment
 from apps.finance.models.financial_account import FinancialAccount
-from apps.finance.models.financial_movement import FinancialMovement
 from apps.finance.selectors.financial_account_selector import FinancialAccountSelector
 from apps.finance.selectors.financial_movement_selector import FinancialMovementSelector
 from apps.invoices.models.invoice import Invoice
@@ -80,8 +80,6 @@ class FinanceDashboardSelector:
             or Decimal("0.00")
         )
 
-        total_cash = cash_accounts_balance + total_open_drawers
-
         bank_balance = (
             accounts_qs.filter(
                 account_type__in=[
@@ -91,6 +89,9 @@ class FinanceDashboardSelector:
             ).aggregate(total=Sum("current_balance"))["total"]
             or Decimal("0.00")
         )
+
+        total_cash = cash_accounts_balance + total_open_drawers
+        total_liquidez_real = bank_balance + total_cash
 
         # 2. Flujo de Caja del Período (Ingresos y Egresos Operativos Reales)
         period_totals = FinancialMovementSelector.get_period_totals(
@@ -105,7 +106,12 @@ class FinanceDashboardSelector:
             document_type=Invoice.DocumentType.SALE_INVOICE,
             status=Invoice.Status.ISSUED,
             is_active=True,
-        )
+        ).annotate(
+            paid_amount=Coalesce(
+                Sum('sale__payments__amount', filter=Q(sale__payments__status=Payment.PaymentStatus.COMPLETED)),
+                Value(0.00), output_field=DecimalField()
+            )
+        ).annotate(pending_amount=F('total') - F('paid_amount'))
         total_receivables = Decimal("0.00")
         for inv in receivables_invoices:
             # Descontar lo pagado si hay relación de venta
@@ -191,7 +197,7 @@ class FinanceDashboardSelector:
 
         # 8. Resumen consolidado para compatibilidad y ERP stats
         summary_payload = {
-            "total_liquid_balance": str(total_available + total_open_drawers),
+            "total_liquid_balance": str(total_liquidez_real),
             "total_inflow": str(period_totals["income"]),
             "total_outflow": str(period_totals["expense"]),
             "net_flow": str(period_totals["net"]),
@@ -237,7 +243,7 @@ class FinanceDashboardSelector:
                 "total_amount": str(period_totals["expense"]),
             },
             "liquidity": {
-                "total_available_money": str(total_available + total_open_drawers),
+                "total_available_money": str(total_liquidez_real),
                 "financial_accounts_balance": str(total_available),
                 "cash_in_drawers": str(total_open_drawers),
                 "total_cash": str(total_cash),

@@ -1,5 +1,3 @@
-from decimal import Decimal
-
 from django.db import transaction
 from django.utils import timezone
 
@@ -10,6 +8,7 @@ from apps.core.exceptions.custom_exceptions import (
     InvalidFinancialReconciliationDatesException,
 )
 from apps.core.services.base_service import BaseService
+from apps.finance.services.finance_cache_service import FinanceCacheService
 from apps.finance.dto.financial_dto import FinancialReconciliationCreateDTO
 from apps.finance.models.financial_account import FinancialAccount
 from apps.finance.models.financial_reconciliation import FinancialReconciliation
@@ -57,6 +56,9 @@ class FinancialReconciliationService(BaseService[FinancialReconciliation]):
             user=user,
             notes=dto.notes.strip(),
         )
+        FinanceCacheService.invalidate_dashboard_cache(
+            company_id=account.company_id,
+        )
         return reconciliation
 
     @classmethod
@@ -98,5 +100,8 @@ class FinancialReconciliationService(BaseService[FinancialReconciliation]):
                 "reconciled_at",
                 "updated_at",
             ]
+        )
+        FinanceCacheService.invalidate_dashboard_cache(
+            company_id=account.company_id,
         )
         return reconciliation

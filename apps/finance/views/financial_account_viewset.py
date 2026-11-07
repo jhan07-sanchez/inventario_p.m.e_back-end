@@ -130,56 +130,45 @@ class FinancialAccountViewSet(BaseViewSet):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        try:
-            account = FinancialAccountService.create_account(serializer.to_dto())
-            output = FinancialAccountDetailSerializer(account).data
-            return self.success_response(
-                message="Cuenta financiera registrada exitosamente.",
-                code="FINANCIAL_ACCOUNT_CREATED",
-                data=output,
-                status_code=status.HTTP_201_CREATED,
-            )
-        except ValidationError as e:
-            return self.handle_validation_error(
-                e, message="Error al registrar cuenta financiera."
-            )
+        account = FinancialAccountService.create_account(serializer.to_dto())
+        output = FinancialAccountDetailSerializer(account).data
+
+        return self.success_response(
+            message="Cuenta financiera registrada exitosamente.",
+            code="FINANCIAL_ACCOUNT_CREATED",
+            data=output,
+            status_code=status.HTTP_201_CREATED,
+        )
+
 
     @finance_account_update_schema
     def update(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        try:
-            account = FinancialAccountService.update_account(
-                kwargs["pk"], serializer.to_dto()
-            )
-            output = FinancialAccountDetailSerializer(account).data
-            return self.success_response(
-                message="Cuenta financiera actualizada exitosamente.",
-                code="FINANCIAL_ACCOUNT_UPDATED",
-                data=output,
-                status_code=status.HTTP_200_OK,
-            )
-        except ValidationError as e:
-            return self.handle_validation_error(
-                e, message="Error al actualizar cuenta financiera."
-            )
+        account = FinancialAccountService.update_account(
+            kwargs["pk"], serializer.to_dto()
+        )
+        output = FinancialAccountDetailSerializer(account).data
+
+        return self.success_response(
+            message="Cuenta financiera actualizada exitosamente.",
+            code="FINANCIAL_ACCOUNT_UPDATED",
+            data=output,
+            status_code=status.HTTP_200_OK,
+        )
 
     @finance_account_delete_schema
     def destroy(self, request, *args, **kwargs):
-        try:
-            FinancialAccountService.deactivate_account(kwargs["pk"])
-            return self.success_response(
-                message="Cuenta financiera desactivada correctamente.",
-                code="FINANCIAL_ACCOUNT_DEACTIVATED",
-                status_code=status.HTTP_200_OK,
-            )
-        except FinancialAccount.DoesNotExist:
-            return self.error_response(
-                message="Cuenta financiera no encontrada.",
-                code="FINANCIAL_ACCOUNT_NOT_FOUND",
-                status_code=status.HTTP_404_NOT_FOUND,
-            )
+
+        FinancialAccountService.deactivate_account(kwargs["pk"])
+
+        return self.success_response(
+            message="Cuenta financiera desactivada exitosamente.",
+            code="FINANCIAL_ACCOUNT_DEACTIVATED",
+            data=None,
+            status_code=status.HTTP_200_OK,
+        )
 
     @finance_account_restore_schema
     @action(detail=True, methods=["post"], url_path="restore")

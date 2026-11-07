@@ -9,6 +9,14 @@ from .spectacular import *  # noqa: F403
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
+# ──────────────────────────────────────────────────────
+# Versión instalada del software.
+# Esta constante NUNCA debe modificarse desde el frontend
+# ni desde un formulario de configuración.
+# Se actualiza mediante variable de entorno o proceso de despliegue.
+# ──────────────────────────────────────────────────────
+APP_VERSION = config("APP_VERSION", default="1.0.0")
+
 SECRET_KEY = config("SECRET_KEY", default="")
 
 DEBUG = config("DEBUG", default=False, cast=bool)

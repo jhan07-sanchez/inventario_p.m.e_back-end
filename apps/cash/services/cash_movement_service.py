@@ -6,7 +6,6 @@ from apps.cash.dto.cash_movement_dto import CashMovementCreateDto
 from apps.cash.models.cash_movement import CashMovement
 from apps.cash.models.cash_session import CashSession
 from apps.cash.models.payment import Payment
-from apps.core.enums import PaymentMethod
 from apps.core.exceptions.custom_exceptions import (
     CashSessionClosedException,
     CashSessionNotFoundException,
@@ -47,10 +46,11 @@ class CashMovementService(BaseService[CashMovement]):
             except Payment.DoesNotExist:
                 raise PaymentNotFoundException()
 
-            import dataclasses
+            #Elimino la re-evaluacion de is_cash confiamos en el DTO.
+            #import dataclasses
 
-            is_cash = PaymentMethod.is_cash(payment.payment_method)
-            dto = dataclasses.replace(dto, is_cash=is_cash)
+            #is_cash = PaymentMethod.is_cash(payment.payment_method)
+            #dto = dataclasses.replace(dto, is_cash=is_cash)
 
         if dto.amount <= Decimal("0.00"):
             raise InvalidCashAmountException(

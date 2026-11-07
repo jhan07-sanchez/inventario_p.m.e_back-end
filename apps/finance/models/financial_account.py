@@ -1,6 +1,6 @@
 from decimal import Decimal
 
-from django.core.validators import MinValueValidator
+
 from django.db import models
 
 from apps.core.models.active_model import ActiveModel

@@ -14,6 +14,21 @@ from .global_parameter_docs import (
     global_parameter_system_summary_schema,
     global_parameter_update_schema,
 )
+from .software_version_docs import (
+    software_version_changelog_add_schema,
+    software_version_check_updates_schema,
+    software_version_create_schema,
+    software_version_delete_changelog_schema,
+    software_version_destroy_schema,
+    software_version_detail_schema,
+    software_version_history_schema,
+    software_version_latest_schema,
+    software_version_list_schema,
+    software_version_partial_update_schema,
+    software_version_publish_schema,
+    software_version_update_schema,
+    software_version_withdraw_schema,
+)
 
 __all__ = [
     "global_parameter_list_schema",
@@ -28,4 +43,17 @@ __all__ = [
     "global_parameter_system_summary_schema",
     "configuration_audit_list_schema",
     "configuration_audit_detail_schema",
+    "software_version_list_schema",
+    "software_version_detail_schema",
+    "software_version_create_schema",
+    "software_version_update_schema",
+    "software_version_publish_schema",
+    "software_version_withdraw_schema",
+    "software_version_changelog_add_schema",
+    "software_version_check_updates_schema",
+    "software_version_history_schema",
+    "software_version_latest_schema",
+    "software_version_destroy_schema",
+    "software_version_partial_update_schema",
+    "software_version_delete_changelog_schema",
 ]
