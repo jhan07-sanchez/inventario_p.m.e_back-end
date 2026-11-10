@@ -17,59 +17,67 @@ class ProductSelector(BaseSelector[Product]):
     def __init__(self):
         super().__init__(Product)
 
-    def get_queryset(self, include_deleted: bool = False) -> QuerySet[Product]:
+    def get_queryset(
+        self, include_deleted: bool = False, company_id: int | None = None
+    ) -> QuerySet[Product]:
         """
         Retorna el queryset base de productos optimizando
         las relaciones necesarias (incluyendo el inventario).
         """
         return (
             super()
-            .get_queryset(include_deleted=include_deleted)
+            .get_queryset(include_deleted=include_deleted, company_id=company_id)
             .select_related("category", "inventory")
             .order_by("id_product")
         )
 
     @staticmethod
-    def get_products() -> QuerySet[Product]:
+    def get_products(company_id: int | None = None) -> QuerySet[Product]:
         """
-        Retorna todos los productos.
+        Retorna todos los productos de la empresa.
         """
-        return ProductSelector().get_all()
+        return ProductSelector().get_all(company_id=company_id)
 
     @staticmethod
-    def get_active_products() -> QuerySet[Product]:
+    def get_active_products(company_id: int | None = None) -> QuerySet[Product]:
         """
-        Retorna únicamente los productos activos.
+        Retorna únicamente los productos activos de la empresa.
         """
-        return ProductSelector().get_active()
+        return ProductSelector().get_active(company_id=company_id)
 
     @staticmethod
-    def get_by_id(id_product: int, include_deleted: bool = False) -> Product:
+    def get_by_id(
+        id_product: int,
+        include_deleted: bool = False,
+        company_id: int | None = None,
+    ) -> Product:
         """
-        Obtiene un producto por su identificador.
+        Obtiene un producto por su identificador asegurando aislamiento tenant.
         """
         return get_object_or_404(
-            ProductSelector().get_queryset(include_deleted=include_deleted),
+            ProductSelector().get_queryset(
+                include_deleted=include_deleted, company_id=company_id
+            ),
             id_product=id_product,
         )
 
     @staticmethod
-    def get_by_code(code: str) -> Product:
+    def get_by_code(code: str, company_id: int | None = None) -> Product:
         """
         Obtiene un producto mediante su código interno.
         """
         return get_object_or_404(
-            ProductSelector().get_queryset(),
+            ProductSelector().get_queryset(company_id=company_id),
             code=code,
         )
 
     @staticmethod
-    def get_by_barcode(barcode: str) -> Product:
+    def get_by_barcode(barcode: str, company_id: int | None = None) -> Product:
         """
         Obtiene un producto mediante su código de barras.
         """
         return get_object_or_404(
-            ProductSelector().get_queryset(),
+            ProductSelector().get_queryset(company_id=company_id),
             barcode=barcode,
         )
 
@@ -78,18 +86,19 @@ class ProductSelector(BaseSelector[Product]):
         *,
         code: str | None = None,
         barcode: str | None = None,
+        company_id: int | None = None,
     ) -> bool:
         """
         Verifica si existe un producto mediante su código
-        interno o código de barras.
+        interno o código de barras dentro del ámbito de una empresa.
         """
         selector = ProductSelector()
 
         if code is not None:
-            return selector.exists(code=code)
+            return selector.exists(code=code, company_id=company_id)
 
         if barcode is not None:
-            return selector.exists(barcode=barcode)
+            return selector.exists(barcode=barcode, company_id=company_id)
 
         return False
 
@@ -102,11 +111,12 @@ class ProductSelector(BaseSelector[Product]):
         category: int | None = None,
         is_active: bool | None = None,
         low_stock: bool | None = None,
+        company_id: int | None = None,
     ) -> QuerySet[Product]:
         """
         Retorna productos aplicando filtros opcionales.
         """
-        queryset = ProductSelector().get_queryset()
+        queryset = ProductSelector().get_queryset(company_id=company_id)
 
         if name:
             queryset = queryset.filter(
@@ -146,6 +156,7 @@ class ProductSelector(BaseSelector[Product]):
         *,
         query: str = "",
         limit: int = 20,
+        company_id: int | None = None,
     ) -> QuerySet[Product]:
         """
         Busqueda optimizada para el POS.
@@ -159,7 +170,7 @@ class ProductSelector(BaseSelector[Product]):
         """
 
         queryset = (
-            ProductSelector().get_active().select_related("category", "inventory")
+            ProductSelector().get_active(company_id=company_id).select_related("category", "inventory")
         )
 
         query = (query or "").strip()

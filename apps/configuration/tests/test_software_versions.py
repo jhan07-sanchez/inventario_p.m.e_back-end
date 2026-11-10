@@ -1,5 +1,5 @@
 from django.core.cache import cache
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from rest_framework import status
 from rest_framework.test import APIClient
 
@@ -127,6 +127,7 @@ class SoftwareVersionUnitTests(TestCase):
         )
         self.assertEqual(withdrawn.status, SoftwareVersion.Status.WITHDRAWN)
 
+    @override_settings(APP_VERSION="1.0.0")
     def test_check_for_updates_selector(self):
         # Con versión instalada = 1.0.0
         # No hay versiones publicadas

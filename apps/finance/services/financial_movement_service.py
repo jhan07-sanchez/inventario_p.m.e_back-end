@@ -35,6 +35,7 @@ class FinancialMovementService(BaseService[FinancialMovement]):
         cls,
         dto: FinancialMovementCreateDTO,
         user,
+        company_id: int | None = None,
     ) -> FinancialMovement:
         if dto.amount <= Decimal("0.00"):
             raise InvalidFinancialAmountException(
@@ -50,6 +51,11 @@ class FinancialMovementService(BaseService[FinancialMovement]):
                 "La cuenta financiera especificada no existe o se encuentra inactiva."
             )
 
+        if company_id is not None and account.company_id != company_id:
+            raise FinancialAccountNotFoundException(
+                "La cuenta financiera especificada no pertenece a la empresa activa."
+            )
+
         category = None
         if dto.category_id:
             try:
@@ -59,6 +65,11 @@ class FinancialMovementService(BaseService[FinancialMovement]):
             except FinancialCategory.DoesNotExist:
                 raise FinancialCategoryNotFoundException(
                     "La categoría financiera especificada no existe o está inactiva."
+                )
+
+            if company_id is not None and category.company_id and category.company_id != company_id:
+                raise FinancialCategoryNotFoundException(
+                    "La categoría financiera especificada no pertenece a la empresa activa."
                 )
 
         # Validaciones de saldo para egresos

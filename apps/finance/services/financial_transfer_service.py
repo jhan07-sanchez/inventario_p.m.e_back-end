@@ -34,6 +34,7 @@ class FinancialTransferService(BaseService[FinancialTransfer]):
         cls,
         dto: FinancialTransferCreateDTO,
         user,
+        company_id: int | None = None,
     ) -> FinancialTransfer:
         if dto.source_account_id == dto.destination_account_id:
             raise InvalidFinancialTransferException(
@@ -64,6 +65,15 @@ class FinancialTransferService(BaseService[FinancialTransfer]):
 
         source_acc = accounts[dto.source_account_id]
         dest_acc = accounts[dto.destination_account_id]
+
+        if source_acc.company_id != dest_acc.company_id:
+            raise InvalidFinancialTransferException(
+                "No se pueden realizar transferencias entre cuentas pertenecientes a diferentes empresas."
+            )
+        if company_id is not None and source_acc.company_id != company_id:
+            raise FinancialAccountNotFoundException(
+                "Las cuentas financieras especificadas no pertenecen a la empresa activa."
+            )
 
         if source_acc.account_type != FinancialAccount.AccountType.CREDIT:
             if dto.amount > source_acc.current_balance:

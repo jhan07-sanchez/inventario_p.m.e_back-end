@@ -50,6 +50,15 @@ _PURCHASES_CACHE_KEYS = [
 ]
 
 
+def _clean_company_id(company_id: Any) -> int | None:
+    """Valida y castea de forma segura el ID de empresa para aislamiento de caché."""
+    if isinstance(company_id, int):
+        return company_id
+    if isinstance(company_id, str) and company_id.isdigit():
+        return int(company_id)
+    return None
+
+
 class DashboardMetricsService:
     """
     Servicio encargado de calcular las métricas para los widgets del dashboard.
@@ -60,7 +69,7 @@ class DashboardMetricsService:
     """
 
     @staticmethod
-    def invalidate_sales_cache() -> None:
+    def invalidate_sales_cache(company_id: int | None = None) -> None:
         """
         Invalida las claves de cache del dashboard relacionadas con ventas e inventario.
 
@@ -68,52 +77,65 @@ class DashboardMetricsService:
         para que el dashboard refleje tanto las métricas de venta como
         la variación de existencias inmediatamente.
         """
-        for key in _SALES_CACHE_KEYS:
+        clean_cid = _clean_company_id(company_id)
+        for key in _SALES_CACHE_KEYS + _INVENTORY_CACHE_KEYS:
             django_cache.delete(key)
-        for key in _INVENTORY_CACHE_KEYS:
-            django_cache.delete(key)
+            if clean_cid is not None:
+                django_cache.delete(f"{key}_company_{clean_cid}")
 
     @staticmethod
-    def invalidate_inventory_cache() -> None:
+    def invalidate_inventory_cache(company_id: int | None = None) -> None:
         """
         Invalida las claves de cache del dashboard relacionadas con inventario y productos.
 
         Debe llamarse después de cualquier movimiento de stock (entradas, salidas,
         ajustes, recepción de compras) o cambio en el catálogo de productos.
         """
+        clean_cid = _clean_company_id(company_id)
         for key in _INVENTORY_CACHE_KEYS:
             django_cache.delete(key)
+            if clean_cid is not None:
+                django_cache.delete(f"{key}_company_{clean_cid}")
 
     @staticmethod
-    def invalidate_purchases_cache() -> None:
+    def invalidate_purchases_cache(company_id: int | None = None) -> None:
         """
         Invalida las claves de cache del dashboard relacionadas con compras.
 
         Debe llamarse al crear, confirmar, recibir, completar o cancelar órdenes de compra.
         """
+        clean_cid = _clean_company_id(company_id)
         for key in _PURCHASES_CACHE_KEYS:
             django_cache.delete(key)
+            if clean_cid is not None:
+                django_cache.delete(f"{key}_company_{clean_cid}")
 
     @staticmethod
-    def invalidate_all_cache() -> None:
+    def invalidate_all_cache(company_id: int | None = None) -> None:
         """
         Invalida todas las claves de métricas cacheadas del dashboard.
         """
+        clean_cid = _clean_company_id(company_id)
         all_keys = set(
             _SALES_CACHE_KEYS + _INVENTORY_CACHE_KEYS + _PURCHASES_CACHE_KEYS
         )
         for key in all_keys:
             django_cache.delete(key)
+            if clean_cid is not None:
+                django_cache.delete(f"{key}_company_{clean_cid}")
 
     @staticmethod
-    def get_metrics(visible_widgets: list[str]) -> list[dict[str, Any]]:
+    def get_metrics(
+        visible_widgets: list[str], company_id: int | None = None
+    ) -> list[dict[str, Any]]:
         """
-        Calcula y devuelve los valores para los widgets proporcionados.
+        Calcula y devuelve los valores para los widgets proporcionados de forma tenant-aware.
 
         Pre-calcula todos los conteos necesarios en una sola pasada
         para evitar consultas duplicadas a PostgreSQL.
         """
 
+        company_id = _clean_company_id(company_id)
         widget_set = set(visible_widgets)
 
         # ── Pre-computar conteos de forma lazy (solo si algún widget lo necesita) ──
@@ -121,7 +143,11 @@ class DashboardMetricsService:
         cache: dict[str, Any] = {}
 
         def get_cached(key: str):
-            cache_key = f"dashboard_metric_{key}"
+            cache_key = (
+                f"dashboard_metric_{key}_company_{company_id}"
+                if company_id is not None
+                else f"dashboard_metric_{key}"
+            )
             cached_val = django_cache.get(cache_key)
             if cached_val is not None:
                 cache[key] = cached_val
@@ -129,35 +155,101 @@ class DashboardMetricsService:
 
             if key not in cache:
                 if key == "users_total":
-                    cache[key] = User.objects.count()
+                    if company_id is not None:
+                        cache[key] = (
+                            User.objects.filter(
+                                memberships__company_id=company_id,
+                                memberships__is_active=True,
+                            )
+                            .distinct()
+                            .count()
+                        )
+                    else:
+                        cache[key] = User.objects.count()
+
                 elif key == "users_active":
-                    cache[key] = User.objects.filter(is_active=True).count()
+                    if company_id is not None:
+                        cache[key] = (
+                            User.objects.filter(
+                                is_active=True,
+                                memberships__company_id=company_id,
+                                memberships__is_active=True,
+                            )
+                            .distinct()
+                            .count()
+                        )
+                    else:
+                        cache[key] = User.objects.filter(is_active=True).count()
+
                 elif key == "roles_distribution":
-                    cache[key] = Role.objects.count()
+                    if company_id is not None:
+                        cache[key] = (
+                            Role.objects.filter(
+                                memberships__company_id=company_id,
+                                memberships__is_active=True,
+                            )
+                            .distinct()
+                            .count()
+                        )
+                    else:
+                        cache[key] = Role.objects.count()
+
                 elif key == "customers_total":
-                    cache[key] = Customer.objects.count()
+                    if company_id is not None:
+                        cache[key] = Customer.objects.filter(
+                            company_id=company_id
+                        ).count()
+                    else:
+                        cache[key] = Customer.objects.count()
+
                 elif key == "customers_recent":
                     now = timezone.now()
-                    cache[key] = Customer.objects.filter(
+                    cust_qs = Customer.objects.filter(
                         created_at__year=now.year, created_at__month=now.month
-                    ).count()
+                    )
+                    if company_id is not None:
+                        cust_qs = cust_qs.filter(company_id=company_id)
+                    cache[key] = cust_qs.count()
+
                 elif key == "suppliers_active":
-                    cache[key] = Supplier.objects.filter(is_active=True).count()
+                    supp_qs = Supplier.objects.filter(is_active=True)
+                    if company_id is not None:
+                        supp_qs = supp_qs.filter(company_id=company_id)
+                    cache[key] = supp_qs.count()
+
                 elif key == "products_total":
-                    cache[key] = Product.objects.count()
+                    prod_qs = Product.objects.all()
+                    if company_id is not None:
+                        prod_qs = prod_qs.filter(company_id=company_id)
+                    cache[key] = prod_qs.count()
+
                 elif key == "products_low_stock":
-                    cache[key] = Inventory.objects.filter(
+                    inv_low_qs = Inventory.objects.filter(
                         is_active=True,
                         product__is_active=True,
                         current_stock__gt=0,
                         current_stock__lte=F("minimum_stock"),
-                    ).count()
+                    )
+                    if company_id is not None:
+                        inv_low_qs = inv_low_qs.filter(
+                            product__company_id=company_id
+                        )
+                    cache[key] = inv_low_qs.count()
+
                 elif key == "products_critical":
-                    cache[key] = Inventory.objects.filter(
-                        is_active=True, product__is_active=True, current_stock=0
-                    ).count()
+                    inv_crit_qs = Inventory.objects.filter(
+                        is_active=True,
+                        product__is_active=True,
+                        current_stock=0,
+                    )
+                    if company_id is not None:
+                        inv_crit_qs = inv_crit_qs.filter(
+                            product__company_id=company_id
+                        )
+                    cache[key] = inv_crit_qs.count()
+
                 elif key == "inventory_alerts":
-                    cache[key] = Inventory.objects.filter(
+                    inv_alert_qs = Inventory.objects.filter(
                         Q(is_active=True, product__is_active=True)
                         & (
                             Q(current_stock=0)
@@ -166,15 +258,36 @@ class DashboardMetricsService:
                                 & Q(current_stock__gt=F("maximum_stock"))
                             )
                         )
-                    ).count()
+                    )
+                    if company_id is not None:
+                        inv_alert_qs = inv_alert_qs.filter(
+                            product__company_id=company_id
+                        )
+                    cache[key] = inv_alert_qs.count()
+
                 elif key == "purchases_summary":
-                    cache[key] = Purchase.objects.count()
+                    purch_qs = Purchase.objects.all()
+                    if company_id is not None:
+                        purch_qs = purch_qs.filter(company_id=company_id)
+                    cache[key] = purch_qs.count()
+
                 elif key == "purchases_pending":
-                    cache[key] = Purchase.objects.filter(
+                    purch_pend_qs = Purchase.objects.filter(
                         status=Purchase.Status.PENDING
-                    ).count()
+                    )
+                    if company_id is not None:
+                        purch_pend_qs = purch_pend_qs.filter(
+                            company_id=company_id
+                        )
+                    cache[key] = purch_pend_qs.count()
+
                 elif key == "inventory_total_value":
-                    val = Inventory.objects.aggregate(
+                    inv_val_qs = Inventory.objects.all()
+                    if company_id is not None:
+                        inv_val_qs = inv_val_qs.filter(
+                            product__company_id=company_id
+                        )
+                    val = inv_val_qs.aggregate(
                         total=Sum(F("current_stock") * F("product__purchase_price"))
                     )["total"]
                     cache[key] = val if val is not None else 0
@@ -188,27 +301,37 @@ class DashboardMetricsService:
                         hour=0, minute=0, second=0, microsecond=0
                     )
 
-                    total_month = Sale.objects.filter(
-                        status=Sale.SaleStatus.COMPLETED, updated_at__gte=start_of_month
+                    sales_qs = Sale.objects.filter(
+                        status=Sale.SaleStatus.COMPLETED
+                    )
+                    if company_id is not None:
+                        sales_qs = sales_qs.filter(company_id=company_id)
+
+                    total_month = sales_qs.filter(
+                        updated_at__gte=start_of_month
                     ).aggregate(total=Sum("total"))["total"]
 
-                    sales_today_count = Sale.objects.filter(
-                        status=Sale.SaleStatus.COMPLETED, updated_at__gte=start_of_day
+                    sales_today_count = sales_qs.filter(
+                        updated_at__gte=start_of_day
                     ).count()
 
                     cache[key] = {
-                        "total_month": float(total_month)
-                        if total_month is not None
-                        else 0.0,
+                        "total_month": (
+                            float(total_month)
+                            if total_month is not None
+                            else 0.0
+                        ),
                         "sales_today_count": sales_today_count,
                     }
 
                 elif key == "inventory_stock_distribution":
-                    # Base: inventarios activos de productos activos (1 sola consulta agregada condicional en SQL)
+                    # Base: inventarios activos de productos activos
                     base_qs = Inventory.objects.filter(
                         is_active=True,
                         product__is_active=True,
                     )
+                    if company_id is not None:
+                        base_qs = base_qs.filter(product__company_id=company_id)
 
                     counts = base_qs.aggregate(
                         critical=Count("id_inventory", filter=Q(current_stock=0)),
@@ -262,14 +385,17 @@ class DashboardMetricsService:
                         choice.value: choice.label for choice in PaymentMethod
                     }
 
-                    # Agrupación y suma directamente en PostgreSQL en lugar de cargar objetos en memoria Python
+                    # Agrupación y suma directamente en PostgreSQL
+                    sales_pm_qs = Sale.objects.filter(
+                        status=Sale.SaleStatus.COMPLETED,
+                        updated_at__gte=thirty_days_ago,
+                        payment_method__isnull=False,
+                    )
+                    if company_id is not None:
+                        sales_pm_qs = sales_pm_qs.filter(company_id=company_id)
+
                     pm_aggregates = (
-                        Sale.objects.filter(
-                            status=Sale.SaleStatus.COMPLETED,
-                            updated_at__gte=thirty_days_ago,
-                            payment_method__isnull=False,
-                        )
-                        .values("payment_method")
+                        sales_pm_qs.values("payment_method")
                         .annotate(total=Sum("total"))
                         .order_by("-total")
                     )
@@ -290,19 +416,23 @@ class DashboardMetricsService:
                 elif key == "purchases_monthly":
                     # Ventas vs Compras del año actual por meses
                     now_yr = timezone.now().year
+                    sales_yr_qs = Sale.objects.filter(
+                        status=Sale.SaleStatus.COMPLETED, updated_at__year=now_yr
+                    )
+                    purch_yr_qs = Purchase.objects.filter(issue_date__year=now_yr)
+                    if company_id is not None:
+                        sales_yr_qs = sales_yr_qs.filter(company_id=company_id)
+                        purch_yr_qs = purch_yr_qs.filter(company_id=company_id)
+
                     sales_by_month = list(
-                        Sale.objects.filter(
-                            status=Sale.SaleStatus.COMPLETED, updated_at__year=now_yr
-                        )
-                        .annotate(month=TruncMonth("updated_at"))
+                        sales_yr_qs.annotate(month=TruncMonth("updated_at"))
                         .values("month")
                         .annotate(total_sales=Sum("total"))
                         .order_by("month")
                     )
 
                     purchases_by_month = list(
-                        Purchase.objects.filter(issue_date__year=now_yr)
-                        .annotate(month=TruncMonth("issue_date"))
+                        purch_yr_qs.annotate(month=TruncMonth("issue_date"))
                         .values("month")
                         .annotate(total_purchases=Sum("total"))
                         .order_by("month")
@@ -338,12 +468,15 @@ class DashboardMetricsService:
                         hour=0, minute=0, second=0, microsecond=0
                     )
 
+                    sales_m_qs = Sale.objects.filter(
+                        status=Sale.SaleStatus.COMPLETED,
+                        updated_at__gte=start_of_30_days,
+                    )
+                    if company_id is not None:
+                        sales_m_qs = sales_m_qs.filter(company_id=company_id)
+
                     daily_sales = list(
-                        Sale.objects.filter(
-                            status=Sale.SaleStatus.COMPLETED,
-                            updated_at__gte=start_of_30_days,
-                        )
-                        .annotate(day=TruncDate("updated_at"))
+                        sales_m_qs.annotate(day=TruncDate("updated_at"))
                         .values("day")
                         .annotate(total=Sum("total"))
                         .order_by("day")
@@ -366,12 +499,15 @@ class DashboardMetricsService:
 
                 elif key == "needs_attention":
                     alerts_query = (
-                        Inventory.objects.filter(is_active=True, product__is_active=True)
+                        Inventory.objects.filter(
+                            is_active=True, product__is_active=True
+                        )
                         .annotate(
                             alert_priority=Case(
                                 When(current_stock=0, then=Value(1)),
                                 When(
-                                    current_stock__lte=F("minimum_stock"), then=Value(2)
+                                    current_stock__lte=F("minimum_stock"),
+                                    then=Value(2),
                                 ),
                                 When(
                                     current_stock__lte=F("minimum_stock") + 5,
@@ -389,6 +525,10 @@ class DashboardMetricsService:
                         .filter(alert_priority__gt=0)
                         .select_related("product")
                     )
+                    if company_id is not None:
+                        alerts_query = alerts_query.filter(
+                            product__company_id=company_id
+                        )
 
                     total_alerts_count = alerts_query.count()
                     top_alerts = alerts_query.order_by(
@@ -416,9 +556,11 @@ class DashboardMetricsService:
                                 "subtitle": f"Stock actual: {inv.current_stock}",
                                 "value": lbl,
                                 "color": clr,
-                                "icon": "fas fa-exclamation-circle"
-                                if inv.alert_priority <= 2
-                                else "fas fa-info-circle",
+                                "icon": (
+                                    "fas fa-exclamation-circle"
+                                    if inv.alert_priority <= 2
+                                    else "fas fa-info-circle"
+                                ),
                             }
                         )
                     cache[key] = {
@@ -429,12 +571,17 @@ class DashboardMetricsService:
                 elif key == "top_selling_products":
                     thirty_days_ago = timezone.now() - datetime.timedelta(days=30)
 
-                    rows = (
-                        SaleDetail.objects.filter(
-                            sale__status=Sale.SaleStatus.COMPLETED,
-                            sale__updated_at__gte=thirty_days_ago,
+                    sale_det_qs = SaleDetail.objects.filter(
+                        sale__status=Sale.SaleStatus.COMPLETED,
+                        sale__updated_at__gte=thirty_days_ago,
+                    )
+                    if company_id is not None:
+                        sale_det_qs = sale_det_qs.filter(
+                            sale__company_id=company_id
                         )
-                        .values(
+
+                    rows = (
+                        sale_det_qs.values(
                             "product__id_product",
                             "product__code",
                             "product__name",
@@ -457,9 +604,16 @@ class DashboardMetricsService:
                     cache[key] = items
 
                 elif key == "latest_sales":
+                    sales_latest_qs = Sale.objects.filter(
+                        status=Sale.SaleStatus.COMPLETED
+                    )
+                    if company_id is not None:
+                        sales_latest_qs = sales_latest_qs.filter(
+                            company_id=company_id
+                        )
+
                     sales = (
-                        Sale.objects.filter(status=Sale.SaleStatus.COMPLETED)
-                        .select_related("customer")
+                        sales_latest_qs.select_related("customer")
                         .order_by("-updated_at")[:5]
                     )
                     items = []

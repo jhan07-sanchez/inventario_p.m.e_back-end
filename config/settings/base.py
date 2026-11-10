@@ -4,6 +4,7 @@ from pathlib import Path
 from urllib.parse import parse_qs, unquote, urlparse
 
 from decouple import Csv, config
+from corsheaders.defaults import default_headers
 
 from .spectacular import *  # noqa: F403
 
@@ -58,6 +59,7 @@ LOCAL_APPS = [
     "apps.cash.apps.CashConfig",
     "apps.configuration.apps.ConfigurationConfig",
     "apps.finance.apps.FinanceConfig",
+    "apps.subscriptions.apps.SubscriptionsConfig",
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
@@ -70,10 +72,21 @@ MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "apps.core.middlewares.tenant_context_middleware.TenantContextMiddleware",
+    "apps.core.middlewares.subscription_middleware.SubscriptionMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "apps.core.middlewares.audit_middleware.AuditMiddleware",
     "simple_history.middleware.HistoryRequestMiddleware",
+]
+
+# =======================================
+# Configuración CORS Multi-Tenant
+# =======================================
+CORS_ALLOW_HEADERS = list(default_headers) + [
+    "x-company-id",
+    "x-company-id",
+    "X-Company-ID",
 ]
 
 ROOT_URLCONF = "config.urls"

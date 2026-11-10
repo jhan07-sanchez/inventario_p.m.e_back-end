@@ -7,6 +7,7 @@ from apps.suppliers.models import Supplier
 class SupplierAdmin(admin.ModelAdmin):
     list_display = (
         "id_supplier",
+        "company",
         "document_type",
         "document_number",
         "first_name",
@@ -14,28 +15,38 @@ class SupplierAdmin(admin.ModelAdmin):
         "business_name",
         "email",
         "is_active",
+        "created_at",
     )
 
     search_fields = (
         "document_number",
-        "firs_name",
+        "first_name",
         "last_name",
         "business_name",
         "email",
+        "company__business_name",
+        "company__tax_id",
     )
 
     list_filter = (
+        "company",
         "is_active",
         "document_type",
+        "city",
+        "country",
+        "created_at",
     )
 
     ordering = ("id_supplier",)
 
+    raw_id_fields = ("company",)
+
     fieldsets = (
         (
-            "Informacion principal",
+            "Identificación del Proveedor",
             {
                 "fields": (
+                    "company",
                     "document_type",
                     "document_number",
                     "first_name",
@@ -45,7 +56,7 @@ class SupplierAdmin(admin.ModelAdmin):
             },
         ),
         (
-            "informacion de contacto",
+            "Información de Contacto",
             {
                 "fields": (
                     "email",
@@ -67,7 +78,7 @@ class SupplierAdmin(admin.ModelAdmin):
             },
         ),
         (
-            "Fechas importantes",
+            "Fechas Importantes",
             {
                 "fields": (
                     "created_at",
@@ -82,10 +93,8 @@ class SupplierAdmin(admin.ModelAdmin):
         "updated_at",
     )
 
-    exclude = ("delete_at",)
+    exclude = ("deleted_at",)
 
     def get_queryset(self, request):
-        """
-        Muestra todos los proveedores incluyendo los eliminados logicamente.
-        """
+        """Muestra todos los proveedores incluyendo eliminados lógicamente."""
         return Supplier.all_objects.all()

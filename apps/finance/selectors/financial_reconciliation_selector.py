@@ -17,6 +17,7 @@ class FinancialReconciliationSelector(BaseSelector[FinancialReconciliation]):
     @classmethod
     def get_reconciliations(
         cls,
+        company_id: Optional[int] = None,
         account_id: Optional[int] = None,
         status: Optional[str] = None,
         include_deleted: bool = False,
@@ -28,6 +29,8 @@ class FinancialReconciliationSelector(BaseSelector[FinancialReconciliation]):
         )
         if not include_deleted:
             qs = qs.filter(is_active=True)
+        if company_id:
+            qs = qs.filter(account__company_id=company_id)
         if account_id:
             qs = qs.filter(account_id=account_id)
         if status:
@@ -38,13 +41,16 @@ class FinancialReconciliationSelector(BaseSelector[FinancialReconciliation]):
     def get_reconciliation_by_id(
         cls,
         reconciliation_id: int,
+        company_id: Optional[int] = None,
         include_deleted: bool = False,
     ) -> Optional[FinancialReconciliation]:
-        return (
+        qs = (
             cls()
             .get_all(include_deleted=include_deleted)
             .select_related("account", "user")
             .filter(pk=reconciliation_id)
-            .first()
         )
+        if company_id:
+            qs = qs.filter(account__company_id=company_id)
+        return qs.first()
 

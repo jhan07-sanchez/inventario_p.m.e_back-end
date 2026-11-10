@@ -72,9 +72,11 @@ class UserViewSet(BaseViewSet):
     def get_queryset(self):
         """
         Obtiene el queryset de usuarios desde la capa
-        de Selectors.
+        de Selectors aislado por tenant.
         """
-        return UserSelector.get_users()
+        company_id = getattr(self.request, "company_id", None)
+        qs = UserSelector.get_users(company_id=company_id)
+        return self.isolate_queryset(qs)
 
     def get_serializer_class(self):
         """
@@ -198,7 +200,15 @@ class UserViewSet(BaseViewSet):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        user = UserService.create_user(serializer.validated_data)
+        company_id = getattr(request, "company_id", None)
+        if not company_id:
+            return self.error_response(
+                message="Se requiere una empresa activa para crear usuarios.",
+                code="COMPANY_REQUIRED",
+                status_code=status.HTTP_400_BAD_REQUEST,
+            )
+
+        user = UserService.create_user(company_id=company_id, validated_data=serializer.validated_data)
 
         response_serializer = UserDetailSerializer(user)
 
@@ -232,8 +242,11 @@ class UserViewSet(BaseViewSet):
         )
         serializer.is_valid(raise_exception=True)
 
+        company_id = getattr(request, "company_id", None)
+
         update_user = UserService.update_user(
             user=user,
+            company_id=company_id,
             validated_data=serializer.validated_data,
         )
 
@@ -269,8 +282,11 @@ class UserViewSet(BaseViewSet):
         )
         serializer.is_valid(raise_exception=True)
 
+        company_id = getattr(request, "company_id", None)
+
         update_user = UserService.update_user(
             user=user,
+            company_id=company_id,
             validated_data=serializer.validated_data,
         )
 
@@ -308,9 +324,11 @@ class UserViewSet(BaseViewSet):
         Restaura un usuario previamente desactivado.
         """
 
+        company_id = getattr(request, "company_id", None)
         user = UserSelector.get_by_id(
             pk,
             include_deleted=True,
+            company_id=company_id,
         )
 
         try:

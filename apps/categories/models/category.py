@@ -1,12 +1,12 @@
 from django.db import models
 
-from apps.core.models.active_model import ActiveModel
+from apps.core.models.tenant_model import TenantModel
 
 
-class Category(ActiveModel):
+class Category(TenantModel):
     """
-    Modelo que representa una categoria de productos
-    dentro del sistema inventario-pme.
+    Modelo que representa una categoría de productos
+    dentro del sistema inventario-pme aislada por empresa.
     """
 
     id_category = models.BigAutoField(
@@ -40,6 +40,10 @@ class Category(ActiveModel):
 
         indexes = [
             models.Index(
+                fields=["company", "is_active"],
+                name="category_comp_active_idx",
+            ),
+            models.Index(
                 fields=["name"],
                 name="category_name_idx",
             ),
@@ -55,7 +59,7 @@ class Category(ActiveModel):
 
         constraints = [
             models.UniqueConstraint(
-                fields=["parent", "name"],
+                fields=["company", "parent", "name"],
                 name="category_unique_name_per_parent",
             ),
         ]

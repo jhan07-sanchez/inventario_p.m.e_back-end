@@ -26,18 +26,11 @@ class CompanyInfoService(BaseService[CompanyInfo]):
     @transaction.atomic
     def create_company_info(
         dto: CompanyInfoCreateDto,
+        owner_user=None,
     ) -> CompanyInfo:
         """
-        Crea el registro de información de empresa.
-
-        Solo se permite un registro activo a la vez.
+        Crea el registro de información de empresa / organización SaaS.
         """
-
-        if CompanyInfo.objects.filter(is_active=True).exists():
-            raise ValidationError(
-                "Ya existe una empresa configurada en el sistema. "
-                "Utilice la operación de actualización."
-            )
 
         if CompanyInfo.objects.filter(tax_id=dto.tax_id).exists():
             raise ValidationError("Ya existe un registro con el NIT proporcionado.")
@@ -56,7 +49,25 @@ class CompanyInfoService(BaseService[CompanyInfo]):
             country=dto.country,
             description=dto.description,
             receipt_footer=dto.receipt_footer,
+            owner_user=owner_user,
         )
+
+        if owner_user:
+            from apps.users.models import CompanyMembership, Role
+            # Asignar rol de Administrador o crear membresía
+            admin_role = (
+                Role.objects.filter(role_name__icontains="admin", is_active=True).first()
+                or Role.objects.filter(is_active=True).first()
+            )
+            if admin_role:
+                CompanyMembership.objects.create(
+                    user=owner_user,
+                    company=company,
+                    role=admin_role,
+                    is_owner=True,
+                    status=CompanyMembership.MembershipStatus.ACTIVE,
+                    is_active=True,
+                )
 
         cache.delete("company_info_current")
         return company

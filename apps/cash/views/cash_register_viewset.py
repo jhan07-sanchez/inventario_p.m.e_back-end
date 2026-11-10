@@ -37,7 +37,9 @@ class CashRegisterViewSet(BaseViewSet):
         return [permission() for permission in classes]
 
     def get_queryset(self):
-        return CashRegisterSelector.get_all()
+        company_id = getattr(self.request, "company_id", None)
+        qs = CashRegisterSelector.get_all(company_id=company_id)
+        return self.isolate_queryset(qs)
 
     def get_serializer_class(self):
         return CashRegisterSerializer
@@ -68,7 +70,8 @@ class CashRegisterViewSet(BaseViewSet):
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        serializer.save()
+        company_id = getattr(request, "company_id", None)
+        serializer.save(company_id=company_id)
         return self.success_response(
             message="Caja registrada correctamente.",
             code="CASH_REGISTER_CREATED",

@@ -236,7 +236,7 @@ class PurchaseCreateSerializer(serializers.Serializer):
         many=True, required=True, allow_empty=False
     )
 
-    def to_dto(self) -> PurchaseCreateDTO:
+    def to_dto(self, company_id: int | None = None) -> PurchaseCreateDTO:
         validated_data = self.validated_data
         details_data = validated_data.get("details", [])
 
@@ -254,6 +254,7 @@ class PurchaseCreateSerializer(serializers.Serializer):
             issue_date=validated_data.get("issue_date"),
             notes=validated_data.get("notes"),
             details=details_dto,
+            company_id=company_id,
         )
 
 

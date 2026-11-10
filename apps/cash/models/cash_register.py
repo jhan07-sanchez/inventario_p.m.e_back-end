@@ -1,9 +1,9 @@
 from django.db import models
 
-from apps.core.models.active_model import ActiveModel
+from apps.core.models.tenant_model import TenantModel
 
 
-class CashRegister(ActiveModel):
+class CashRegister(TenantModel):
     """
     Modelo que representa una caja registradora en el sistema.
     """
@@ -15,7 +15,6 @@ class CashRegister(ActiveModel):
 
     name = models.CharField(
         max_length=100,
-        unique=True,
         verbose_name="Nombre de Caja",
         help_text="Ej: Caja Principal, Caja POS 1",
     )
@@ -31,6 +30,19 @@ class CashRegister(ActiveModel):
         verbose_name = "Caja"
         verbose_name_plural = "Cajas"
         ordering = ["name"]
+        indexes = [
+            models.Index(
+                fields=["company", "is_active"],
+                name="cash_reg_comp_act_idx",
+            ),
+        ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["company", "name"],
+                condition=models.Q(is_active=True),
+                name="unique_cash_reg_per_company",
+            ),
+        ]
 
     def __str__(self) -> str:
         return self.name

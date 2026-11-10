@@ -76,8 +76,9 @@ class RoleViewSet(BaseViewSet):
 
         Todas las consultas son delegadas al RoleSelector.
         """
+        company_id = getattr(self.request, "company_id", None)
 
-        return RoleSelector.get_roles()
+        return RoleSelector.get_roles(company_id=company_id)
 
     def get_serializer_class(self):
         """
@@ -146,14 +147,23 @@ class RoleViewSet(BaseViewSet):
         Crea un nuevo rol.
         """
 
-        serializer = self.get_serializer(
-            data=request.data,
-        )
-
+        serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
+        company_id = getattr(request, "company_id", None)
+
+        if not company_id:
+            return self.error_response(
+                message="Se requiere una empresa activa para crear roles.",
+                code="COMPANY_REQUIRED",
+                status_code=status.HTTP_400_BAD_REQUEST,
+            )
+
         try:
-            role = RoleService.create_role(serializer.validated_data)
+
+            validated_data = serializer.validated_data.copy()
+            validated_data["company_id"] = company_id
+            role = RoleService.create_role(validated_data)
 
             response_serializer = RoleDetailSerializer(role)
 

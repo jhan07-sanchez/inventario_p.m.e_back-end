@@ -41,15 +41,18 @@ class FinancialAccountSelector(BaseSelector[FinancialAccount]):
     def get_account_by_id(
         cls,
         account_id: int,
+        company_id: Optional[int] = None,
         include_deleted: bool = False,
     ) -> Optional[FinancialAccount]:
-        return (
+        qs = (
             cls()
             .get_all(include_deleted=include_deleted)
             .select_related("company")
             .filter(pk=account_id)
-            .first()
         )
+        if company_id:
+            qs = qs.filter(company_id=company_id)
+        return qs.first()
 
     @classmethod
     def get_total_balance(

@@ -44,11 +44,12 @@ class FinancialCategoryViewSet(BaseViewSet):
 
     def get_queryset(self):
         cat_type = self.request.query_params.get("category_type")
-        company_id = self.request.query_params.get("company_id")
-        return FinancialCategorySelector.get_categories(
+        company_id = getattr(self.request, "company_id", None) or self.request.query_params.get("company_id")
+        qs = FinancialCategorySelector.get_categories(
             category_type=cat_type,
             company_id=int(company_id) if company_id else None,
         )
+        return self.isolate_queryset(qs)
 
     def get_serializer_class(self):
         if self.action == "create":
@@ -73,13 +74,7 @@ class FinancialCategoryViewSet(BaseViewSet):
 
     @finance_category_detail_schema
     def retrieve(self, request, *args, **kwargs):
-        instance = FinancialCategorySelector.get_category_by_id(kwargs["pk"])
-        if not instance:
-            return self.error_response(
-                message="Categoría financiera no encontrada.",
-                code="FINANCIAL_CATEGORY_NOT_FOUND",
-                status_code=status.HTTP_404_NOT_FOUND,
-            )
+        instance = self.get_object()
         serializer = self.get_serializer(instance)
         return self.success_response(
             message="Categoría financiera obtenida.",
@@ -93,12 +88,13 @@ class FinancialCategoryViewSet(BaseViewSet):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
+        company_id = getattr(request, "company_id", None) or serializer.validated_data.get("company_id")
         try:
             cat = FinancialCategoryService.create_category(
                 name=serializer.validated_data["name"],
                 category_type=serializer.validated_data["category_type"],
                 description=serializer.validated_data.get("description", ""),
-                company_id=serializer.validated_data.get("company_id"),
+                company_id=company_id,
             )
             output = FinancialCategorySerializer(cat).data
             return self.success_response(

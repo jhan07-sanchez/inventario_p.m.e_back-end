@@ -29,9 +29,12 @@ class SecurityContextView(APIView):
 
     @security_context_schema
     def get(self, request):
-        """Retorna roles, permisos y acciones efectivas."""
+        """Retorna roles, permisos, acciones efectivas y empresas del usuario."""
 
-        context_result = SecurityService.get_authorization_context(request.user)
+        company_id = getattr(request, "company_id", None)
+        context_result = SecurityService.get_authorization_context(
+            request.user, company_id=company_id
+        )
         serializer = SecurityContextResponseSerializer(context_result)
 
         return ApiResponse.success(
@@ -51,7 +54,8 @@ class SecurityNavigationView(APIView):
     def get(self, request):
         """Retorna únicamente el árbol de navegación."""
 
-        navigation = SecurityService.get_navigation(request.user)
+        company_id = getattr(request, "company_id", None)
+        navigation = SecurityService.get_navigation(request.user, company_id=company_id)
 
         serializer = NavigationResponseSerializer({"navigation": navigation})
 
@@ -72,7 +76,8 @@ class SecurityDashboardView(APIView):
     def get(self, request):
         """Retorna únicamente la configuración de widgets del dashboard."""
 
-        dashboard = SecurityService.get_dashboard(request.user)
+        company_id = getattr(request, "company_id", None)
+        dashboard = SecurityService.get_dashboard(request.user, company_id=company_id)
         serializer = DashboardResponseSerializer(dashboard)
 
         return ApiResponse.success(

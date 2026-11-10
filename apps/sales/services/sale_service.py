@@ -304,7 +304,9 @@ class SaleService(BaseService[Sale]):
             ]
         )
 
-        DashboardMetricsService.invalidate_sales_cache()
+        DashboardMetricsService.invalidate_sales_cache(
+            company_id=getattr(sale, "company_id", None)
+        )
 
         return sale
 
@@ -391,7 +393,9 @@ class SaleService(BaseService[Sale]):
         sale.status = Sale.SaleStatus.COMPLETED
         sale.save(update_fields=["status", "updated_at"])
 
-        DashboardMetricsService.invalidate_sales_cache()
+        DashboardMetricsService.invalidate_sales_cache(
+            company_id=getattr(sale, "company_id", None)
+        )
 
         return sale
 
@@ -573,7 +577,9 @@ class SaleService(BaseService[Sale]):
             ]
         )
 
-        DashboardMetricsService.invalidate_sales_cache()
+        DashboardMetricsService.invalidate_sales_cache(
+            company_id=getattr(sale, "company_id", None)
+        )
 
         return sale
 

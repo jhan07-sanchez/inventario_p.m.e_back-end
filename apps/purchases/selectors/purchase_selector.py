@@ -16,7 +16,11 @@ class PurchaseSelector(BaseSelector[Purchase]):
     def __init__(self):
         super().__init__(Purchase)
 
-    def get_queryset(self, include_deleted: bool = False) -> QuerySet[Purchase]:
+    def get_queryset(
+        self,
+        include_deleted: bool = False,
+        company_id: int | None = None,
+    ) -> QuerySet[Purchase]:
         """
         Retorna el queryset base de compras optimizando
         las relaciones necesarias (proveedor, líneas de detalle y facturas asociadas).
@@ -38,7 +42,7 @@ class PurchaseSelector(BaseSelector[Purchase]):
 
         return (
             super()
-            .get_queryset(include_deleted=include_deleted)
+            .get_queryset(include_deleted=include_deleted, company_id=company_id)
             .select_related("supplier")
             .prefetch_related(
                 "details",
@@ -53,36 +57,46 @@ class PurchaseSelector(BaseSelector[Purchase]):
         )
 
     @staticmethod
-    def get_purchases() -> QuerySet[Purchase]:
+    def get_purchases(company_id: int | None = None) -> QuerySet[Purchase]:
         """
         Retorna todas las compras.
         """
-        return PurchaseSelector().get_all()
+        return PurchaseSelector().get_all(company_id=company_id)
 
     @staticmethod
-    def get_active_purchases() -> QuerySet[Purchase]:
+    def get_active_purchases(company_id: int | None = None) -> QuerySet[Purchase]:
         """
         Retorna únicamente las compras activas.
         """
-        return PurchaseSelector().get_active()
+        return PurchaseSelector().get_active(company_id=company_id)
 
     @staticmethod
-    def get_purchase_by_id(purchase_id: int, include_deleted: bool = False) -> Purchase:
+    def get_purchase_by_id(
+        purchase_id: int,
+        include_deleted: bool = False,
+        company_id: int | None = None,
+    ) -> Purchase:
         """
-        Obtiene una compra por su identificador.
+        Obtiene una compra por su identificador con aislamiento tenant opcional.
         """
         return get_object_or_404(
-            PurchaseSelector().get_queryset(include_deleted=include_deleted),
+            PurchaseSelector().get_queryset(
+                include_deleted=include_deleted,
+                company_id=company_id,
+            ),
             pk=purchase_id,
         )
 
     @staticmethod
-    def get_by_invoice_number(invoice_number: str) -> Purchase:
+    def get_by_invoice_number(
+        invoice_number: str,
+        company_id: int | None = None,
+    ) -> Purchase:
         """
         Obtiene una compra mediante su número de factura.
         """
         return get_object_or_404(
-            PurchaseSelector().get_queryset(),
+            PurchaseSelector().get_queryset(company_id=company_id),
             invoices__invoice_number=invoice_number,
         )
 
@@ -90,6 +104,7 @@ class PurchaseSelector(BaseSelector[Purchase]):
     def purchase_exists(
         *,
         invoice_number: str | None = None,
+        company_id: int | None = None,
     ) -> bool:
         """
         Verifica si existe una compra mediante su número de factura.
@@ -97,7 +112,10 @@ class PurchaseSelector(BaseSelector[Purchase]):
         selector = PurchaseSelector()
 
         if invoice_number is not None:
-            return selector.exists(invoices__invoice_number=invoice_number)
+            filters = {"invoices__invoice_number": invoice_number}
+            if company_id is not None:
+                filters["company_id"] = company_id
+            return selector.exists(**filters)
 
         return False
 
@@ -108,11 +126,12 @@ class PurchaseSelector(BaseSelector[Purchase]):
         status: str | None = None,
         invoice_number: str | None = None,
         is_active: bool | None = None,
+        company_id: int | None = None,
     ) -> QuerySet[Purchase]:
         """
         Retorna compras aplicando filtros opcionales.
         """
-        queryset = PurchaseSelector().get_queryset()
+        queryset = PurchaseSelector().get_queryset(company_id=company_id)
 
         if supplier_id is not None:
             queryset = queryset.filter(

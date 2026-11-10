@@ -222,7 +222,9 @@ class ProductService(BaseService[Product]):
 
         InventoryService.create_inventory({"product": product})
 
-        DashboardMetricsService.invalidate_inventory_cache()
+        DashboardMetricsService.invalidate_inventory_cache(
+            company_id=getattr(product, "company_id", None)
+        )
 
         return product
 
@@ -250,7 +252,9 @@ class ProductService(BaseService[Product]):
                 inventory.full_clean()
                 inventory.save(update_fields=["is_active", "updated_at"])
 
-        DashboardMetricsService.invalidate_inventory_cache()
+        DashboardMetricsService.invalidate_inventory_cache(
+            company_id=getattr(updated_product, "company_id", None)
+        )
 
         return updated_product
 
@@ -271,7 +275,9 @@ class ProductService(BaseService[Product]):
         if hasattr(product, "inventory"):
             product.inventory.soft_delete()
 
-        DashboardMetricsService.invalidate_inventory_cache()
+        DashboardMetricsService.invalidate_inventory_cache(
+            company_id=getattr(product, "company_id", None)
+        )
 
         return product
 
@@ -289,6 +295,8 @@ class ProductService(BaseService[Product]):
         if hasattr(product, "inventory"):
             product.inventory.restore()
 
-        DashboardMetricsService.invalidate_inventory_cache()
+        DashboardMetricsService.invalidate_inventory_cache(
+            company_id=getattr(product, "company_id", None)
+        )
 
         return product

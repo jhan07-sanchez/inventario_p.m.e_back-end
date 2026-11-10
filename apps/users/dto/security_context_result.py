@@ -16,3 +16,5 @@ class SecurityContextResult:
     actions: dict[str, dict[str, bool]] = field(default_factory=dict)
     navigation: list[dict] = field(default_factory=list)
     dashboard: dict = field(default_factory=dict)
+    companies: list[dict] = field(default_factory=list)
+    active_company: dict | None = None

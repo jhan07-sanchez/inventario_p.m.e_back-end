@@ -28,6 +28,7 @@ class FinancialReconciliationService(BaseService[FinancialReconciliation]):
         cls,
         dto: FinancialReconciliationCreateDTO,
         user,
+        company_id: int | None = None,
     ) -> FinancialReconciliation:
         if dto.start_date > dto.end_date:
             raise InvalidFinancialReconciliationDatesException(
@@ -39,6 +40,11 @@ class FinancialReconciliationService(BaseService[FinancialReconciliation]):
         except FinancialAccount.DoesNotExist:
             raise FinancialAccountNotFoundException(
                 "La cuenta financiera especificada no existe o está inactiva."
+            )
+
+        if company_id is not None and account.company_id != company_id:
+            raise FinancialAccountNotFoundException(
+                "La cuenta financiera especificada no pertenece a la empresa activa."
             )
 
         # El saldo en libros actual según el sistema

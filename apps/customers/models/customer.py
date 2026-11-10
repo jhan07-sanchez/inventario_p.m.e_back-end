@@ -1,9 +1,9 @@
 from django.db import models
 
-from apps.core.models.active_model import ActiveModel
+from apps.core.models.tenant_model import TenantModel
 
 
-class Customer(ActiveModel):
+class Customer(TenantModel):
     """
     Modelo que representa a un cliente en el sistema inventario-pme.
     """
@@ -31,9 +31,8 @@ class Customer(ActiveModel):
     )
     document_number = models.CharField(
         max_length=30,
-        unique=True,
         verbose_name="Número de Documento",
-        help_text="Número único de identidad del cliente.",
+        help_text="Número de identidad del cliente.",
     )
     first_name = models.CharField(max_length=100, blank=True, verbose_name="Nombres")
     last_name = models.CharField(max_length=100, blank=True, verbose_name="Apellidos")
@@ -93,6 +92,10 @@ class Customer(ActiveModel):
 
         indexes = [
             models.Index(
+                fields=["company", "is_active"],
+                name="customer_comp_active_idx",
+            ),
+            models.Index(
                 fields=["document_number"],
                 name="customer_document_idx",
             ),
@@ -115,6 +118,13 @@ class Customer(ActiveModel):
             models.Index(
                 fields=["deleted_at"],
                 name="customer_deleted_at_idx",
+            ),
+        ]
+
+        constraints = [
+            models.UniqueConstraint(
+                fields=["company", "document_type", "document_number"],
+                name="unique_customer_doc_per_company",
             ),
         ]
 

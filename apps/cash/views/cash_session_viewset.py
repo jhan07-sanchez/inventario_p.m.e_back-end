@@ -60,7 +60,9 @@ class CashSessionViewSet(BaseGenericViewSet):
         return [permission() for permission in classes]
 
     def get_queryset(self):
-        return CashSessionSelector.get_all()
+        company_id = getattr(self.request, "company_id", None)
+        qs = CashSessionSelector.get_all(company_id=company_id)
+        return self.isolate_queryset(qs)
 
     def get_serializer_class(self):
         if self.action == "open":
@@ -90,7 +92,7 @@ class CashSessionViewSet(BaseGenericViewSet):
 
     @cash_session_detail_schema
     def retrieve(self, request, *args, **kwargs):
-        session = CashSessionSelector.get_by_id(kwargs["pk"])
+        session = self.get_object()
         serializer = self.get_serializer(session)
         return self.success_response(
             message="Sesión obtenida.",
@@ -102,7 +104,8 @@ class CashSessionViewSet(BaseGenericViewSet):
     @cash_session_current_schema
     @action(detail=False, methods=["get"], url_path="current")
     def current(self, request):
-        session = CashSessionSelector.get_current_session(request.user)
+        company_id = getattr(request, "company_id", None)
+        session = CashSessionSelector.get_current_session(request.user, company_id=company_id)
         if not session:
             return self.error_response(
                 message="No tienes una sesión de caja abierta.",
@@ -138,7 +141,7 @@ class CashSessionViewSet(BaseGenericViewSet):
     @cash_session_close_schema
     @action(detail=True, methods=["post"], url_path="close")
     def close(self, request, pk=None):
-        session = CashSessionSelector.get_by_id(pk)
+        session = self.get_object()
 
         if session.user != request.user and not (
             request.user.is_staff or request.user.is_superuser
@@ -167,7 +170,7 @@ class CashSessionViewSet(BaseGenericViewSet):
     @cash_session_add_movement_schema
     @action(detail=True, methods=["post"], url_path="movements")
     def add_movement(self, request, pk=None):
-        session = CashSessionSelector.get_by_id(pk)
+        session = self.get_object()
 
         if session.user != request.user and not (
             request.user.is_staff or request.user.is_superuser
@@ -198,8 +201,15 @@ class CashSessionViewSet(BaseGenericViewSet):
     @cash_session_movements_schema
     @action(detail=True, methods=["get"], url_path="movements/list")
     def movements(self, request, pk=None):
-        session = CashSessionSelector.get_by_id(pk)
+        session = self.get_object()
         movements = CashSessionSelector.get_movements(session.id_cash_session)
+        serializer = CashMovementRetrieveSerializer(movements, many=True)
+        return self.success_response(
+            message="Movimientos obtenidos correctamente.",
+            code="CASH_MOVEMENTS_FETCHED",
+            data=serializer.data,
+            status_code=status.HTTP_200_OK,
+        )
         serializer = CashMovementRetrieveSerializer(movements, many=True)
         return self.success_response(
             message="Movimientos obtenidos correctamente.",
@@ -247,7 +257,8 @@ class CashSessionViewSet(BaseGenericViewSet):
     @cash_session_audit_summary_schema
     @action(detail=True, methods=["get"], url_path="audit-summary")
     def audit_summary(self, request, pk=None):
-        summary = CashSessionSelector.get_session_audit_summary(pk)
+        session = self.get_object()
+        summary = CashSessionSelector.get_session_audit_summary(session.pk)
         return self.success_response(
             message="Resumen de auditoría de sesión obtenido.",
             code="SESSION_AUDIT_SUMMARY_FETCHED",

@@ -18,12 +18,12 @@ class FinanceDashboardView(BaseResponseMixin, APIView):
 
     @finance_dashboard_schema
     def get(self, request, *args, **kwargs):
-        company_id = request.query_params.get("company_id")
+        company_id = getattr(request, "company_id", None) or request.query_params.get("company_id")
         period = request.query_params.get("period")
         start_date = request.query_params.get("start_date")
         end_date = request.query_params.get("end_date")
 
-        cid= int(company_id) if company_id else None
+        cid = int(company_id) if company_id else None
 
         #Intentar obtener de la cache
         cached_data = FinanceCacheService.get_dashboard_cache(

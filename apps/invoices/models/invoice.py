@@ -3,11 +3,11 @@ from decimal import Decimal
 from django.core.validators import MinValueValidator
 from django.db import models
 
-from apps.core.models.active_model import ActiveModel
+from apps.core.models.tenant_model import TenantModel
 from apps.invoices.models.invoice_template import InvoiceTemplate
 
 
-class Invoice(ActiveModel):
+class Invoice(TenantModel):
     """
     Modelo que representa una factura o documento empresarial (compra/venta).
     """
@@ -24,7 +24,7 @@ class Invoice(ActiveModel):
 
     invoice_number = models.CharField(
         max_length=50,
-        unique=True,
+        db_index=True,
         verbose_name="Número de Factura",
     )
 
@@ -174,6 +174,8 @@ class Invoice(ActiveModel):
         ordering = ["-created_at"]
 
         indexes = [
+            models.Index(fields=["company", "status"], name="inv_comp_status_idx"),
+            models.Index(fields=["company", "invoice_number"], name="inv_comp_number_idx"),
             models.Index(fields=["invoice_number"], name="invoice_number_idx"),
             models.Index(fields=["status"], name="invoice_status_idx"),
             models.Index(
@@ -184,6 +186,10 @@ class Invoice(ActiveModel):
         ]
 
         constraints = [
+            models.UniqueConstraint(
+                fields=["company", "invoice_number"],
+                name="unique_invoice_number_per_company",
+            ),
             models.CheckConstraint(
                 condition=(
                     models.Q(purchase__isnull=False, sale__isnull=True)

@@ -1,3 +1,6 @@
+import uuid
+
+from django.conf import settings
 from django.db import models
 
 from apps.core.models.active_model import ActiveModel
@@ -5,16 +8,47 @@ from apps.core.models.active_model import ActiveModel
 
 class CompanyInfo(ActiveModel):
     """
-    Modelo singleton que almacena la información global de la empresa.
-
-    Diseñado para una única instalación por empresa (no multitenancy).
-    Utilizado por tickets POS, facturas, reportes y encabezados
-    del sistema.
+    Modelo representativo de una Empresa / Organización en la plataforma SaaS.
+    Almacena los datos fiscales, comerciales y operativos de cada tenant.
     """
+
+    class CompanyStatus(models.TextChoices):
+        ACTIVE = "ACTIVE", "Activa"
+        SUSPENDED = "SUSPENDED", "Suspendida"
+        PENDING_VERIFICATION = "PENDING_VERIFICATION", "Pendiente de Verificación"
+        CANCELLED = "CANCELLED", "Cancelada"
 
     id_company = models.BigAutoField(
         primary_key=True,
         verbose_name="ID",
+    )
+
+    uuid = models.UUIDField(
+        default=uuid.uuid4,
+        editable=False,
+        null=True,
+        db_index=True,
+        verbose_name="UUID Público",
+        help_text="Identificador único universal para integraciones y API pública.",
+    )
+
+    status = models.CharField(
+        max_length=25,
+        choices=CompanyStatus.choices,
+        default=CompanyStatus.ACTIVE,
+        db_index=True,
+        verbose_name="Estado de la Empresa",
+        help_text="Estado operativo de la organización en la plataforma SaaS.",
+    )
+
+    owner_user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="owned_companies",
+        verbose_name="Propietario Principal",
+        help_text="Usuario propietario/creador de la organización.",
     )
 
     business_name = models.CharField(

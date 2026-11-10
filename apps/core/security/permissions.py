@@ -56,9 +56,14 @@ def HasPermission(permission_code: str):
             if user.is_superuser:
                 return True
 
+            company_id = getattr(request, "company_id", None)
+            if not company_id and hasattr(request, "company") and request.company:
+                company_id = getattr(request.company, "id_company", None) or getattr(request.company, "pk", None)
+
             return PermissionService.user_has_permission(
                 user=user,
                 permission_code=permission_code,
+                company_id=company_id,
             )
 
     DynamicPermission.__name__ = f"HasPermission_{permission_code.replace('.', '_')}"
@@ -84,10 +89,15 @@ def HasAnyPermission(*permission_codes: str):
             if user.is_superuser:
                 return True
 
+            company_id = getattr(request, "company_id", None)
+            if not company_id and hasattr(request, "company") and request.company:
+                company_id = getattr(request.company, "id_company", None) or getattr(request.company, "pk", None)
+
             return any(
                 PermissionService.user_has_permission(
                     user=user,
                     permission_code=code,
+                    company_id=company_id,
                 )
                 for code in permission_codes
             )

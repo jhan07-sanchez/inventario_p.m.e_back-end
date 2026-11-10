@@ -1,3 +1,4 @@
+from typing import Any
 from django.db.models import Prefetch, QuerySet
 from django.shortcuts import get_object_or_404
 
@@ -18,7 +19,9 @@ class SaleSelector(BaseSelector[Sale]):
     def __init__(self):
         super().__init__(Sale)
 
-    def get_queryset(self, include_deleted: bool = False) -> QuerySet[Sale]:
+    def get_queryset(
+        self, include_deleted: bool = False, company_id: Any = None
+    ) -> QuerySet[Sale]:
         """
         Retorna el queryset base de ventas optimizando las relaciones
         con cliente, usuario, detalles de productos y facturas asociadas.
@@ -36,7 +39,7 @@ class SaleSelector(BaseSelector[Sale]):
         )
         return (
             super()
-            .get_queryset(include_deleted=include_deleted)
+            .get_queryset(include_deleted=include_deleted, company_id=company_id)
             .select_related(
                 "customer",
                 "user",
@@ -53,47 +56,57 @@ class SaleSelector(BaseSelector[Sale]):
         )
 
     @staticmethod
-    def get_all(qs=None, include_deleted: bool = False) -> QuerySet[Sale]:
+    def get_all(
+        qs=None, include_deleted: bool = False, company_id: Any = None
+    ) -> QuerySet[Sale]:
         """
-        Obtiene todas las ventas activas.
-
-        Se utilizan relaciones optimizadas para evitar consultas
-        innecesarias a la base de datos.
+        Obtiene todas las ventas activas confinado al tenant correspondiente.
         """
         if qs is not None:
-            return qs.filter(is_active=True) if not include_deleted else qs
+            base = qs.filter(is_active=True) if not include_deleted else qs
+            if company_id is not None:
+                base = base.filter(company_id=company_id)
+            return base
         return (
-            SaleSelector().get_queryset(include_deleted=include_deleted)
+            SaleSelector().get_queryset(
+                include_deleted=include_deleted, company_id=company_id
+            )
             if include_deleted
-            else SaleSelector().get_queryset().filter(is_active=True)
+            else SaleSelector()
+            .get_queryset(company_id=company_id)
+            .filter(is_active=True)
         )
 
     @staticmethod
-    def get_by_id(sale_id: int, include_deleted: bool = False) -> Sale:
+    def get_by_id(
+        sale_id: int, include_deleted: bool = False, company_id: Any = None
+    ) -> Sale:
         """
-        Obtiene una venta por su identificador.
-
-        Lanza Http404 si la venta no existe o está inactiva.
+        Obtiene una venta por su identificador asegurando aislamiento tenant.
         """
         return get_object_or_404(
-            SaleSelector().get_queryset(include_deleted=include_deleted),
+            SaleSelector().get_queryset(
+                include_deleted=include_deleted, company_id=company_id
+            ),
             id_sale=sale_id,
         )
 
     @staticmethod
     def get_by_sale_number(
-        sale_number: str,
+        sale_number: str, company_id: Any = None
     ) -> Sale | None:
         """
         Obtiene una venta mediante su número de venta.
         """
+        qs = Sale.objects.filter(
+            sale_number=sale_number,
+            is_active=True,
+        )
+        if company_id is not None:
+            qs = qs.filter(company_id=company_id)
 
         return (
-            Sale.objects.filter(
-                sale_number=sale_number,
-                is_active=True,
-            )
-            .select_related(
+            qs.select_related(
                 "customer",
                 "user",
             )
@@ -118,11 +131,7 @@ class SaleSelector(BaseSelector[Sale]):
     def get_details(sale_id: int) -> QuerySet[SaleDetail]:
         """
         Obtiene los detalles activos de una venta.
-
-        Incluye la información del producto para evitar consultas
-        adicionales al serializar la respuesta.
         """
-
         return (
             SaleDetail.objects.filter(
                 sale_id=sale_id,
@@ -134,15 +143,15 @@ class SaleSelector(BaseSelector[Sale]):
 
     @staticmethod
     def exists_by_sale_number(
-        sale_number: str,
+        sale_number: str, company_id: Any = None
     ) -> bool:
         """
         Comprueba si existe una venta con el número indicado.
         """
-
-        return Sale.objects.filter(
-            sale_number=sale_number,
-        ).exists()
+        qs = Sale.objects.filter(sale_number=sale_number)
+        if company_id is not None:
+            qs = qs.filter(company_id=company_id)
+        return qs.exists()
 
     @staticmethod
     def filter_sales(
@@ -152,13 +161,12 @@ class SaleSelector(BaseSelector[Sale]):
         invoice_number: str | None = None,
         invoice_status: str | None = None,
         is_active: bool | None = True,
+        company_id: int | None = None,
     ) -> QuerySet[Sale]:
         """
-        Retorna ventas aplicando filtros opcionales, incluyendo
-        información de sus facturas asociadas.
+        Retorna ventas aplicando filtros opcionales confinado a la empresa.
         """
-
-        queryset = SaleSelector.get_all()
+        queryset = SaleSelector.get_all(company_id=company_id)
 
         if customer_id is not None:
             queryset = queryset.filter(customer_id=customer_id)

@@ -107,18 +107,39 @@ class CompanyInfoTests(TestCase):
         self.assertEqual(res.status_code, status.HTTP_200_OK)
         self.assertEqual(res.data["data"]["tax_id"], "901234567-8")
 
-    def test_singleton_creation_rejected_when_company_already_exists(self):
-        from django.core.exceptions import ValidationError
-
+    def test_multiple_companies_can_be_created_successfully(self):
         from apps.company_info.dto.company_info_dto import CompanyInfoCreateDto
 
         dto = CompanyInfoCreateDto(
             business_name="Segunda Empresa S.A.",
+            trade_name="Empresa 2",
             tax_id="999888777-1",
+            email="empresa2@example.com",
         )
-        with self.assertRaises(ValidationError) as ctx:
-            CompanyInfoService.create_company_info(dto)
-        self.assertIn("Ya existe una empresa configurada", str(ctx.exception))
+        second_company = CompanyInfoService.create_company_info(dto, owner_user=self.user)
+        self.assertIsNotNone(second_company.pk)
+        self.assertIsNotNone(second_company.uuid)
+        self.assertEqual(second_company.business_name, "Segunda Empresa S.A.")
+        self.assertEqual(CompanyInfo.objects.filter(is_active=True).count(), 2)
+
+    def test_my_companies_action_returns_user_companies(self):
+        from apps.users.models import CompanyMembership
+
+        CompanyMembership.objects.create(
+            user=self.user,
+            company=self.company,
+            role=self.role,
+            is_owner=True,
+            status=CompanyMembership.MembershipStatus.ACTIVE,
+        )
+
+        res = self.client.get(reverse("company-info-my-companies"))
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertTrue(res.data["success"])
+        data = res.data["data"]
+        self.assertGreaterEqual(len(data), 1)
+        self.assertEqual(data[0]["id_company"], self.company.id_company)
+        self.assertTrue(data[0]["is_owner"])
 
     def test_upload_logo_validation_rejects_invalid_file_extension(self):
         from django.core.files.uploadedfile import SimpleUploadedFile

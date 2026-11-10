@@ -35,53 +35,86 @@ class PermissionService:
     """
 
     @staticmethod
-    def invalidate_user_cache(user_id: int | None = None) -> None:
+    def invalidate_user_cache(
+        user_id: int | None = None,
+        company_id: int | None = None,
+    ) -> None:
         """
-        Invalida el caché de permisos de un usuario específico o todo el caché.
+        Invalida el caché de permisos de un usuario específico para una empresa, o de todo el usuario.
         """
-        if user_id is not None:
+        if user_id is not None and company_id is not None:
+            cache.delete(f"user_permissions_{user_id}_{company_id}")
+            cache.delete(f"user_permissions_{user_id}")
+        elif user_id is not None:
             cache.delete(f"user_permissions_{user_id}")
         else:
             cache.clear()
 
     @staticmethod
-    def _get_active_roles(user: User):
+    def _get_active_roles(user: User, company_id: int | None = None):
         """
-        Obtiene los roles activos del usuario de forma optimizada.
-        Utiliza prefetch cache si existe.
+        Obtiene los roles activos del usuario considerando el contexto de empresa si se provee.
+        Prioriza las membresías activas en la empresa; si no se especifica empresa,
+        retorna los roles globales/legados o la unión de roles activos.
         """
-        if (
-            hasattr(user, "_prefetched_objects_cache")
-            and "user_roles" in user._prefetched_objects_cache
-        ):
-            return [ur.role for ur in user.user_roles.all() if ur.role.is_active]
+        roles = []
 
-        return [
-            ur.role
-            for ur in user.user_roles.filter(role__is_active=True).select_related(
-                "role"
-            )
-        ]
+        if company_id is not None and hasattr(user, "memberships"):
+            membership_roles = [
+                m.role
+                for m in user.memberships.filter(
+                    company_id=company_id,
+                    is_active=True,
+                    role__is_active=True,
+                ).select_related("role")
+            ]
+            if membership_roles:
+                return membership_roles
+
+        # Fallback a roles directos del usuario (UserRole)
+        if hasattr(user, "user_roles"):
+            if (
+                hasattr(user, "_prefetched_objects_cache")
+                and "user_roles" in user._prefetched_objects_cache
+            ):
+                roles = [ur.role for ur in user.user_roles.all() if ur.role.is_active]
+            else:
+                roles = [
+                    ur.role
+                    for ur in user.user_roles.filter(role__is_active=True).select_related(
+                        "role"
+                    )
+                ]
+
+        if not roles and hasattr(user, "memberships"):
+            roles = [
+                m.role
+                for m in user.memberships.filter(
+                    is_active=True,
+                    role__is_active=True,
+                ).select_related("role")
+            ]
+
+        return roles
 
     @staticmethod
-    def get_effective_permissions(user: User) -> dict[str, bool]:
+    def get_effective_permissions(
+        user: User,
+        company_id: int | None = None,
+    ) -> dict[str, bool]:
         """
         Calcula los permisos efectivos de un usuario fusionando
-        los permisos de todos sus roles activos.
+        los permisos de todos sus roles activos en el contexto de la empresa.
 
         La fusión utiliza **unión lógica (OR)**: si *cualquier* rol
         otorga un permiso, el usuario lo tiene.
-
-        Args:
-            user:
-                Instancia del usuario autenticado.
-
-        Returns:
-            Diccionario ``{código_permiso: bool}`` con todos los
-            permisos registrados en ``SecurityRegistry``.
         """
 
-        cache_key = f"user_permissions_{user.pk}"
+        cache_key = (
+            f"user_permissions_{user.pk}_{company_id}"
+            if company_id is not None
+            else f"user_permissions_{user.pk}"
+        )
         cached_permissions = cache.get(cache_key)
 
         if cached_permissions is not None:
@@ -97,7 +130,7 @@ class PermissionService:
         all_codes = SecurityRegistry.get_all_security_codes()
         effective: dict[str, bool] = {code: False for code in all_codes}
 
-        active_roles = PermissionService._get_active_roles(user)
+        active_roles = PermissionService._get_active_roles(user, company_id=company_id)
 
         for role in active_roles:
             for code in all_codes:
@@ -151,27 +184,21 @@ class PermissionService:
     def user_has_permission(
         user: User,
         permission_code: str,
+        company_id: int | None = None,
     ) -> bool:
         """
-        Verifica si un usuario posee un permiso específico.
-
-        Aprovecha la resolución y caché de permisos efectivos
-        para máxima velocidad de consulta en middlewares y guards.
-
-        Args:
-            user:
-                Instancia del usuario autenticado.
-            permission_code:
-                Código del permiso a verificar (ej. ``"users.view"``).
-
-        Returns:
-            ``True`` si el usuario tiene el permiso.
+        Verifica si un usuario posee un permiso específico (opcionalmente dentro del contexto de una empresa).
         """
 
         if getattr(user, "is_superuser", False):
             return True
 
-        effective = PermissionService.get_effective_permissions(user)
+        if company_id is not None:
+            effective = PermissionService.get_effective_permissions(
+                user, company_id=company_id
+            )
+        else:
+            effective = PermissionService.get_effective_permissions(user)
         return effective.get(permission_code, False)
 
     @staticmethod
@@ -190,17 +217,20 @@ class PermissionService:
         return NavigationBuilder.build(effective_permissions)
 
     @staticmethod
-    def get_user_role_names(user: User) -> list[str]:
-        """Devuelve los nombres de los roles activos del usuario."""
+    def get_user_role_names(user: User, company_id: int | None = None) -> list[str]:
+        """Devuelve los nombres de los roles activos del usuario en la empresa."""
 
-        active_roles = PermissionService._get_active_roles(user)
+        active_roles = PermissionService._get_active_roles(user, company_id=company_id)
         return [role.role_name for role in active_roles]
 
     @staticmethod
-    def has_any_active_role(user: User) -> bool:
+    def has_any_active_role(user: User, company_id: int | None = None) -> bool:
         """Verifica que el usuario tiene al menos un rol activo asignado."""
 
-        active_roles = PermissionService._get_active_roles(user)
+        if getattr(user, "is_superuser", False):
+            return True
+
+        active_roles = PermissionService._get_active_roles(user, company_id=company_id)
         return len(active_roles) > 0
 
     @staticmethod

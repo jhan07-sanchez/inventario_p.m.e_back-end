@@ -18,6 +18,15 @@ class AuditLog(BaseModel):
         related_name="audit_logs",
         help_text="Usuario que realizó la acción. Nulo si fue un usuario anónimo.",
     )
+    company = models.ForeignKey(
+        "company_info.CompanyInfo",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="audit_logs",
+        verbose_name="Empresa",
+        help_text="Empresa dentro de cuyo contexto se realizó la acción.",
+    )
     method = models.CharField(
         max_length=10,
         help_text="Método HTTP utilizado (ej. POST, PUT, DELETE).",
@@ -50,6 +59,9 @@ class AuditLog(BaseModel):
         verbose_name_plural = "Registros de Auditoría"
         ordering = ["-created_at"]
         db_table = "inventario_pme_audit_logs"
+        indexes = [
+            models.Index(fields=["company", "-created_at"], name="audit_comp_created_idx"),
+        ]
 
     def __str__(self):
         return f"[{self.method}] {self.path} - {self.status_code} ({self.created_at.strftime('%Y-%m-%d %H:%M:%S')})"

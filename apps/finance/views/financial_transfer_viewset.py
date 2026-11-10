@@ -52,19 +52,22 @@ class FinancialTransferViewSet(BaseViewSet):
         return [permission() for permission in classes]
 
     def get_queryset(self):
+        company_id = getattr(self.request, "company_id", None) or self.request.query_params.get("company_id")
         source_id = self.request.query_params.get("source_account_id")
         dest_id = self.request.query_params.get("destination_account_id")
         status_param = self.request.query_params.get("status")
         start_date = self.request.query_params.get("start_date")
         end_date = self.request.query_params.get("end_date")
 
-        return FinancialTransferSelector.get_transfers(
+        qs = FinancialTransferSelector.get_transfers(
+            company_id=int(company_id) if company_id else None,
             source_account_id=int(source_id) if source_id else None,
             destination_account_id=int(dest_id) if dest_id else None,
             status=status_param,
             start_date=start_date,
             end_date=end_date,
         )
+        return self.isolate_queryset(qs)
 
     def get_serializer_class(self):
         if self.action == "create":
@@ -91,13 +94,7 @@ class FinancialTransferViewSet(BaseViewSet):
 
     @finance_transfer_detail_schema
     def retrieve(self, request, *args, **kwargs):
-        instance = FinancialTransferSelector.get_transfer_by_id(kwargs["pk"])
-        if not instance:
-            return self.error_response(
-                message="Transferencia financiera no encontrada.",
-                code="FINANCIAL_TRANSFER_NOT_FOUND",
-                status_code=status.HTTP_404_NOT_FOUND,
-            )
+        instance = self.get_object()
         serializer = self.get_serializer(instance)
         return self.success_response(
             message="Transferencia financiera obtenida.",
@@ -113,7 +110,9 @@ class FinancialTransferViewSet(BaseViewSet):
 
         try:
             transfer = FinancialTransferService.execute_transfer(
-                serializer.to_dto(), user=request.user
+                serializer.to_dto(),
+                user=request.user,
+                company_id=getattr(request, "company_id", None),
             )
             output = FinancialTransferListSerializer(transfer).data
             return self.success_response(
@@ -130,16 +129,17 @@ class FinancialTransferViewSet(BaseViewSet):
     @finance_transfer_cancel_schema
     @action(detail=True, methods=["post"], url_path="cancel")
     def cancel(self, request, pk=None):
+        transfer = self.get_object()
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
         try:
-            transfer = FinancialTransferService.cancel_transfer(
-                transfer_id=pk,
+            cancelled_transfer = FinancialTransferService.cancel_transfer(
+                transfer_id=transfer.pk,
                 reason=serializer.validated_data["reason"],
                 user=request.user,
             )
-            output = FinancialTransferListSerializer(transfer).data
+            output = FinancialTransferListSerializer(cancelled_transfer).data
             return self.success_response(
                 message="Transferencia cancelada y fondos restaurados.",
                 code="FINANCIAL_TRANSFER_CANCELLED",

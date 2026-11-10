@@ -14,22 +14,36 @@ class UserSelector(BaseSelector[User]):
     def __init__(self):
         super().__init__(User)
 
-    def get_queryset(self, include_deleted: bool = False) -> QuerySet[User]:
-        return (
+    def get_queryset(
+        self,
+        include_deleted: bool = False,
+        company_id: int | None = None,
+    ) -> QuerySet[User]:
+        qs = (
             super()
             .get_queryset(include_deleted=include_deleted)
             .prefetch_related("user_roles__role")
             .order_by("id_user")
         )
+        if company_id is not None:
+            qs = qs.filter(memberships__company_id=company_id).distinct()
+        return qs
 
     @staticmethod
-    def get_users():
-        return UserSelector().get_all()
+    def get_users(company_id: int | None = None):
+        return UserSelector().get_all(company_id=company_id)
 
     @staticmethod
-    def get_by_id(user_id: int, include_deleted: bool = False):
+    def get_by_id(
+        user_id: int,
+        include_deleted: bool = False,
+        company_id: int | None = None,
+    ):
         return get_object_or_404(
-            UserSelector().get_queryset(include_deleted=include_deleted),
+            UserSelector().get_queryset(
+                include_deleted=include_deleted,
+                company_id=company_id,
+            ),
             pk=user_id,
         )
 

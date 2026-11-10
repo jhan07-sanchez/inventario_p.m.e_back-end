@@ -118,10 +118,12 @@ class InventoryViewSet(BaseViewSet):
         """
         Retorna el queryset de inventarios.
 
-        Las consultas son delegadas al InventorySelector.
+        Las consultas son delegadas al InventorySelector y aisladas por tenant.
         """
 
-        return InventorySelector.get_inventories()
+        company_id = getattr(self.request, "company_id", None)
+        qs = InventorySelector.get_inventories(company_id=company_id)
+        return self.isolate_queryset(qs)
 
     def get_serializer_class(self):
         """
@@ -200,12 +202,10 @@ class InventoryViewSet(BaseViewSet):
     @inventory_detail_schema
     def retrieve(self, request, *args, **kwargs):
         """
-        Obtiene el detalle de un inventario.
+        Obtiene el detalle de un inventario garantizando aislamiento tenant.
         """
 
-        inventory = InventorySelector.get_by_id(
-            kwargs["pk"],
-        )
+        inventory = self.get_object()
 
         serializer = self.get_serializer(
             inventory,
@@ -257,12 +257,10 @@ class InventoryViewSet(BaseViewSet):
     @inventory_update_schema
     def update(self, request, *args, **kwargs):
         """
-        Actualiza completamente un inventario.
+        Actualiza completamente un inventario garantizando aislamiento tenant.
         """
 
-        inventory = InventorySelector.get_by_id(
-            kwargs["pk"],
-        )
+        inventory = self.get_object()
 
         serializer = self.get_serializer(
             inventory,
@@ -299,12 +297,10 @@ class InventoryViewSet(BaseViewSet):
     @inventory_partial_update_schema
     def partial_update(self, request, *args, **kwargs):
         """
-        Actualiza parcialmente un inventario.
+        Actualiza parcialmente un inventario garantizando aislamiento tenant.
         """
 
-        inventory = InventorySelector.get_by_id(
-            kwargs["pk"],
-        )
+        inventory = self.get_object()
 
         serializer = self.get_serializer(
             inventory,
@@ -342,12 +338,10 @@ class InventoryViewSet(BaseViewSet):
     @inventory_delete_schema
     def destroy(self, request, *args, **kwargs):
         """
-        Elimina o desactiva un registro de inventario.
+        Elimina o desactiva un registro de inventario garantizando aislamiento tenant.
         """
 
-        inventory = InventorySelector.get_by_id(
-            kwargs["pk"],
-        )
+        inventory = self.get_object()
 
         try:
             InventoryService.deactivate_inventory(
@@ -374,12 +368,14 @@ class InventoryViewSet(BaseViewSet):
     )
     def restore(self, request, pk=None):
         """
-        Restaura un registro de inventario previamente desactivado.
+        Restaura un registro de inventario previamente desactivado garantizando aislamiento tenant.
         """
 
+        company_id = getattr(request, "company_id", None)
         inventory = InventorySelector.get_by_id(
             pk,
             include_deleted=True,
+            company_id=company_id,
         )
 
         try:
@@ -410,12 +406,10 @@ class InventoryViewSet(BaseViewSet):
         pk=None,
     ):
         """
-        Actualiza los umbrales de stock mínimo y máximo.
+        Actualiza los umbrales de stock mínimo y máximo con aislamiento tenant.
         """
 
-        inventory = InventorySelector.get_by_id(
-            pk,
-        )
+        inventory = self.get_object()
 
         serializer = self.get_serializer(
             inventory,
@@ -462,12 +456,10 @@ class InventoryViewSet(BaseViewSet):
         pk=None,
     ):
         """
-        Registra una entrada de stock al inventario.
+        Registra una entrada de stock al inventario con aislamiento tenant.
         """
 
-        inventory = InventorySelector.get_by_id(
-            pk,
-        )
+        inventory = self.get_object()
 
         serializer = self.get_serializer(
             data=request.data,
@@ -513,12 +505,10 @@ class InventoryViewSet(BaseViewSet):
         pk=None,
     ):
         """
-        Registra una salida de stock del inventario.
+        Registra una salida de stock del inventario con aislamiento tenant.
         """
 
-        inventory = InventorySelector.get_by_id(
-            pk,
-        )
+        inventory = self.get_object()
 
         serializer = self.get_serializer(
             data=request.data,
@@ -564,12 +554,10 @@ class InventoryViewSet(BaseViewSet):
         pk=None,
     ):
         """
-        Realiza un ajuste manual del stock del inventario.
+        Realiza un ajuste manual del stock del inventario con aislamiento tenant.
         """
 
-        inventory = InventorySelector.get_by_id(
-            pk,
-        )
+        inventory = self.get_object()
 
         serializer = self.get_serializer(
             data=request.data,
@@ -615,12 +603,10 @@ class InventoryViewSet(BaseViewSet):
         pk=None,
     ):
         """
-        Obtiene el historial de movimientos de un inventario.
+        Obtiene el historial de movimientos de un inventario con aislamiento tenant.
         """
 
-        inventory = InventorySelector.get_by_id(
-            pk,
-        )
+        inventory = self.get_object()
 
         queryset = InventorySelector.get_movements(
             inventory=inventory,

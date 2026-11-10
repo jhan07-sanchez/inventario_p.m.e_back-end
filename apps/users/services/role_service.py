@@ -224,10 +224,14 @@ class RoleService(BaseService[Role]):
         """
         Crea un nuevo rol aplicando las reglas de negocio.
         """
+        company_id = validated_data.pop("company_id", None)
 
-        return RoleService().create(
+        role = Role.objects.create(
+            company_id=company_id,
             **validated_data,
         )
+
+        return role
 
     @staticmethod
     @transaction.atomic

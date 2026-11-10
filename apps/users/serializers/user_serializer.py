@@ -62,7 +62,9 @@ class UserDetailSerializer(serializers.ModelSerializer):
 
     @extend_schema_field(RoleListSerializer(many=True))
     def get_roles(self, obj):
-        roles = PermissionService._get_active_roles(obj)
+        request = self.context.get("request")
+        company_id = getattr(request, "company_id", None) if request else None
+        roles = PermissionService._get_active_roles(obj, company_id=company_id)
 
         return RoleListSerializer(
             roles,

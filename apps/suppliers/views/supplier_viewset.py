@@ -88,10 +88,12 @@ class SupplierViewSet(BaseViewSet):
         """
         Retorna el queryset de proveedores.
 
-        Las consultas son delegadas al SupplierSelector.
+        Las consultas son delegadas al SupplierSelector y aisladas por tenant.
         """
 
-        return SupplierSelector.get_suppliers()
+        company_id = getattr(self.request, "company_id", None)
+        qs = SupplierSelector.get_suppliers(company_id=company_id)
+        return self.isolate_queryset(qs)
 
     def get_serializer_class(self):
         """
@@ -155,12 +157,10 @@ class SupplierViewSet(BaseViewSet):
     @supplier_detail_schema
     def retrieve(self, request, *args, **kwargs):
         """
-        Obtiene el detalle de un proveedor.
+        Obtiene el detalle de un proveedor garantizando aislamiento tenant.
         """
 
-        supplier = SupplierSelector.get_supplier_by_id(
-            kwargs["pk"],
-        )
+        supplier = self.get_object()
 
         serializer = self.get_serializer(
             supplier,
@@ -176,7 +176,7 @@ class SupplierViewSet(BaseViewSet):
     @supplier_create_schema
     def create(self, request, *args, **kwargs):
         """
-        Crea un nuevo proveedor.
+        Crea un nuevo proveedor asociándolo a la empresa activa.
         """
 
         serializer = self.get_serializer(
@@ -188,8 +188,13 @@ class SupplierViewSet(BaseViewSet):
         )
 
         try:
+            validated_data = dict(serializer.validated_data)
+            company_id = getattr(request, "company_id", None)
+            if company_id and "company" not in validated_data and "company_id" not in validated_data:
+                validated_data["company_id"] = company_id
+
             supplier = SupplierService.create_supplier(
-                serializer.validated_data,
+                validated_data,
             )
 
             response_serializer = SupplierDetailSerializer(
@@ -212,12 +217,10 @@ class SupplierViewSet(BaseViewSet):
     @supplier_update_schema
     def update(self, request, *args, **kwargs):
         """
-        Actualiza completamente un proveedor.
+        Actualiza completamente un proveedor garantizando aislamiento tenant.
         """
 
-        supplier = SupplierSelector.get_supplier_by_id(
-            kwargs["pk"],
-        )
+        supplier = self.get_object()
 
         serializer = self.get_serializer(
             supplier,
@@ -254,12 +257,10 @@ class SupplierViewSet(BaseViewSet):
     @supplier_partial_update_schema
     def partial_update(self, request, *args, **kwargs):
         """
-        Actualiza parcialmente un proveedor.
+        Actualiza parcialmente un proveedor garantizando aislamiento tenant.
         """
 
-        supplier = SupplierSelector.get_supplier_by_id(
-            kwargs["pk"],
-        )
+        supplier = self.get_object()
 
         serializer = self.get_serializer(
             supplier,
@@ -297,12 +298,10 @@ class SupplierViewSet(BaseViewSet):
     @supplier_delete_schema
     def destroy(self, request, *args, **kwargs):
         """
-        Realiza el borrado lógico de un proveedor.
+        Realiza el borrado lógico de un proveedor garantizando aislamiento tenant.
         """
 
-        supplier = SupplierSelector.get_supplier_by_id(
-            kwargs["pk"],
-        )
+        supplier = self.get_object()
 
         try:
             SupplierService.deactivate_supplier(
@@ -333,12 +332,14 @@ class SupplierViewSet(BaseViewSet):
         pk=None,
     ):
         """
-        Restaura un proveedor previamente desactivado.
+        Restaura un proveedor previamente desactivado garantizando aislamiento tenant.
         """
 
+        company_id = getattr(request, "company_id", None)
         supplier = SupplierSelector.get_supplier_by_id(
             pk,
             include_deleted=True,
+            company_id=company_id,
         )
 
         try:

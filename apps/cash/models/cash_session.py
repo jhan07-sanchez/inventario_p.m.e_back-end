@@ -5,10 +5,10 @@ from django.core.validators import MinValueValidator
 from django.db import models
 
 from apps.cash.models.cash_register import CashRegister
-from apps.core.models.active_model import ActiveModel
+from apps.core.models.tenant_model import TenantModel
 
 
-class CashSession(ActiveModel):
+class CashSession(TenantModel):
     """
     Modelo que representa el turno o sesión de trabajo de un cajero.
     Controla el balance de efectivo (esperado y físico).
@@ -103,20 +103,21 @@ class CashSession(ActiveModel):
         verbose_name_plural = "Sesiones de Caja"
         ordering = ["-start_time"]
         indexes = [
+            models.Index(fields=["company", "status"], name="cash_sess_comp_stat_idx"),
             models.Index(fields=["status"]),
             models.Index(fields=["user", "status"]),
             models.Index(fields=["cash_register", "status"]),
         ]
         constraints = [
             models.UniqueConstraint(
-                fields=["user"],
+                fields=["company", "user"],
                 condition=models.Q(status="OPEN", is_active=True),
-                name="unique_open_session_per_user",
+                name="unique_open_session_user_comp",
             ),
             models.UniqueConstraint(
-                fields=["cash_register"],
+                fields=["company", "cash_register"],
                 condition=models.Q(status="OPEN", is_active=True),
-                name="unique_open_session_per_register",
+                name="unique_open_session_reg_comp",
             ),
             models.CheckConstraint(
                 condition=models.Q(opening_balance__gte=Decimal("0.00")),

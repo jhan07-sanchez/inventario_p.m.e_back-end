@@ -106,10 +106,12 @@ class CustomerViewSet(BaseViewSet):
         """
         Retorna el queryset de clientes.
 
-        Las consultas son delegadas al CustomerSelector.
+        Las consultas son delegadas al CustomerSelector y aisladas por tenant.
         """
 
-        return CustomerSelector.get_customers()
+        company_id = getattr(self.request, "company_id", None)
+        qs = CustomerSelector.get_customers(company_id=company_id)
+        return self.isolate_queryset(qs)
 
     def get_serializer_class(self):
         """
@@ -173,12 +175,10 @@ class CustomerViewSet(BaseViewSet):
     @customer_detail_schema
     def retrieve(self, request, *args, **kwargs):
         """
-        Obtiene el detalle de un cliente.
+        Obtiene el detalle de un cliente garantizando aislamiento tenant.
         """
 
-        customer = CustomerSelector.get_customer_by_id(
-            kwargs["pk"],
-        )
+        customer = self.get_object()
 
         serializer = self.get_serializer(
             customer,
@@ -206,8 +206,13 @@ class CustomerViewSet(BaseViewSet):
         )
 
         try:
+            validated_data = dict(serializer.validated_data)
+            company_id = getattr(request, "company_id", None)
+            if company_id and "company" not in validated_data and "company_id" not in validated_data:
+                validated_data["company_id"] = company_id
+
             customer = CustomerService.create_customer(
-                serializer.validated_data,
+                validated_data,
             )
 
             response_serializer = CustomerDetailSerializer(
@@ -230,12 +235,10 @@ class CustomerViewSet(BaseViewSet):
     @customer_update_schema
     def update(self, request, *args, **kwargs):
         """
-        Actualiza completamente un cliente.
+        Actualiza completamente un cliente garantizando aislamiento tenant.
         """
 
-        customer = CustomerSelector.get_customer_by_id(
-            kwargs["pk"],
-        )
+        customer = self.get_object()
 
         serializer = self.get_serializer(
             customer,
@@ -272,12 +275,10 @@ class CustomerViewSet(BaseViewSet):
     @customer_partial_update_schema
     def partial_update(self, request, *args, **kwargs):
         """
-        Actualiza parcialmente un cliente.
+        Actualiza parcialmente un cliente garantizando aislamiento tenant.
         """
 
-        customer = CustomerSelector.get_customer_by_id(
-            kwargs["pk"],
-        )
+        customer = self.get_object()
 
         serializer = self.get_serializer(
             customer,
@@ -315,12 +316,10 @@ class CustomerViewSet(BaseViewSet):
     @customer_delete_schema
     def destroy(self, request, *args, **kwargs):
         """
-        Realiza el borrado lógico de un cliente.
+        Realiza el borrado lógico de un cliente garantizando aislamiento tenant.
         """
 
-        customer = CustomerSelector.get_customer_by_id(
-            kwargs["pk"],
-        )
+        customer = self.get_object()
 
         try:
             CustomerService.deactivate_customer(
@@ -351,12 +350,14 @@ class CustomerViewSet(BaseViewSet):
         pk=None,
     ):
         """
-        Restaura un cliente previamente desactivado.
+        Restaura un cliente previamente desactivado garantizando aislamiento tenant.
         """
 
+        company_id = getattr(request, "company_id", None)
         customer = CustomerSelector.get_customer_by_id(
             pk,
             include_deleted=True,
+            company_id=company_id,
         )
 
         try:

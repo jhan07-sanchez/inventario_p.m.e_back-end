@@ -7,8 +7,7 @@ from apps.core.exceptions.custom_exceptions import (
     UserInactiveException,
 )
 from apps.core.services.base_service import BaseService
-from apps.users.models import Role, User, UserRole
-
+from apps.users.models import Role, User, UserRole, CompanyMembership
 
 class UserService(BaseService[User]):
     """
@@ -57,7 +56,7 @@ class UserService(BaseService[User]):
 
         return data
 
-    def perform_create(self, data: dict) -> User:
+    def perform_create(self, data: dict, company_id: int | None) -> User:
         password = data.pop("password")
         roles_ids = data.pop("roles", [])
 
@@ -68,14 +67,27 @@ class UserService(BaseService[User]):
         user.full_clean()
         user.save()
 
-        if roles_ids:
-            roles = Role.objects.filter(id_role__in=roles_ids, is_active=True)
-            for role in roles:
-                UserRole.objects.create(user=user, role=role)
-
+        if company_id:
+            if roles_ids:
+                role = Role.objects.filter(id_role__in=roles_ids, company_id=company_id, is_active=True).first()
+                if role:
+                    CompanyMembership.objects.create(
+                        user=user,
+                        company_id=company_id,
+                        role=role,
+                        status=CompanyMembership.MembershipStatus.ACTIVE,
+                        is_owner=False,
+                    )
+            else:
+                CompanyMembership.objects.create(
+                    user=user,
+                    company_id=company_id,
+                    role=None,
+                    status=CompanyMembership.MembershipStatus.ACTIVE,
+                )
         return user
 
-    def perform_update(self, instance: User, data: dict) -> User:
+    def perform_update(self, instance: User, data: dict, company_id: int = None) -> User:
         password = data.pop("password", None)
         roles_ids = data.pop("roles", None)
 
@@ -91,16 +103,32 @@ class UserService(BaseService[User]):
         instance.full_clean()
         instance.save()
 
-        if roles_ids is not None:
-            from apps.users.services.user_role_service import UserRoleService
 
-            for ur in UserRole.objects.filter(user=instance):
-                ur.delete()
 
-            if roles_ids:
-                roles = Role.objects.filter(id_role__in=roles_ids, is_active=True)
-                for role in roles:
-                    UserRoleService.create_user_role({"user": instance, "role": role})
+        if roles_ids is not None and company_id:
+            membership = CompanyMembership.objects.filter(
+                user=instance, company_id=company_id
+            ).first()
+
+            if membership:
+                if roles_ids:
+                    role = Role.objects.filter(
+                        id_role__in=roles_ids, company_id=company_id
+                    ).first()
+                    if role:
+                        membership.role = role
+                        membership.save()
+                else:
+                    membership.is_active = False
+                    membership.save()
+            elif roles_ids:
+                role = Role.objects.filter(
+                    id_role__in=roles_ids, company_id=company_id
+                ).first()
+                if role:
+                    CompanyMembership.objects.create(
+                        user=instance, company_id=company_id, role=role, status="ACTIVE"
+                    )
 
             from apps.core.security.services.permission_service import PermissionService
 
@@ -126,19 +154,22 @@ class UserService(BaseService[User]):
 
     @staticmethod
     @transaction.atomic
-    def create_user(validated_data: dict) -> User:
+    def create_user(company_id: int | None, validated_data: dict) -> User:
         """
         Crea un nuevo usuario aplicando las reglas de negocio.
         """
-        return UserService().create(**validated_data)
+        return UserService().create(
+            company_id=company_id,
+            **validated_data
+        )
 
     @staticmethod
     @transaction.atomic
-    def update_user(user: User, validated_data: dict) -> User:
+    def update_user(user: User, company_id: int, validated_data: dict) -> User:
         """
         Actualiza un usuario aplicando las reglas de negocio.
         """
-        return UserService().update(user, **validated_data)
+        return UserService().update(user, company_id=company_id, **validated_data)
 
     @staticmethod
     @transaction.atomic

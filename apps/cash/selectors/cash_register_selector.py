@@ -12,25 +12,38 @@ class CashRegisterSelector(BaseSelector[CashRegister]):
     def __init__(self):
         super().__init__(CashRegister)
 
-    def get_queryset(self, include_deleted: bool = False) -> QuerySet[CashRegister]:
+    def get_queryset(
+        self,
+        include_deleted: bool = False,
+        company_id: int | None = None,
+    ) -> QuerySet[CashRegister]:
         """
         Retorna el queryset base de cajas registradoras ordenadas por nombre.
         """
         return (
             super()
-            .get_queryset(include_deleted=include_deleted)
+            .get_queryset(include_deleted=include_deleted, company_id=company_id)
             .order_by("name")
         )
 
     @staticmethod
-    def get_all(qs=None, include_deleted: bool = False) -> QuerySet[CashRegister]:
+    def get_all(
+        qs=None,
+        include_deleted: bool = False,
+        company_id: int | None = None,
+    ) -> QuerySet[CashRegister]:
         """
         Retorna todas las cajas registradoras activas.
         """
         if qs is not None:
             return qs.filter(is_active=True) if not include_deleted else qs
         return (
-            CashRegisterSelector().get_queryset(include_deleted=include_deleted)
+            CashRegisterSelector().get_queryset(
+                include_deleted=include_deleted,
+                company_id=company_id,
+            )
             if include_deleted
-            else CashRegisterSelector().get_queryset().filter(is_active=True)
+            else CashRegisterSelector().get_queryset(
+                company_id=company_id,
+            ).filter(is_active=True)
         )

@@ -38,7 +38,9 @@ class InventoryService(BaseService[Inventory]):
             raise ValidationError("El producto ya tiene un registro de inventario.")
 
         instance = InventoryService().create(**data)
-        DashboardMetricsService.invalidate_inventory_cache()
+        DashboardMetricsService.invalidate_inventory_cache(
+            company_id=getattr(product, "company_id", None)
+        )
         return instance
 
     @staticmethod
@@ -58,7 +60,9 @@ class InventoryService(BaseService[Inventory]):
             inventory,
             **data,
         )
-        DashboardMetricsService.invalidate_inventory_cache()
+        DashboardMetricsService.invalidate_inventory_cache(
+            company_id=getattr(getattr(inventory, "product", None), "company_id", None)
+        )
         return instance
 
     @staticmethod
@@ -73,7 +77,9 @@ class InventoryService(BaseService[Inventory]):
             inventory,
             **data,
         )
-        DashboardMetricsService.invalidate_inventory_cache()
+        DashboardMetricsService.invalidate_inventory_cache(
+            company_id=getattr(getattr(inventory, "product", None), "company_id", None)
+        )
         return instance
 
     @staticmethod
@@ -140,7 +146,9 @@ class InventoryService(BaseService[Inventory]):
             user=movement_user,
         )
 
-        DashboardMetricsService.invalidate_inventory_cache()
+        DashboardMetricsService.invalidate_inventory_cache(
+            company_id=getattr(getattr(inventory_locked, "product", None), "company_id", None)
+        )
 
         return movement
 
@@ -198,7 +206,9 @@ class InventoryService(BaseService[Inventory]):
             user=movement_user,
         )
 
-        DashboardMetricsService.invalidate_inventory_cache()
+        DashboardMetricsService.invalidate_inventory_cache(
+            company_id=getattr(getattr(inventory_locked, "product", None), "company_id", None)
+        )
 
         return movement
 
@@ -256,7 +266,9 @@ class InventoryService(BaseService[Inventory]):
             user=movement_user,
         )
 
-        DashboardMetricsService.invalidate_inventory_cache()
+        DashboardMetricsService.invalidate_inventory_cache(
+            company_id=getattr(getattr(inventory_locked, "product", None), "company_id", None)
+        )
 
         return movement
 
@@ -272,7 +284,9 @@ class InventoryService(BaseService[Inventory]):
             raise ValidationError("El inventario ya se encuentra desactivado.")
 
         InventoryService().delete(inventory)
-        DashboardMetricsService.invalidate_inventory_cache()
+        DashboardMetricsService.invalidate_inventory_cache(
+            company_id=getattr(getattr(inventory, "product", None), "company_id", None)
+        )
 
     @staticmethod
     def restore_inventory(
@@ -286,5 +300,7 @@ class InventoryService(BaseService[Inventory]):
             return inventory
 
         instance = InventoryService().restore(inventory)
-        DashboardMetricsService.invalidate_inventory_cache()
+        DashboardMetricsService.invalidate_inventory_cache(
+            company_id=getattr(getattr(inventory, "product", None), "company_id", None)
+        )
         return instance

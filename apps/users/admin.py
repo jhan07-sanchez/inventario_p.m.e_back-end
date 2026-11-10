@@ -1,11 +1,19 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 
-from .models import Role, User, UserRole
+from .models import CompanyMembership, Role, User, UserRole
+
+
+class CompanyMembershipInline(admin.TabularInline):
+    model = CompanyMembership
+    extra = 0
+    raw_id_fields = ("company", "role")
+    fields = ("company", "role", "is_owner", "status", "is_active")
 
 
 @admin.register(User)
 class CustomUserAdmin(UserAdmin):
+    inlines = [CompanyMembershipInline]
     list_display = (
         "id_user",
         "username",
@@ -165,3 +173,39 @@ class UserRoleAdmin(admin.ModelAdmin):
     def get_queryset(self, request):
         """Muestra todas las asignaciones, incluyendo las eliminadas lógicamente."""
         return UserRole.all_objects.all()
+
+
+@admin.register(CompanyMembership)
+class CompanyMembershipAdmin(admin.ModelAdmin):
+    list_display = (
+        "id_membership",
+        "user",
+        "company",
+        "role",
+        "is_owner",
+        "status",
+        "is_active",
+        "created_at",
+    )
+
+    list_filter = (
+        "status",
+        "is_owner",
+        "is_active",
+        "company",
+        "role",
+    )
+
+    search_fields = (
+        "user__username",
+        "user__email",
+        "company__business_name",
+        "company__tax_id",
+        "role__role_name",
+    )
+
+    ordering = ("-created_at",)
+
+    readonly_fields = ("created_at", "updated_at")
+
+    raw_id_fields = ("user", "company", "role")

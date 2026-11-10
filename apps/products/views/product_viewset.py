@@ -89,12 +89,11 @@ class ProductViewSet(BaseViewSet):
 
     def get_queryset(self):
         """
-        Retorna el queryset de productos.
-
-        Las consultas son delegadas al ProductSelector.
+        Retorna el queryset de productos confinado al tenant activo.
         """
-
-        return ProductSelector.get_products()
+        company_id = getattr(self.request, "company_id", None)
+        qs = ProductSelector.get_products(company_id=company_id)
+        return self.isolate_queryset(qs)
 
     def get_serializer_class(self):
         """
@@ -158,12 +157,10 @@ class ProductViewSet(BaseViewSet):
     @product_detail_schema
     def retrieve(self, request, *args, **kwargs):
         """
-        Obtiene el detalle de un producto.
+        Obtiene el detalle de un producto garantizando aislamiento tenant.
         """
 
-        product = ProductSelector.get_by_id(
-            kwargs["pk"],
-        )
+        product = self.get_object()
 
         serializer = self.get_serializer(
             product,
@@ -215,12 +212,10 @@ class ProductViewSet(BaseViewSet):
     @product_update_schema
     def update(self, request, *args, **kwargs):
         """
-        Actualiza completamente un producto.
+        Actualiza completamente un producto garantizando aislamiento tenant.
         """
 
-        product = ProductSelector.get_by_id(
-            kwargs["pk"],
-        )
+        product = self.get_object()
 
         serializer = self.get_serializer(
             product,
@@ -257,12 +252,10 @@ class ProductViewSet(BaseViewSet):
     @product_partial_update_schema
     def partial_update(self, request, *args, **kwargs):
         """
-        Actualiza parcialmente un producto.
+        Actualiza parcialmente un producto garantizando aislamiento tenant.
         """
 
-        product = ProductSelector.get_by_id(
-            kwargs["pk"],
-        )
+        product = self.get_object()
 
         serializer = self.get_serializer(
             product,
@@ -300,12 +293,10 @@ class ProductViewSet(BaseViewSet):
     @product_delete_schema
     def destroy(self, request, *args, **kwargs):
         """
-        Realiza la desactivación lógica de un producto.
+        Realiza la desactivación lógica de un producto garantizando aislamiento tenant.
         """
 
-        product = ProductSelector.get_by_id(
-            kwargs["pk"],
-        )
+        product = self.get_object()
 
         try:
             ProductService.deactivate_product(
@@ -339,9 +330,11 @@ class ProductViewSet(BaseViewSet):
         Restaura un producto previamente desactivado.
         """
 
+        company_id = getattr(request, "company_id", None)
         product = ProductSelector.get_by_id(
             pk,
             include_deleted=True,
+            company_id=company_id,
         )
 
         try:
@@ -380,7 +373,7 @@ class ProductViewSet(BaseViewSet):
             q (str): Término de búsqueda (código, nombre o barcode).
             limit (int): Máximo de resultados. Default 20, tope 50.
 
-        Retorna una lista plana de productos activos.
+        Retorna una lista plana de productos activos de la empresa.
         """
 
         query = request.query_params.get("q", "").strip()
@@ -391,10 +384,12 @@ class ProductViewSet(BaseViewSet):
             limit = 20
 
         limit = max(1, min(limit, 50))
+        company_id = getattr(request, "company_id", None)
 
         products = ProductSelector.search_products(
             query=query,
             limit=limit,
+            company_id=company_id,
         )
 
         serializer = ProductSearchSerializer(

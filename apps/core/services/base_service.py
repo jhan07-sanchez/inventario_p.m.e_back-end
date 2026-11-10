@@ -48,12 +48,64 @@ class BaseService(Generic[ModelType]):
             else:
                 instance.delete()
 
+    def _is_tenant_model(self) -> bool:
+        if not self.model:
+            return False
+        try:
+            from apps.core.models.tenant_model import TenantModel
+
+            if issubclass(self.model, TenantModel):
+                return True
+        except Exception:
+            pass
+        fields = [f.name for f in getattr(self.model._meta, "fields", [])]
+        return "company" in fields or "company_id" in fields
+
+    def validate_cross_tenant_integrity(
+        self, data: dict[str, Any], company_id: Any
+    ) -> None:
+        """
+        Verifica que todas las claves foráneas pasadas pertenezcan a la misma empresa.
+        Previene la inyección de entidades ajenas (cross-tenant relational injection).
+        """
+        if not company_id:
+            return
+        comp_id = (
+            getattr(company_id, "id_company", None)
+            or getattr(company_id, "pk", None)
+            or company_id
+        )
+
+        for field_name, value in data.items():
+            if value is not None and hasattr(value, "company_id"):
+                rel_comp_id = getattr(value, "company_id", None)
+                if rel_comp_id is not None and rel_comp_id != comp_id:
+                    from django.core.exceptions import ValidationError
+
+                    raise ValidationError(
+                        f"La entidad relacionada '{field_name}' pertenece a otra empresa."
+                    )
+
     @transaction.atomic
     def create(self, **data: Any) -> ModelType:
         """
         Flujo central de creación.
         Aplica validaciones -> Construye -> Retorna el objeto.
+        Inyecta automáticamente company_id y verifica integridad relacional multi-tenant.
         """
+        if self._is_tenant_model():
+            from apps.core.context import get_current_company_id
+
+            comp_id = (
+                data.get("company_id")
+                or getattr(data.get("company"), "pk", None)
+                or get_current_company_id()
+            )
+            if comp_id:
+                if "company_id" not in data and "company" not in data:
+                    data["company_id"] = comp_id
+                self.validate_cross_tenant_integrity(data, comp_id)
+
         validated_data = self.validate(data)
         return self.perform_create(validated_data)
 
@@ -62,7 +114,14 @@ class BaseService(Generic[ModelType]):
         """
         Flujo central de actualización.
         Aplica validaciones de negocio y luego actualiza.
+        Garantiza que la empresa del registro no sea alterada.
         """
+        if self._is_tenant_model():
+            existing_company_id = getattr(instance, "company_id", None)
+            if existing_company_id:
+                data["company_id"] = existing_company_id
+                self.validate_cross_tenant_integrity(data, existing_company_id)
+
         validated_data = self.validate(data, instance=instance)
         return self.perform_update(instance, validated_data)
 

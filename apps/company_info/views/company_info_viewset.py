@@ -54,6 +54,9 @@ class CompanyInfoViewSet(BaseViewSet):
                 # para reportes o tickets, pero limitamos a view si es necesario
                 HasPermission("settings.view"),
             ),
+            "my_companies": (
+                IsAuthenticatedAndActive,
+            ),
             "create": (
                 IsAuthenticatedAndActive,
                 HasPermission("settings.update"),
@@ -144,9 +147,12 @@ class CompanyInfoViewSet(BaseViewSet):
     @action(detail=False, methods=["get"], url_path="current")
     def current(self, request):
         """
-        Obtiene la información de la empresa activa.
+        Obtiene la información de la empresa activa del contexto del usuario.
         """
-        company = CompanyInfoSelector.get_current()
+        company = getattr(request, "company", None)
+        if not company:
+            company = CompanyInfoSelector.get_current()
+
         if not company:
             return self.error_response(
                 message="No hay empresa configurada en el sistema.",
@@ -161,16 +167,76 @@ class CompanyInfoViewSet(BaseViewSet):
             status_code=status.HTTP_200_OK,
         )
 
+    @action(detail=False, methods=["get"], url_path="my-companies")
+    def my_companies(self, request):
+        """
+        Retorna el listado de empresas a las que pertenece el usuario autenticado (Company Switcher).
+        """
+        user = request.user
+        from apps.users.models import CompanyMembership
+
+        if getattr(user, "is_superuser", False):
+            companies = CompanyInfoSelector.get_all()
+            data = [
+                {
+                    "id_company": c.id_company,
+                    "uuid": str(c.uuid),
+                    "business_name": c.business_name,
+                    "trade_name": c.trade_name,
+                    "tax_id": c.tax_id,
+                    "logo": request.build_absolute_uri(c.logo.url) if c.logo else None,
+                    "role_name": "Superadministrador",
+                    "is_owner": True,
+                    "status": c.status,
+                }
+                for c in companies
+            ]
+        else:
+            memberships = (
+                CompanyMembership.objects.filter(
+                    user=user,
+                    is_active=True,
+                    company__is_active=True,
+                )
+                .select_related("company", "role")
+                .order_by("-is_owner", "company__business_name")
+            )
+            data = [
+                {
+                    "id_company": m.company.id_company,
+                    "uuid": str(m.company.uuid),
+                    "business_name": m.company.business_name,
+                    "trade_name": m.company.trade_name,
+                    "tax_id": m.company.tax_id,
+                    "logo": request.build_absolute_uri(m.company.logo.url) if m.company.logo else None,
+                    "role_name": m.role.role_name,
+                    "id_role": m.role.id_role,
+                    "is_owner": m.is_owner,
+                    "status": m.company.status,
+                }
+                for m in memberships
+            ]
+
+        return self.success_response(
+            message="Empresas del usuario obtenidas correctamente.",
+            code="USER_COMPANIES_FETCHED",
+            data=data,
+            status_code=status.HTTP_200_OK,
+        )
+
     @company_info_create_schema
     def create(self, request, *args, **kwargs):
         """
-        Crea el registro de empresa (singleton).
+        Crea una nueva organización o empresa en el SaaS.
         """
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
         try:
-            company = CompanyInfoService.create_company_info(serializer.to_dto())
+            company = CompanyInfoService.create_company_info(
+                serializer.to_dto(),
+                owner_user=request.user if request.user.is_authenticated else None,
+            )
             response_serializer = CompanyInfoSerializer(
                 company, context={"request": request}
             )

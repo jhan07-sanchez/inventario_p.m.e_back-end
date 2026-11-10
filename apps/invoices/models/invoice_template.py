@@ -1,9 +1,9 @@
 from django.db import models
 
-from apps.core.models.active_model import ActiveModel
+from apps.core.models.tenant_model import TenantModel
 
 
-class InvoiceTemplate(ActiveModel):
+class InvoiceTemplate(TenantModel):
     """
     Modelo que representa una plantilla documental para
     la generación de facturas u otros documentos empresariales.
@@ -61,7 +61,18 @@ class InvoiceTemplate(ActiveModel):
 
         indexes = [
             models.Index(
+                fields=["company", "document_type"], name="inv_tmpl_comp_type_idx"
+            ),
+            models.Index(
                 fields=["document_type", "is_active"], name="inv_tmpl_type_active_idx"
+            ),
+        ]
+
+        constraints = [
+            models.UniqueConstraint(
+                fields=["company", "document_type"],
+                condition=models.Q(is_default=True, is_active=True),
+                name="unique_default_tmpl_company",
             ),
         ]
 

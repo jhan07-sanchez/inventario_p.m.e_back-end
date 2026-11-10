@@ -126,10 +126,12 @@ class PurchaseViewSet(BaseViewSet):
         """
         Retorna el queryset de compras.
 
-        Las consultas son delegadas al PurchaseSelector.
+        Las consultas son delegadas al PurchaseSelector y aisladas por tenant.
         """
 
-        return PurchaseSelector.get_purchases()
+        company_id = getattr(self.request, "company_id", None)
+        qs = PurchaseSelector.get_purchases(company_id=company_id)
+        return self.isolate_queryset(qs)
 
     def get_serializer_class(self):
         """
@@ -196,12 +198,10 @@ class PurchaseViewSet(BaseViewSet):
     @purchase_detail_schema
     def retrieve(self, request, *args, **kwargs):
         """
-        Obtiene el detalle de una compra.
+        Obtiene el detalle de una compra garantizando aislamiento tenant.
         """
 
-        purchase = PurchaseSelector.get_purchase_by_id(
-            kwargs["pk"],
-        )
+        purchase = self.get_object()
 
         serializer = self.get_serializer(
             purchase,
@@ -217,7 +217,7 @@ class PurchaseViewSet(BaseViewSet):
     @purchase_create_schema
     def create(self, request, *args, **kwargs):
         """
-        Crea una nueva compra.
+        Crea una nueva compra asociándola a la empresa activa.
         """
 
         serializer = self.get_serializer(
@@ -229,8 +229,9 @@ class PurchaseViewSet(BaseViewSet):
         )
 
         try:
+            company_id = getattr(request, "company_id", None)
             purchase = PurchaseService.create_purchase(
-                serializer.to_dto(),
+                serializer.to_dto(company_id=company_id),
             )
 
             response_serializer = PurchaseRetrieveSerializer(
@@ -253,12 +254,10 @@ class PurchaseViewSet(BaseViewSet):
     @purchase_update_schema
     def update(self, request, *args, **kwargs):
         """
-        Actualiza completamente una compra.
+        Actualiza completamente una compra garantizando aislamiento tenant.
         """
 
-        purchase = PurchaseSelector.get_purchase_by_id(
-            kwargs["pk"],
-        )
+        purchase = self.get_object()
 
         serializer = self.get_serializer(
             purchase,
@@ -295,12 +294,10 @@ class PurchaseViewSet(BaseViewSet):
     @purchase_partial_update_schema
     def partial_update(self, request, *args, **kwargs):
         """
-        Actualiza parcialmente una compra.
+        Actualiza parcialmente una compra garantizando aislamiento tenant.
         """
 
-        purchase = PurchaseSelector.get_purchase_by_id(
-            kwargs["pk"],
-        )
+        purchase = self.get_object()
 
         serializer = self.get_serializer(
             purchase,
@@ -338,12 +335,10 @@ class PurchaseViewSet(BaseViewSet):
     @purchase_delete_schema
     def destroy(self, request, *args, **kwargs):
         """
-        Realiza el borrado lógico de una compra.
+        Realiza el borrado lógico de una compra garantizando aislamiento tenant.
         """
 
-        purchase = PurchaseSelector.get_purchase_by_id(
-            kwargs["pk"],
-        )
+        purchase = self.get_object()
 
         try:
             PurchaseService.deactivate_purchase(
@@ -370,12 +365,14 @@ class PurchaseViewSet(BaseViewSet):
     )
     def restore(self, request, pk=None):
         """
-        Restaura una compra previamente desactivada.
+        Restaura una compra previamente desactivada garantizando aislamiento tenant.
         """
 
+        company_id = getattr(request, "company_id", None)
         purchase = PurchaseSelector.get_purchase_by_id(
             pk,
             include_deleted=True,
+            company_id=company_id,
         )
 
         try:
@@ -402,9 +399,9 @@ class PurchaseViewSet(BaseViewSet):
     )
     def confirm(self, request, pk=None):
         """
-        Confirma una compra (DRAFT -> PENDING).
+        Confirma una compra (DRAFT -> PENDING) con verificación tenant.
         """
-        purchase = PurchaseSelector.get_purchase_by_id(pk)
+        purchase = self.get_object()
 
         try:
             PurchaseService.confirm_purchase(purchase)
@@ -430,9 +427,9 @@ class PurchaseViewSet(BaseViewSet):
     )
     def receive(self, request, pk=None):
         """
-        Recibe una compra e incrementa inventario (PENDING -> RECEIVED).
+        Recibe una compra e incrementa inventario (PENDING -> RECEIVED) con verificación tenant.
         """
-        purchase = PurchaseSelector.get_purchase_by_id(pk)
+        purchase = self.get_object()
 
         try:
             PurchaseService.receive_purchase(purchase)
@@ -458,9 +455,9 @@ class PurchaseViewSet(BaseViewSet):
     )
     def complete(self, request, pk=None):
         """
-        Completa una compra (RECEIVED -> COMPLETED).
+        Completa una compra (RECEIVED -> COMPLETED) con verificación tenant.
         """
-        purchase = PurchaseSelector.get_purchase_by_id(pk)
+        purchase = self.get_object()
 
         try:
             PurchaseService.complete_purchase(purchase)
@@ -486,9 +483,9 @@ class PurchaseViewSet(BaseViewSet):
     )
     def cancel(self, request, pk=None):
         """
-        Cancela una compra.
+        Cancela una compra con verificación tenant.
         """
-        purchase = PurchaseSelector.get_purchase_by_id(pk)
+        purchase = self.get_object()
 
         try:
             PurchaseService.cancel_purchase(purchase)
@@ -516,12 +513,13 @@ class PurchaseViewSet(BaseViewSet):
         """
         Registra el pago de una compra a proveedor, afectando la caja chica o banco.
         """
+        purchase = self.get_object()
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
         try:
             result = PurchasePaymentService.pay_purchase(
-                purchase_id=pk,
+                purchase_id=purchase.pk,
                 dto=serializer.to_dto(),
                 user=request.user,
             )
@@ -547,7 +545,8 @@ class PurchaseViewSet(BaseViewSet):
         """
         Obtiene el historial y estado consolidado de pagos de una compra.
         """
-        summary = PurchasePaymentService.get_purchase_payment_summary(pk)
+        purchase = self.get_object()
+        summary = PurchasePaymentService.get_purchase_payment_summary(purchase.pk)
         return self.success_response(
             message="Pagos de la compra obtenidos con éxito.",
             code="PURCHASE_PAYMENTS_FETCHED",

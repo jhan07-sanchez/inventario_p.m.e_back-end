@@ -3,10 +3,10 @@ from decimal import Decimal
 from django.core.validators import MinValueValidator
 from django.db import models
 
-from apps.core.models.active_model import ActiveModel
+from apps.core.models.tenant_model import TenantModel
 
 
-class Purchase(ActiveModel):
+class Purchase(TenantModel):
     """
     Modelo que representa una orden de compra o ingreso de mercancía de un proveedor.
     """
@@ -69,6 +69,8 @@ class Purchase(ActiveModel):
         ordering = ["-created_at"]
 
         indexes = [
+            models.Index(fields=["company", "status"], name="purch_comp_status_idx"),
+            models.Index(fields=["company", "-created_at"], name="purch_comp_created_idx"),
             models.Index(fields=["status"], name="purchase_status_idx"),
             models.Index(fields=["issue_date"], name="purchase_issue_date_idx"),
             models.Index(

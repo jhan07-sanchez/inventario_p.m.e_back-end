@@ -28,17 +28,19 @@ class CashSessionService(BaseService[CashSession]):
     @staticmethod
     @transaction.atomic
     def open_session(dto: CashSessionOpenDto, user) -> CashSession:
-        if CashSession.objects.filter(
-            user=user, status=CashSession.SessionStatus.OPEN, is_active=True
-        ).exists():
-            raise CashSessionAlreadyOpenException()
-
         try:
             register = CashRegister.objects.select_for_update().get(
                 pk=dto.cash_register_id, is_active=True
             )
         except CashRegister.DoesNotExist:
             raise CashRegisterNotFoundException()
+
+        company_id = getattr(register, "company_id", None)
+
+        if CashSession.objects.filter(
+            company_id=company_id, user=user, status=CashSession.SessionStatus.OPEN, is_active=True
+        ).exists():
+            raise CashSessionAlreadyOpenException()
 
         if CashSession.objects.filter(
             cash_register=register,
@@ -53,6 +55,7 @@ class CashSessionService(BaseService[CashSession]):
             )
 
         session = CashSession.objects.create(
+            company_id=company_id,
             cash_register=register,
             user=user,
             opening_balance=dto.opening_balance,

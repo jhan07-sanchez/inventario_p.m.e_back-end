@@ -51,7 +51,12 @@ class CompanyInfoSelector(BaseSelector[CompanyInfo]):
         return CompanyInfoSelector().get_active().filter(pk=company_id).first()
 
     @staticmethod
-    def get_all(qs=None, include_deleted: bool = False) -> QuerySet[CompanyInfo]:
+    def get_all(
+        qs=None,
+        include_deleted: bool = False,
+        company_id=None,
+        **kwargs,
+    ) -> QuerySet[CompanyInfo]:
         """
         Obtiene todos los registros de empresa activos.
         """

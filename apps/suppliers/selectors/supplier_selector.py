@@ -13,30 +13,35 @@ class SupplierSelector(BaseSelector[Supplier]):
     def __init__(self):
         super().__init__(Supplier)
 
-    def get_queryset(self, include_deleted: bool = False) -> QuerySet[Supplier]:
+    def get_queryset(
+        self,
+        include_deleted: bool = False,
+        company_id: int | None = None,
+    ) -> QuerySet[Supplier]:
         """
         Retorna el queryset base de proveedores ordenados por ID.
         """
         return (
             super()
-            .get_queryset(include_deleted=include_deleted)
+            .get_queryset(include_deleted=include_deleted, company_id=company_id)
             .order_by("id_supplier")
         )
 
     @staticmethod
-    def get_suppliers() -> QuerySet[Supplier]:
+    def get_suppliers(company_id: int | None = None) -> QuerySet[Supplier]:
         """
         Retorna el queryset base de proveedores.
 
         El filtrado, busqueda y paginacion adicional pueden ser
         aplicados posteriormente por Django REST Framework.
         """
-        return SupplierSelector().get_all()
+        return SupplierSelector().get_all(company_id=company_id)
 
     @staticmethod
     def get_supplier_by_id(
         supplier_id: int,
         include_deleted: bool = False,
+        company_id: int | None = None,
     ) -> Supplier:
         """
         Obtiene un proveedor mediante su identificador.
@@ -52,7 +57,10 @@ class SupplierSelector(BaseSelector[Supplier]):
             Supplier.DoesNotExist:
                 Si el proveedor no existe.
         """
-        manager = Supplier.all_objects if include_deleted else Supplier.objects
-        return manager.get(
+        qs = SupplierSelector().get_queryset(
+            include_deleted=include_deleted,
+            company_id=company_id,
+        )
+        return qs.get(
             pk=supplier_id,
         )

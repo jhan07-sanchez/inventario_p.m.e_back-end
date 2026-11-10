@@ -116,28 +116,29 @@ class SaleViewSet(BaseViewSet):
 
     def get_queryset(self):
         """
-        Retorna el queryset de ventas.
-
-        Las consultas son delegadas al SaleSelector.
+        Retorna el queryset de ventas confinado al tenant activo.
         """
 
         customer_id = self.request.query_params.get("customer_id")
         sale_status = self.request.query_params.get("status")
         invoice_number = self.request.query_params.get("invoice_number")
         invoice_status = self.request.query_params.get("invoice_status")
+        company_id = getattr(self.request, "company_id", None)
 
         is_active_param = self.request.query_params.get("is_active")
         is_active = True
         if is_active_param is not None:
             is_active = is_active_param.lower() == "true"
 
-        return SaleSelector.filter_sales(
+        qs = SaleSelector.filter_sales(
             customer_id=customer_id,
             status=sale_status,
             invoice_number=invoice_number,
             invoice_status=invoice_status,
             is_active=is_active,
+            company_id=company_id,
         )
+        return self.isolate_queryset(qs)
 
     def get_serializer_class(self):
         """
@@ -183,10 +184,10 @@ class SaleViewSet(BaseViewSet):
     @sale_detail_schema
     def retrieve(self, request, *args, **kwargs):
         """
-        Obtiene el detalle de una venta.
+        Obtiene el detalle de una venta garantizando aislamiento tenant.
         """
 
-        sale = SaleSelector.get_by_id(kwargs["pk"])
+        sale = self.get_object()
         serializer = self.get_serializer(sale)
 
         return self.success_response(
@@ -290,7 +291,7 @@ class SaleViewSet(BaseViewSet):
         Realiza el borrado lógico de una venta.
         """
 
-        sale = SaleSelector.get_by_id(kwargs["pk"])
+        sale = self.get_object()
 
         try:
             SaleService.deactivate_sale(sale)
@@ -318,9 +319,11 @@ class SaleViewSet(BaseViewSet):
         Restaura una venta previamente desactivada.
         """
 
+        company_id = getattr(request, "company_id", None)
         sale = SaleSelector.get_by_id(
             pk,
             include_deleted=True,
+            company_id=company_id,
         )
 
         try:
@@ -350,7 +353,7 @@ class SaleViewSet(BaseViewSet):
         Completa una venta y descuenta el inventario.
         """
 
-        sale = SaleSelector.get_by_id(pk)
+        sale = self.get_object()
 
         try:
             sale = SaleService.complete_sale(sale, request.user)
@@ -380,7 +383,7 @@ class SaleViewSet(BaseViewSet):
         Cancela una venta y revierte el inventario cuando corresponde.
         """
 
-        sale = SaleSelector.get_by_id(pk)
+        sale = self.get_object()
 
         try:
             sale = SaleService.cancel_sale(sale, request.user)

@@ -28,11 +28,12 @@ class AuditMiddleware(MiddlewareMixin):
 
     @staticmethod
     def _save_audit_log_sync(
-        user_id, method, path, ip_address, user_agent, status_code, payload
+        user_id, method, path, ip_address, user_agent, status_code, payload, company_id=None
     ):
         try:
             AuditLog.objects.create(
                 user_id=user_id,
+                company_id=company_id,
                 method=method,
                 path=path,
                 ip_address=ip_address,
@@ -45,11 +46,12 @@ class AuditMiddleware(MiddlewareMixin):
 
     @staticmethod
     def _save_audit_log_async(
-        user_id, method, path, ip_address, user_agent, status_code, payload
+        user_id, method, path, ip_address, user_agent, status_code, payload, company_id=None
     ):
         try:
             AuditLog.objects.create(
                 user_id=user_id,
+                company_id=company_id,
                 method=method,
                 path=path,
                 ip_address=ip_address,
@@ -100,6 +102,9 @@ class AuditMiddleware(MiddlewareMixin):
             ip_address = self._get_client_ip(request)
 
             user_id = user.id_user if user else None
+            company_id = getattr(request, "company_id", None)
+            if not company_id and hasattr(request, "company") and request.company:
+                company_id = getattr(request.company, "id_company", None) or getattr(request.company, "pk", None)
 
             if self._is_testing():
                 # En pruebas ejecutamos en el mismo hilo/conexión para evitar violaciones
@@ -112,6 +117,7 @@ class AuditMiddleware(MiddlewareMixin):
                     request.META.get("HTTP_USER_AGENT", ""),
                     response.status_code,
                     masked_payload,
+                    company_id=company_id,
                 )
             else:
                 try:
@@ -124,6 +130,7 @@ class AuditMiddleware(MiddlewareMixin):
                         request.META.get("HTTP_USER_AGENT", ""),
                         response.status_code,
                         masked_payload,
+                        company_id=company_id,
                     )
                 except Exception as e:  # noqa: BLE001
                     logger.error(f"No se pudo encolar la tarea de auditoría: {e!s}")

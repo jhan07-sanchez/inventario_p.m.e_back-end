@@ -31,10 +31,13 @@ class SupplierService(BaseService[Supplier]):
         if document_number:
             document_number = document_number.strip()
 
+            company_id = data.get("company_id") or getattr(instance, "company_id", None)
             supplier_mgr = getattr(Supplier, "all_objects", Supplier.objects)
             query = supplier_mgr.filter(
                 document_number=document_number,
             )
+            if company_id:
+                query = query.filter(company_id=company_id)
 
             if instance is not None:
                 query = query.exclude(

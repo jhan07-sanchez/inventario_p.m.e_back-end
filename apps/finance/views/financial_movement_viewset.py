@@ -47,6 +47,7 @@ class FinancialMovementViewSet(BaseViewSet):
         return [permission() for permission in classes]
 
     def get_queryset(self):
+        company_id = getattr(self.request, "company_id", None) or self.request.query_params.get("company_id")
         account_id = self.request.query_params.get("account_id")
         movement_type = self.request.query_params.get("movement_type")
         category_id = self.request.query_params.get("category_id")
@@ -54,7 +55,8 @@ class FinancialMovementViewSet(BaseViewSet):
         start_date = self.request.query_params.get("start_date")
         end_date = self.request.query_params.get("end_date")
 
-        return FinancialMovementSelector.get_movements(
+        qs = FinancialMovementSelector.get_movements(
+            company_id=int(company_id) if company_id else None,
             account_id=int(account_id) if account_id else None,
             movement_type=movement_type,
             category_id=int(category_id) if category_id else None,
@@ -62,6 +64,7 @@ class FinancialMovementViewSet(BaseViewSet):
             start_date=start_date,
             end_date=end_date,
         )
+        return self.isolate_queryset(qs)
 
     def get_serializer_class(self):
         if self.action == "create":
@@ -88,13 +91,7 @@ class FinancialMovementViewSet(BaseViewSet):
 
     @finance_movement_detail_schema
     def retrieve(self, request, *args, **kwargs):
-        instance = FinancialMovementSelector.get_movement_by_id(kwargs["pk"])
-        if not instance:
-            return self.error_response(
-                message="Movimiento financiero no encontrado.",
-                code="FINANCIAL_MOVEMENT_NOT_FOUND",
-                status_code=status.HTTP_404_NOT_FOUND,
-            )
+        instance = self.get_object()
         serializer = self.get_serializer(instance)
         return self.success_response(
             message="Movimiento financiero obtenido.",
@@ -110,7 +107,9 @@ class FinancialMovementViewSet(BaseViewSet):
 
         try:
             movement = FinancialMovementService.record_movement(
-                serializer.to_dto(), user=request.user
+                serializer.to_dto(),
+                user=request.user,
+                company_id=getattr(request, "company_id", None),
             )
             output = FinancialMovementListSerializer(movement).data
             return self.success_response(
@@ -127,12 +126,13 @@ class FinancialMovementViewSet(BaseViewSet):
     @finance_movement_reverse_schema
     @action(detail=True, methods=["post"], url_path="reverse")
     def reverse(self, request, pk=None):
+        movement = self.get_object()
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
         try:
             counter = FinancialMovementService.reverse_movement(
-                movement_id=pk,
+                movement_id=movement.pk,
                 reason=serializer.validated_data["reason"],
                 user=request.user,
             )

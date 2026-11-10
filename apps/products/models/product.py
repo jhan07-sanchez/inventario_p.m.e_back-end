@@ -4,12 +4,12 @@ from django.core.validators import MinValueValidator
 from django.db import models
 
 from apps.categories.models.category import Category
-from apps.core.models.active_model import ActiveModel
+from apps.core.models.tenant_model import TenantModel
 
 
-class Product(ActiveModel):
+class Product(TenantModel):
     """
-    Modelo que representa un producto en el sistema (Solo catálogo).
+    Modelo que representa un producto en el sistema (Solo catálogo) aislado por empresa.
     """
 
     class Unit(models.TextChoices):
@@ -30,18 +30,17 @@ class Product(ActiveModel):
 
     id_product = models.AutoField(primary_key=True, verbose_name="ID")
     code = models.CharField(
-        max_length=50, unique=True, db_index=True, verbose_name="Código del producto"
+        max_length=50, db_index=True, verbose_name="Código del producto"
     )
     barcode = models.CharField(
         max_length=50,
-        unique=True,
         null=True,
         blank=True,
         db_index=True,
         verbose_name="Código de barras",
     )
     name = models.CharField(
-        max_length=150, unique=True, db_index=True, verbose_name="Nombre del producto"
+        max_length=150, db_index=True, verbose_name="Nombre del producto"
     )
     description = models.TextField(
         blank=True, null=True, default="", verbose_name="Descripción del producto"
@@ -79,12 +78,36 @@ class Product(ActiveModel):
 
         indexes = [
             models.Index(
+                fields=["company", "is_active"],
+                name="product_comp_active_idx",
+            ),
+            models.Index(
+                fields=["company", "code"],
+                name="product_comp_code_idx",
+            ),
+            models.Index(
                 fields=["name"],
                 name="product_name_idx",
             ),
             models.Index(
                 fields=["category", "is_active"],
                 name="product_category_active_idx",
+            ),
+        ]
+
+        constraints = [
+            models.UniqueConstraint(
+                fields=["company", "code"],
+                name="unique_product_code_per_company",
+            ),
+            models.UniqueConstraint(
+                fields=["company", "name"],
+                name="unique_product_name_per_company",
+            ),
+            models.UniqueConstraint(
+                fields=["company", "barcode"],
+                condition=models.Q(barcode__isnull=False),
+                name="unique_product_barcode_per_company",
             ),
         ]
 
