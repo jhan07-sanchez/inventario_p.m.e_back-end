@@ -56,7 +56,8 @@ class UserService(BaseService[User]):
 
         return data
 
-    def perform_create(self, data: dict, company_id: int | None) -> User:
+    def perform_create(self, data: dict) -> User:
+        company_id = data.pop("company_id", None)
         password = data.pop("password")
         roles_ids = data.pop("roles", [])
 
@@ -87,7 +88,8 @@ class UserService(BaseService[User]):
                 )
         return user
 
-    def perform_update(self, instance: User, data: dict, company_id: int = None) -> User:
+    def perform_update(self, instance: User, data: dict) -> User:
+        company_id = data.pop("company_id", None)
         password = data.pop("password", None)
         roles_ids = data.pop("roles", None)
 
