@@ -40,6 +40,7 @@ THIRD_PARTY_APPS = [
     "rest_framework",
     "corsheaders",
     "drf_spectacular",
+    "drf_spectacular_sidecar",
     "rest_framework_simplejwt.token_blacklist",
     "simple_history",
 ]

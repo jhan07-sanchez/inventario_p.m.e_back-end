@@ -291,4 +291,6 @@ SPECTACULAR_SETTINGS = {
         "expandResponses": "200,201",
         "hideDownloadButton": False,
     },
+    # Distribución local de ReDoc.
+    "REDOC_DIST": "SIDECAR",
 }
