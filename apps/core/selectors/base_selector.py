@@ -36,25 +36,47 @@ class BaseSelector(Generic[ModelType]):
 
         fields = [f.name for f in self.model._meta.fields]
 
-        if "company" in fields or "company_id" in fields or hasattr(self.model, "company"):
+        if (
+            "company" in fields
+            or "company_id" in fields
+            or hasattr(self.model, "company")
+        ):
             return qs.filter(company_id=comp_id)
 
-        if self.model._meta.app_label == "inventory" and self.model.__name__ == "Inventory":
+        if (
+            self.model._meta.app_label == "inventory"
+            and self.model.__name__ == "Inventory"
+        ):
             return qs.filter(product__company_id=comp_id)
 
-        if self.model._meta.app_label == "inventory" and self.model.__name__ == "InventoryMovement":
+        if (
+            self.model._meta.app_label == "inventory"
+            and self.model.__name__ == "InventoryMovement"
+        ):
             return qs.filter(inventory__product__company_id=comp_id)
 
-        if self.model._meta.app_label == "sales" and self.model.__name__ == "SaleDetail":
+        if (
+            self.model._meta.app_label == "sales"
+            and self.model.__name__ == "SaleDetail"
+        ):
             return qs.filter(sale__company_id=comp_id)
 
-        if self.model._meta.app_label == "purchases" and self.model.__name__ == "PurchaseDetail":
+        if (
+            self.model._meta.app_label == "purchases"
+            and self.model.__name__ == "PurchaseDetail"
+        ):
             return qs.filter(purchase__company_id=comp_id)
 
-        if self.model._meta.app_label == "invoices" and self.model.__name__ == "InvoiceItem":
+        if (
+            self.model._meta.app_label == "invoices"
+            and self.model.__name__ == "InvoiceItem"
+        ):
             return qs.filter(invoice__company_id=comp_id)
 
-        if self.model._meta.app_label == "cash" and self.model.__name__ in ("CashMovement", "Payment"):
+        if self.model._meta.app_label == "cash" and self.model.__name__ in (
+            "CashMovement",
+            "Payment",
+        ):
             return qs.filter(cash_session__company_id=comp_id)
 
         if self.model._meta.app_label == "finance":
@@ -64,7 +86,9 @@ class BaseSelector(Generic[ModelType]):
                 return qs.filter(source_account__company_id=comp_id)
 
         if self.model._meta.app_label == "users" and self.model.__name__ == "User":
-            return qs.filter(memberships__company_id=comp_id, memberships__is_active=True).distinct()
+            return qs.filter(
+                memberships__company_id=comp_id, memberships__is_active=True
+            ).distinct()
 
         return qs
 
@@ -88,7 +112,9 @@ class BaseSelector(Generic[ModelType]):
         include_deleted: bool = False,
         company_id: Any = None,
     ) -> QuerySet[ModelType]:
-        base_qs = qs if qs is not None else self.get_queryset(include_deleted=include_deleted)
+        base_qs = (
+            qs if qs is not None else self.get_queryset(include_deleted=include_deleted)
+        )
         return self._apply_company_filter(base_qs, company_id=company_id)
 
     def get_active(
@@ -116,7 +142,9 @@ class BaseSelector(Generic[ModelType]):
         company_id: Any = None,
     ) -> Optional[ModelType]:
         try:
-            base_qs = self.get_all(qs, include_deleted=include_deleted, company_id=company_id)
+            base_qs = self.get_all(
+                qs, include_deleted=include_deleted, company_id=company_id
+            )
             return base_qs.get(pk=record_id)
         except ObjectDoesNotExist:
             return None

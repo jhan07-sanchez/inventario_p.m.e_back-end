@@ -82,13 +82,16 @@ class CompanyMembership(BaseModel):
         ]
 
         indexes = [
-            models.Index(fields=["user", "is_active"], name="membership_user_active_idx"),
-            models.Index(fields=["company", "is_active"], name="membership_comp_active_idx"),
+            models.Index(
+                fields=["user", "is_active"], name="membership_user_active_idx"
+            ),
+            models.Index(
+                fields=["company", "is_active"], name="membership_comp_active_idx"
+            ),
         ]
 
     def __str__(self) -> str:
         return f"{self.user.username} @ {self.company.trade_name or self.company.business_name} ({self.role.role_name})"
-
 
     def save(self, *args, **kwargs):
         """

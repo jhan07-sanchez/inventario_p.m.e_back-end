@@ -9,7 +9,6 @@ from rest_framework.test import APIClient
 
 from apps.core.exceptions.custom_exceptions import (
     FinancialAccountNotFoundException,
-    FinancialTransferNotFoundException,
     InsufficientAccountFundsException,
     InvalidFinancialAmountException,
     InvalidFinancialTransferException,

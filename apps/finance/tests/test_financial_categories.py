@@ -106,4 +106,3 @@ class FinancialCategoryTests(TestCase):
         res_detail = self.client.get(detail_url)
         self.assertEqual(res_detail.status_code, status.HTTP_200_OK)
         self.assertEqual(res_detail.data["data"]["name"], "Arrendamiento")
-

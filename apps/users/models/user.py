@@ -36,15 +36,17 @@ class User(AbstractUser, BaseModel):
     failed_login_attempts = models.PositiveIntegerField(
         default=0,
         verbose_name="Intentos fallidos",
-        help_text="Numero de intentos de inicio de sesion fallidos consecutivos."
+        help_text="Numero de intentos de inicio de sesion fallidos consecutivos.",
     )
     lockout_until = models.DateTimeField(
         null=True,
         blank=True,
         verbose_name="Bloqueado hasta",
-        help_text="Fecha y hora la cual la cuenta esta bloqueada."
+        help_text="Fecha y hora la cual la cuenta esta bloqueada.",
     )
-    history = HistoricalRecords(excluded_fields=["password", "last_login", "date_joined"])
+    history = HistoricalRecords(
+        excluded_fields=["password", "last_login", "date_joined"]
+    )
 
     @property
     def is_locked_out(self) -> bool:

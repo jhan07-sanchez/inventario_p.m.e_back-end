@@ -1,4 +1,5 @@
 from django.core.exceptions import ValidationError
+from drf_spectacular.utils import extend_schema, extend_schema_view
 from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.filters import OrderingFilter, SearchFilter
@@ -22,6 +23,11 @@ from apps.finance.services.financial_movement_service import FinancialMovementSe
 from apps.users.permissions import IsAuthenticatedAndActive
 
 
+@extend_schema_view(
+    update=extend_schema(exclude=True),
+    partial_update=extend_schema(exclude=True),
+    destroy=extend_schema(exclude=True),
+)
 class FinancialMovementViewSet(BaseViewSet):
     """
     ViewSet para listar, registrar y reversar Movimientos Financieros.
@@ -47,7 +53,9 @@ class FinancialMovementViewSet(BaseViewSet):
         return [permission() for permission in classes]
 
     def get_queryset(self):
-        company_id = getattr(self.request, "company_id", None) or self.request.query_params.get("company_id")
+        company_id = getattr(
+            self.request, "company_id", None
+        ) or self.request.query_params.get("company_id")
         account_id = self.request.query_params.get("account_id")
         movement_type = self.request.query_params.get("movement_type")
         category_id = self.request.query_params.get("category_id")

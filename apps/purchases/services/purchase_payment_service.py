@@ -53,10 +53,9 @@ class PurchasePaymentService:
             status=Payment.PaymentStatus.COMPLETED,
             is_active=True,
         )
-        total_already_paid = (
-            existing_payments.aggregate(total=models.Sum("amount"))["total"]
-            or Decimal("0.00")
-        )
+        total_already_paid = existing_payments.aggregate(total=models.Sum("amount"))[
+            "total"
+        ] or Decimal("0.00")
 
         pending_balance = purchase.total - total_already_paid
         if dto.amount > pending_balance:
@@ -75,8 +74,18 @@ class PurchasePaymentService:
                     )
                 except CashSession.DoesNotExist:
                     raise ValidationError("La sesión de caja especificada no existe.")
+                if (
+                    session.company_id
+                    and purchase.company_id
+                    and session.company_id != purchase.company_id
+                ):
+                    raise ValidationError(
+                        "La sesión de caja seleccionada no pertenece a la empresa de la compra."
+                    )
             else:
-                session = CashSessionSelector.get_current_session(user)
+                session = CashSessionSelector.get_current_session(
+                    user, company_id=purchase.company_id
+                )
                 if not session:
                     raise CashSessionClosedException(
                         "Para realizar pagos a proveedores en efectivo debe tener una sesión de caja abierta."
@@ -97,8 +106,17 @@ class PurchasePaymentService:
                 session = CashSession.objects.filter(
                     pk=dto.cash_session_id, is_active=True
                 ).first()
+                if (
+                    session
+                    and session.company_id
+                    and purchase.company_id
+                    and session.company_id != purchase.company_id
+                ):
+                    session = None
             else:
-                session = CashSessionSelector.get_current_session(user)
+                session = CashSessionSelector.get_current_session(
+                    user, company_id=purchase.company_id
+                )
 
         # Crear registro en Payment
         full_ref = f"{ref_prefix}"
@@ -111,8 +129,7 @@ class PurchasePaymentService:
             else f"Proveedor #{purchase.supplier_id}"
         )
         payment_notes = (
-            dto.notes
-            or f"Pago de compra #{purchase.id_purchase} a {supplier_name}"
+            dto.notes or f"Pago de compra #{purchase.id_purchase} a {supplier_name}"
         )
 
         payment = Payment.objects.create(
@@ -174,10 +191,9 @@ class PurchasePaymentService:
         ).order_by("-created_at")
 
         completed_payments = payments.filter(status=Payment.PaymentStatus.COMPLETED)
-        total_paid = (
-            completed_payments.aggregate(total=models.Sum("amount"))["total"]
-            or Decimal("0.00")
-        )
+        total_paid = completed_payments.aggregate(total=models.Sum("amount"))[
+            "total"
+        ] or Decimal("0.00")
         pending_balance = purchase.total - total_paid
 
         return {

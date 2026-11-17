@@ -81,9 +81,9 @@ class PermissionService:
             else:
                 roles = [
                     ur.role
-                    for ur in user.user_roles.filter(role__is_active=True).select_related(
-                        "role"
-                    )
+                    for ur in user.user_roles.filter(
+                        role__is_active=True
+                    ).select_related("role")
                 ]
 
         if not roles and hasattr(user, "memberships"):

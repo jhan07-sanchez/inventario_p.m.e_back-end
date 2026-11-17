@@ -1,4 +1,5 @@
 from django.core.exceptions import ValidationError
+from drf_spectacular.utils import extend_schema, extend_schema_view
 from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.filters import OrderingFilter, SearchFilter
@@ -22,6 +23,11 @@ from apps.finance.services.financial_transfer_service import FinancialTransferSe
 from apps.users.permissions import IsAuthenticatedAndActive
 
 
+@extend_schema_view(
+    update=extend_schema(exclude=True),
+    partial_update=extend_schema(exclude=True),
+    destroy=extend_schema(exclude=True),
+)
 class FinancialTransferViewSet(BaseViewSet):
     """
     ViewSet para transferencias entre cuentas financieras propias.
@@ -52,7 +58,9 @@ class FinancialTransferViewSet(BaseViewSet):
         return [permission() for permission in classes]
 
     def get_queryset(self):
-        company_id = getattr(self.request, "company_id", None) or self.request.query_params.get("company_id")
+        company_id = getattr(
+            self.request, "company_id", None
+        ) or self.request.query_params.get("company_id")
         source_id = self.request.query_params.get("source_account_id")
         dest_id = self.request.query_params.get("destination_account_id")
         status_param = self.request.query_params.get("status")

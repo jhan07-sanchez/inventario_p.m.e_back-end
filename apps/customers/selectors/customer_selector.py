@@ -61,6 +61,8 @@ class CustomerSelector(BaseSelector[Customer]):
         """
         Busca un cliente por su numero de documento en la empresa correspondiente.
         """
-        return CustomerSelector().filter(
-            document_number=document_number, company_id=company_id
-        ).first()
+        return (
+            CustomerSelector()
+            .filter(document_number=document_number, company_id=company_id)
+            .first()
+        )

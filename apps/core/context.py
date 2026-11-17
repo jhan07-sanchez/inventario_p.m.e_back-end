@@ -25,4 +25,3 @@ def set_current_company_id(company_id: Optional[int]) -> contextvars.Token:
 def reset_current_company_id(token: contextvars.Token) -> None:
     """Restaura el contexto de la empresa anterior al token dado."""
     _current_company_id.reset(token)
-

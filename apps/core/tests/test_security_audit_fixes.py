@@ -38,16 +38,19 @@ class SecurityAuditFixesTests(TestCase):
         self.assertIn("invoices.delete", all_codes)
 
         # RoleService validation must not raise InvalidRolePermissionsException
-        RoleService._validate_permissions({
-            "invoices.view": True,
-            "invoices.create": True,
-        })
+        RoleService._validate_permissions(
+            {
+                "invoices.view": True,
+                "invoices.create": True,
+            }
+        )
 
     def test_legacy_base_role_permission_resolves_without_field_error(self):
         """
         Verifica que BaseRolePermission y subclases legadas (CanReadUsers)
         se evalúen a través de PermissionService sin lanzar FieldError.
         """
+
         class DummyRequest:
             def __init__(self, user):
                 self.user = user
@@ -78,9 +81,7 @@ class SecurityAuditFixesTests(TestCase):
         service = UserService()
         # First assignment of new_role
         service.perform_update(self.user, {"roles": [new_role.pk]})
-        self.assertTrue(
-            UserRole.objects.filter(user=self.user, role=new_role).exists()
-        )
+        self.assertTrue(UserRole.objects.filter(user=self.user, role=new_role).exists())
 
         # Reassign back to original role (new_role is soft-deleted)
         service.perform_update(self.user, {"roles": [self.role.pk]})
@@ -90,6 +91,4 @@ class SecurityAuditFixesTests(TestCase):
 
         # Reassign again to new_role: must restore softly-deleted assignment without IntegrityError
         service.perform_update(self.user, {"roles": [new_role.pk]})
-        self.assertTrue(
-            UserRole.objects.filter(user=self.user, role=new_role).exists()
-        )
+        self.assertTrue(UserRole.objects.filter(user=self.user, role=new_role).exists())

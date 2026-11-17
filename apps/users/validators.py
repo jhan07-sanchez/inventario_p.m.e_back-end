@@ -1,14 +1,10 @@
-from django.core.validators import RegexValidator
 from django.core.exceptions import ValidationError
+from django.core.validators import RegexValidator
 from django.utils.translation import gettext_lazy as _
-
-
-
 
 document_number_validator = RegexValidator(
     regex=r"^[0-9]+$", message="El número de documento solo puede contener numeros."
 )
-
 
 
 class DynamicPasswordLengthValidator:
@@ -20,6 +16,7 @@ class DynamicPasswordLengthValidator:
         from apps.configuration.services.global_parameter_service import (
             GlobalParameterService,
         )
+
         # Consultamos el parametro (gracias al cache, es casi instantaneo)
         min_length = GlobalParameterService.get_typed_value(
             "SECURITY_PASSWORD_MIN_LENGTH", default=8
@@ -36,6 +33,7 @@ class DynamicPasswordLengthValidator:
         from apps.configuration.services.global_parameter_service import (
             GlobalParameterService,
         )
+
         min_length = GlobalParameterService.get_typed_value(
             "SECURITY_PASSWORD_MIN_LENGTH", default=8
         )

@@ -19,6 +19,7 @@ class SystemInfoView(viewsets.ViewSet):
 
     authentication_classes = []
     permission_classes = [AllowAny]
+    serializer_class = None
 
     @extend_schema(
         operation_id="system_info",
@@ -32,7 +33,9 @@ class SystemInfoView(viewsets.ViewSet):
                     "app_name": serializers.CharField(),
                     "version": serializers.CharField(),
                     "installed_version": serializers.CharField(),
-                    "installed_version_published_at": serializers.CharField(allow_null=True),
+                    "installed_version_published_at": serializers.CharField(
+                        allow_null=True
+                    ),
                     "latest_version": serializers.CharField(),
                     "has_update": serializers.BooleanField(),
                     "is_mandatory": serializers.BooleanField(),
@@ -51,7 +54,9 @@ class SystemInfoView(viewsets.ViewSet):
                 "app_name": "Inventario P.M.E",
                 "version": installed_version,
                 "installed_version": installed_version,
-                "installed_version_published_at": update_info.get("installed_version_published_at"),
+                "installed_version_published_at": update_info.get(
+                    "installed_version_published_at"
+                ),
                 "latest_version": update_info.get("latest_version", installed_version),
                 "has_update": update_info.get("has_update", False),
                 "is_mandatory": update_info.get("is_mandatory", False),

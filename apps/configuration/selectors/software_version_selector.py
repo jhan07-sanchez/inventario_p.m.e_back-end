@@ -115,12 +115,14 @@ class SoftwareVersionSelector(BaseSelector[SoftwareVersion]):
                 cat = entry.category
                 if cat not in entries_by_cat:
                     entries_by_cat[cat] = []
-                entries_by_cat[cat].append({
-                    "id": entry.id_entry,
-                    "title": entry.title,
-                    "description": entry.description,
-                    "order": entry.order,
-                })
+                entries_by_cat[cat].append(
+                    {
+                        "id": entry.id_entry,
+                        "title": entry.title,
+                        "description": entry.description,
+                        "order": entry.order,
+                    }
+                )
 
             latest_data = {
                 "id": latest.id_version,
@@ -128,20 +130,24 @@ class SoftwareVersionSelector(BaseSelector[SoftwareVersion]):
                 "name": latest.name,
                 "priority": latest.priority,
                 "priority_display": latest.get_priority_display(),
-                "published_at": latest.published_at.isoformat() if latest.published_at else None,
+                "published_at": latest.published_at.isoformat()
+                if latest.published_at
+                else None,
                 "description": latest.description,
                 "min_compatible_version": latest.min_compatible_version,
                 "prerequisites": latest.prerequisites,
                 "upgrade_instructions": latest.upgrade_instructions,
                 "changelog": entries_by_cat,
-                "total_changes": getattr(latest, "total_changes", latest.changelog_entries.count()),
+                "total_changes": getattr(
+                    latest, "total_changes", latest.changelog_entries.count()
+                ),
             }
 
             # 2. Evaluamos si esa versión es más nueva que la instalada
             if cls.is_newer_version(latest.version, installed):
                 has_update = True
                 priority = latest.priority
-                is_mandatory = (latest.priority == SoftwareVersion.Priority.MANDATORY)
+                is_mandatory = latest.priority == SoftwareVersion.Priority.MANDATORY
 
         installed_record = SoftwareVersion.objects.filter(
             version=installed, status=SoftwareVersion.Status.PUBLISHED
@@ -158,11 +164,12 @@ class SoftwareVersionSelector(BaseSelector[SoftwareVersion]):
             "latest_version": latest.version if latest else installed,
             "is_mandatory": is_mandatory,
             "priority": priority,
-            "latest_release": latest_data, # <-- Ahora SIEMPRE vendrá lleno si hay versiones
+            "latest_release": latest_data,  # <-- Ahora SIEMPRE vendrá lleno si hay versiones
         }
 
         cache.set(cls.CACHE_KEY_UPDATE_CHECK, result, timeout=cls.CACHE_TIMEOUT)
         return result
+
     @classmethod
     def get_user_notifications(cls, user, limit: int = 15) -> dict:
         """
@@ -173,7 +180,9 @@ class SoftwareVersionSelector(BaseSelector[SoftwareVersion]):
             return {"unread_count": 0, "notifications": []}
 
         published_qs = (
-            SoftwareVersion.objects.filter(status=SoftwareVersion.Status.PUBLISHED, is_active=True)
+            SoftwareVersion.objects.filter(
+                status=SoftwareVersion.Status.PUBLISHED, is_active=True
+            )
             .select_related("published_by")
             .annotate(
                 total_changes=Count(
@@ -184,8 +193,7 @@ class SoftwareVersionSelector(BaseSelector[SoftwareVersion]):
         )
 
         read_records = {
-            r.version_id: r.read_at
-            for r in UserVersionRead.objects.filter(user=user)
+            r.version_id: r.read_at for r in UserVersionRead.objects.filter(user=user)
         }
 
         notifications = []
@@ -195,15 +203,21 @@ class SoftwareVersionSelector(BaseSelector[SoftwareVersion]):
                 {
                     "id": ver.id_version,
                     "version": ver.version,
-                    "title": f"Versión v{ver.version} disponible" if not ver.name else f"v{ver.version} - {ver.name}",
+                    "title": f"Versión v{ver.version} disponible"
+                    if not ver.name
+                    else f"v{ver.version} - {ver.name}",
                     "name": ver.name,
                     "description": ver.description,
                     "priority": ver.priority,
                     "priority_display": ver.get_priority_display(),
-                    "published_at": ver.published_at.isoformat() if ver.published_at else None,
+                    "published_at": ver.published_at.isoformat()
+                    if ver.published_at
+                    else None,
                     "total_changes": getattr(ver, "total_changes", 0),
                     "is_read": is_read,
-                    "read_at": read_records[ver.id_version].isoformat() if is_read else None,
+                    "read_at": read_records[ver.id_version].isoformat()
+                    if is_read
+                    else None,
                 }
             )
 

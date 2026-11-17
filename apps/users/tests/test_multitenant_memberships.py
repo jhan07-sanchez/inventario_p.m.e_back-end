@@ -156,10 +156,10 @@ class MultiTenantMembershipTests(TestCase):
 
     def test_permission_caches_are_strictly_isolated_by_tenant(self):
         # Cargar permisos en Alfa y en Beta
-        perms_a = PermissionService.get_effective_permissions(
+        PermissionService.get_effective_permissions(
             self.user, company_id=self.company_a.id_company
         )
-        perms_b = PermissionService.get_effective_permissions(
+        PermissionService.get_effective_permissions(
             self.user, company_id=self.company_b.id_company
         )
 
@@ -232,7 +232,7 @@ class MultiTenantMembershipTests(TestCase):
         self.assertEqual(res_data.get("code"), "TENANT_ACCESS_DENIED")
 
     def test_superuser_can_access_any_company_context(self):
-        superuser = User.objects.create_superuser(
+        User.objects.create_superuser(
             username="super_admin",
             email="super@example.com",
             password="SuperPassword123!",
@@ -252,4 +252,6 @@ class MultiTenantMembershipTests(TestCase):
 
         res = self.client.get(reverse("security-context"))
         self.assertEqual(res.status_code, status.HTTP_200_OK)
-        self.assertEqual(res.data["data"]["active_company"]["id_company"], self.company_c.id_company)
+        self.assertEqual(
+            res.data["data"]["active_company"]["id_company"], self.company_c.id_company
+        )

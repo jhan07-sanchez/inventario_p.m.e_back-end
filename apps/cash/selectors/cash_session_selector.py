@@ -48,9 +48,11 @@ class CashSessionSelector(BaseSelector[CashSession]):
                     company_id=company_id,
                 )
                 if include_deleted
-                else CashSessionSelector().get_queryset(
+                else CashSessionSelector()
+                .get_queryset(
                     company_id=company_id,
-                ).filter(is_active=True)
+                )
+                .filter(is_active=True)
             )
         if company_id is not None:
             res = res.filter(company_id=company_id)
@@ -59,17 +61,29 @@ class CashSessionSelector(BaseSelector[CashSession]):
     @staticmethod
     def get_by_id(session_id: int, company_id: int | None = None) -> CashSession:
         return get_object_or_404(
-            CashSessionSelector().get_queryset(company_id=company_id).filter(is_active=True),
+            CashSessionSelector()
+            .get_queryset(company_id=company_id)
+            .filter(is_active=True),
             pk=session_id,
         )
 
     @staticmethod
     def get_current_session(user, company_id: int | None = None) -> CashSession | None:
+        if not company_id:
+            from apps.core.context import get_current_company_id
+
+            company_id = get_current_company_id()
+
         qs = CashSession.objects.filter(
             user=user, status=CashSession.SessionStatus.OPEN, is_active=True
         )
         if company_id is not None:
-            qs = qs.filter(company_id=company_id)
+            if company_id == 1:
+                from django.db.models import Q
+
+                qs = qs.filter(Q(company_id=1) | Q(company_id__isnull=True))
+            else:
+                qs = qs.filter(company_id=company_id)
         return qs.select_related("cash_register").first()
 
     @staticmethod
@@ -103,86 +117,53 @@ class CashSessionSelector(BaseSelector[CashSession]):
         """
         import json
         from decimal import Decimal
+
         from django.db.models import Q, Sum
 
         session = CashSessionSelector.get_by_id(session_id)
         movements = session.movements.filter(is_active=True).select_related("payment")
 
         # Sumatorias generales
-        cash_in = (
-            movements.filter(is_cash=True, movement_type="IN").aggregate(
-                total=Sum("amount")
-            )["total"]
-            or Decimal("0.00")
-        )
-        cash_out = (
-            movements.filter(is_cash=True, movement_type="OUT").aggregate(
-                total=Sum("amount")
-            )["total"]
-            or Decimal("0.00")
-        )
-        elec_in = (
-            movements.filter(is_cash=False, movement_type="IN").aggregate(
-                total=Sum("amount")
-            )["total"]
-            or Decimal("0.00")
-        )
-        elec_out = (
-            movements.filter(is_cash=False, movement_type="OUT").aggregate(
-                total=Sum("amount")
-            )["total"]
-            or Decimal("0.00")
-        )
+        cash_in = movements.filter(is_cash=True, movement_type="IN").aggregate(
+            total=Sum("amount")
+        )["total"] or Decimal("0.00")
+        cash_out = movements.filter(is_cash=True, movement_type="OUT").aggregate(
+            total=Sum("amount")
+        )["total"] or Decimal("0.00")
 
         # Ventas (con payment asociado)
-        sales_cash = (
-            movements.filter(
-                is_cash=True,
-                movement_type="IN",
-                payment__isnull=False,
-                payment__sale__isnull=False,
-            ).aggregate(total=Sum("amount"))["total"]
-            or Decimal("0.00")
-        )
+        sales_cash = movements.filter(
+            is_cash=True,
+            movement_type="IN",
+            payment__isnull=False,
+            payment__sale__isnull=False,
+        ).aggregate(total=Sum("amount"))["total"] or Decimal("0.00")
 
-        sales_electronic = (
-            movements.filter(
-                is_cash=False,
-                movement_type="IN",
-                payment__isnull=False,
-                payment__sale__isnull=False,
-            ).aggregate(total=Sum("amount"))["total"]
-            or Decimal("0.00")
-        )
+        sales_electronic = movements.filter(
+            is_cash=False,
+            movement_type="IN",
+            payment__isnull=False,
+            payment__sale__isnull=False,
+        ).aggregate(total=Sum("amount"))["total"] or Decimal("0.00")
 
         # Pagos de compras a proveedores
-        purchases_cash = (
-            movements.filter(
-                is_cash=True,
-                movement_type="OUT",
-            )
-            .filter(
-                Q(reference__icontains="COMPRA")
-                | Q(description__icontains="COMPRA")
-                | Q(payment__reference__icontains="COMPRA")
-            )
-            .aggregate(total=Sum("amount"))["total"]
-            or Decimal("0.00")
-        )
+        purchases_cash = movements.filter(
+            is_cash=True,
+            movement_type="OUT",
+        ).filter(
+            Q(reference__icontains="COMPRA")
+            | Q(description__icontains="COMPRA")
+            | Q(payment__reference__icontains="COMPRA")
+        ).aggregate(total=Sum("amount"))["total"] or Decimal("0.00")
 
-        purchases_electronic = (
-            movements.filter(
-                is_cash=False,
-                movement_type="OUT",
-            )
-            .filter(
-                Q(reference__icontains="COMPRA")
-                | Q(description__icontains="COMPRA")
-                | Q(payment__reference__icontains="COMPRA")
-            )
-            .aggregate(total=Sum("amount"))["total"]
-            or Decimal("0.00")
-        )
+        purchases_electronic = movements.filter(
+            is_cash=False,
+            movement_type="OUT",
+        ).filter(
+            Q(reference__icontains="COMPRA")
+            | Q(description__icontains="COMPRA")
+            | Q(payment__reference__icontains="COMPRA")
+        ).aggregate(total=Sum("amount"))["total"] or Decimal("0.00")
 
         # Movimientos manuales
         manual_income = cash_in - sales_cash
@@ -246,6 +227,7 @@ class CashSessionSelector(BaseSelector[CashSession]):
         Retorna resumen financiero global de cajas y flujo de dinero.
         """
         from decimal import Decimal
+
         from django.db.models import Sum
         from django.utils import timezone
 
@@ -254,10 +236,9 @@ class CashSessionSelector(BaseSelector[CashSession]):
             is_active=True,
         ).select_related("cash_register", "user")
 
-        total_open_expected = (
-            open_sessions.aggregate(total=Sum("expected_balance"))["total"]
-            or Decimal("0.00")
-        )
+        total_open_expected = open_sessions.aggregate(total=Sum("expected_balance"))[
+            "total"
+        ] or Decimal("0.00")
         total_open_count = open_sessions.count()
 
         # Resumen del día de hoy
@@ -267,24 +248,15 @@ class CashSessionSelector(BaseSelector[CashSession]):
             is_active=True,
         )
 
-        today_cash_in = (
-            today_movements.filter(is_cash=True, movement_type="IN").aggregate(
-                total=Sum("amount")
-            )["total"]
-            or Decimal("0.00")
-        )
-        today_cash_out = (
-            today_movements.filter(is_cash=True, movement_type="OUT").aggregate(
-                total=Sum("amount")
-            )["total"]
-            or Decimal("0.00")
-        )
-        today_elec_in = (
-            today_movements.filter(is_cash=False, movement_type="IN").aggregate(
-                total=Sum("amount")
-            )["total"]
-            or Decimal("0.00")
-        )
+        today_cash_in = today_movements.filter(
+            is_cash=True, movement_type="IN"
+        ).aggregate(total=Sum("amount"))["total"] or Decimal("0.00")
+        today_cash_out = today_movements.filter(
+            is_cash=True, movement_type="OUT"
+        ).aggregate(total=Sum("amount"))["total"] or Decimal("0.00")
+        today_elec_in = today_movements.filter(
+            is_cash=False, movement_type="IN"
+        ).aggregate(total=Sum("amount"))["total"] or Decimal("0.00")
 
         # Sesiones cerradas hoy y diferencias
         closed_today = CashSession.objects.filter(
@@ -292,10 +264,9 @@ class CashSessionSelector(BaseSelector[CashSession]):
             end_time__date=today,
             is_active=True,
         )
-        total_difference_today = (
-            closed_today.aggregate(total=Sum("difference"))["total"]
-            or Decimal("0.00")
-        )
+        total_difference_today = closed_today.aggregate(total=Sum("difference"))[
+            "total"
+        ] or Decimal("0.00")
 
         return {
             "open_sessions_count": total_open_count,

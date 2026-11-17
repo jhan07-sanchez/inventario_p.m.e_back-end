@@ -110,4 +110,3 @@ class SystemHistoryViewSet(BaseGenericViewSet):
             code="HISTORY_FETCHED",
             data=serializer.data,
         )
-

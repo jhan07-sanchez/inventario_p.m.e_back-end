@@ -19,6 +19,7 @@ class TenantContextMiddleware(MiddlewareMixin):
     EXEMPT_PATHS = [
         re.compile(r"^/api/v1/auth/"),
         re.compile(r"^/api/v1/system/"),
+        re.compile(r"^/api/v1/saas-admin/"),
         re.compile(r"^/api/v1/companies/my-companies/"),
         re.compile(r"^/api/docs/"),
         re.compile(r"^/api/schema/"),
@@ -50,7 +51,9 @@ class TenantContextMiddleware(MiddlewareMixin):
             auth_header = request.META.get("HTTP_AUTHORIZATION")
             if auth_header and auth_header.startswith("Bearer "):
                 try:
-                    from rest_framework_simplejwt.authentication import JWTAuthentication
+                    from rest_framework_simplejwt.authentication import (
+                        JWTAuthentication,
+                    )
 
                     jwt_auth = JWTAuthentication()
                     validated_token = jwt_auth.get_validated_token(
@@ -77,7 +80,9 @@ class TenantContextMiddleware(MiddlewareMixin):
 
         if company_id is not None:
             if getattr(user, "is_superuser", False):
-                company = CompanyInfo.objects.filter(pk=company_id, is_active=True).first()
+                company = CompanyInfo.objects.filter(
+                    pk=company_id, is_active=True
+                ).first()
                 if company:
                     request.company = company
                     request.company_id = company.pk
@@ -118,7 +123,9 @@ class TenantContextMiddleware(MiddlewareMixin):
                         "message": "No tiene acceso a la empresa solicitada o su membresía se encuentra inactiva.",
                         "data": None,
                         "errors": {
-                            "company": ["No pertenece a esta organización o membresía inactiva."]
+                            "company": [
+                                "No pertenece a esta organización o membresía inactiva."
+                            ]
                         },
                     },
                     status=403,

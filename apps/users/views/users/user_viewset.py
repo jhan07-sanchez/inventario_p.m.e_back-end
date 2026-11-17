@@ -208,7 +208,9 @@ class UserViewSet(BaseViewSet):
                 status_code=status.HTTP_400_BAD_REQUEST,
             )
 
-        user = UserService.create_user(company_id=company_id, validated_data=serializer.validated_data)
+        user = UserService.create_user(
+            company_id=company_id, validated_data=serializer.validated_data
+        )
 
         response_serializer = UserDetailSerializer(user)
 

@@ -60,7 +60,9 @@ class AuditLog(BaseModel):
         ordering = ["-created_at"]
         db_table = "inventario_pme_audit_logs"
         indexes = [
-            models.Index(fields=["company", "-created_at"], name="audit_comp_created_idx"),
+            models.Index(
+                fields=["company", "-created_at"], name="audit_comp_created_idx"
+            ),
         ]
 
     def __str__(self):

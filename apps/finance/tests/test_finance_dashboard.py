@@ -9,8 +9,6 @@ from rest_framework.test import APIClient
 
 from apps.cash.models.cash_register import CashRegister
 from apps.cash.models.cash_session import CashSession
-from apps.cash.models.payment import Payment
-from apps.core.enums import PaymentMethod
 from apps.customers.models.customer import Customer
 from apps.finance.dto.financial_dto import (
     FinancialAccountCreateDTO,
@@ -167,7 +165,9 @@ class FinanceDashboardTests(TestCase):
         self.assertEqual(Decimal(liquidity["cash_in_drawers"]), Decimal("350000.00"))
         self.assertEqual(Decimal(liquidity["total_cash"]), Decimal("3350000.00"))
         # Total disponible global = 10,000,000 + 3,350,000 = 13,350,000
-        self.assertEqual(Decimal(liquidity["total_available_money"]), Decimal("13350000.00"))
+        self.assertEqual(
+            Decimal(liquidity["total_available_money"]), Decimal("13350000.00")
+        )
 
         # Flujo de caja: las transferencias internas NO deben figurar en ingresos o egresos
         cash_flow = metrics["cash_flow"]
@@ -178,7 +178,9 @@ class FinanceDashboardTests(TestCase):
         # Obligaciones
         obligations = metrics["obligations"]
         self.assertEqual(Decimal(obligations["accounts_payable"]), Decimal("800000.00"))
-        self.assertEqual(Decimal(obligations["accounts_receivable"]), Decimal("600000.00"))
+        self.assertEqual(
+            Decimal(obligations["accounts_receivable"]), Decimal("600000.00")
+        )
 
     def test_dashboard_endpoint_api(self):
         url = reverse("finance-dashboard")
@@ -188,4 +190,3 @@ class FinanceDashboardTests(TestCase):
         self.assertIn("cash_flow", res.data["data"])
         self.assertIn("obligations", res.data["data"])
         self.assertIn("accounts", res.data["data"])
-

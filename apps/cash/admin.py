@@ -140,4 +140,3 @@ class PaymentAdmin(admin.ModelAdmin):
     @admin.display(description="Empresa")
     def sale_company(self, obj):
         return obj.sale.company if obj.sale else "-"
-

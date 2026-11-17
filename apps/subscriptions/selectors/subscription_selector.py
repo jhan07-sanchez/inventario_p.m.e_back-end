@@ -3,7 +3,6 @@ from typing import Any, Dict, Optional
 from django.db.models import QuerySet
 from django.utils import timezone
 
-from apps.categories.models import Category
 from apps.invoices.models import Invoice
 from apps.products.models import Product
 from apps.subscriptions.models import Plan, Subscription
@@ -101,8 +100,14 @@ class SubscriptionSelector:
         max_invoices = plan.max_invoices_per_month if plan else 100
 
         user_pct = round((active_users_count / max_users * 100), 1) if max_users else 0
-        prod_pct = round((products_count / max_products * 100), 1) if max_products else 0
-        inv_pct = round((monthly_invoices_count / max_invoices * 100), 1) if max_invoices else 0
+        prod_pct = (
+            round((products_count / max_products * 100), 1) if max_products else 0
+        )
+        inv_pct = (
+            round((monthly_invoices_count / max_invoices * 100), 1)
+            if max_invoices
+            else 0
+        )
 
         return {
             "has_subscription": sub is not None,
@@ -140,4 +145,3 @@ class SubscriptionSelector:
                 },
             },
         }
-

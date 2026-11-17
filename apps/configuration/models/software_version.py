@@ -126,7 +126,9 @@ class SoftwareVersion(ActiveModel):
         verbose_name_plural = "Versiones del Software"
         ordering = ["-published_at", "-created_at"]
         indexes = [
-            models.Index(fields=["status", "-published_at"], name="idx_version_status_pub"),
+            models.Index(
+                fields=["status", "-published_at"], name="idx_version_status_pub"
+            ),
         ]
 
     def __str__(self) -> str:
@@ -258,4 +260,3 @@ class UserVersionRead(models.Model):
 
     def __str__(self) -> str:
         return f"User {self.user_id} - v{self.version.version} (read at {self.read_at})"
-

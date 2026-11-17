@@ -160,7 +160,6 @@ class RoleViewSet(BaseViewSet):
             )
 
         try:
-
             validated_data = serializer.validated_data.copy()
             validated_data["company_id"] = company_id
             role = RoleService.create_role(validated_data)

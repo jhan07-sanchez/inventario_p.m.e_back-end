@@ -8,10 +8,10 @@ from apps.core.exceptions.custom_exceptions import (
     InvalidFinancialReconciliationDatesException,
 )
 from apps.core.services.base_service import BaseService
-from apps.finance.services.finance_cache_service import FinanceCacheService
 from apps.finance.dto.financial_dto import FinancialReconciliationCreateDTO
 from apps.finance.models.financial_account import FinancialAccount
 from apps.finance.models.financial_reconciliation import FinancialReconciliation
+from apps.finance.services.finance_cache_service import FinanceCacheService
 
 
 class FinancialReconciliationService(BaseService[FinancialReconciliation]):
@@ -83,7 +83,10 @@ class FinancialReconciliationService(BaseService[FinancialReconciliation]):
                 "La conciliación financiera no existe o está inactiva."
             )
 
-        if reconciliation.status == FinancialReconciliation.ReconciliationStatus.RECONCILED:
+        if (
+            reconciliation.status
+            == FinancialReconciliation.ReconciliationStatus.RECONCILED
+        ):
             raise FinancialReconciliationAlreadyClosedException(
                 "La conciliación ya se encuentra cerrada y conciliada."
             )
@@ -94,9 +97,7 @@ class FinancialReconciliationService(BaseService[FinancialReconciliation]):
         reconciliation.difference = (
             reconciliation.statement_balance - reconciliation.book_balance
         )
-        reconciliation.status = (
-            FinancialReconciliation.ReconciliationStatus.RECONCILED
-        )
+        reconciliation.status = FinancialReconciliation.ReconciliationStatus.RECONCILED
         reconciliation.reconciled_at = timezone.now()
         reconciliation.save(
             update_fields=[

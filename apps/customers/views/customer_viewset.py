@@ -208,7 +208,11 @@ class CustomerViewSet(BaseViewSet):
         try:
             validated_data = dict(serializer.validated_data)
             company_id = getattr(request, "company_id", None)
-            if company_id and "company" not in validated_data and "company_id" not in validated_data:
+            if (
+                company_id
+                and "company" not in validated_data
+                and "company_id" not in validated_data
+            ):
                 validated_data["company_id"] = company_id
 
             customer = CustomerService.create_customer(

@@ -42,8 +42,7 @@ class FinancialTransferSelector(BaseSelector[FinancialTransfer]):
             qs = qs.filter(destination_account_id=destination_account_id)
         if account_id:
             qs = qs.filter(
-                Q(source_account_id=account_id)
-                | Q(destination_account_id=account_id)
+                Q(source_account_id=account_id) | Q(destination_account_id=account_id)
             )
         if status:
             qs = qs.filter(status=status)

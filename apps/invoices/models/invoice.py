@@ -175,7 +175,9 @@ class Invoice(TenantModel):
 
         indexes = [
             models.Index(fields=["company", "status"], name="inv_comp_status_idx"),
-            models.Index(fields=["company", "invoice_number"], name="inv_comp_number_idx"),
+            models.Index(
+                fields=["company", "invoice_number"], name="inv_comp_number_idx"
+            ),
             models.Index(fields=["invoice_number"], name="invoice_number_idx"),
             models.Index(fields=["status"], name="invoice_status_idx"),
             models.Index(

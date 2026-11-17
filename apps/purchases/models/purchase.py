@@ -70,7 +70,9 @@ class Purchase(TenantModel):
 
         indexes = [
             models.Index(fields=["company", "status"], name="purch_comp_status_idx"),
-            models.Index(fields=["company", "-created_at"], name="purch_comp_created_idx"),
+            models.Index(
+                fields=["company", "-created_at"], name="purch_comp_created_idx"
+            ),
             models.Index(fields=["status"], name="purchase_status_idx"),
             models.Index(fields=["issue_date"], name="purchase_issue_date_idx"),
             models.Index(

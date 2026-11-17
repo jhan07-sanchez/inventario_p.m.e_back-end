@@ -43,7 +43,9 @@ class CashRegisterSelector(BaseSelector[CashRegister]):
                 company_id=company_id,
             )
             if include_deleted
-            else CashRegisterSelector().get_queryset(
+            else CashRegisterSelector()
+            .get_queryset(
                 company_id=company_id,
-            ).filter(is_active=True)
+            )
+            .filter(is_active=True)
         )

@@ -7,7 +7,8 @@ from apps.core.exceptions.custom_exceptions import (
     UserInactiveException,
 )
 from apps.core.services.base_service import BaseService
-from apps.users.models import Role, User, UserRole, CompanyMembership
+from apps.users.models import CompanyMembership, Role, User, UserRole
+
 
 class UserService(BaseService[User]):
     """
@@ -61,6 +62,11 @@ class UserService(BaseService[User]):
         password = data.pop("password")
         roles_ids = data.pop("roles", [])
 
+        if not company_id:
+            from apps.core.context import get_current_company_id
+
+            company_id = get_current_company_id()
+
         if "email" in data and data["email"]:
             data["email"] = data["email"].strip().lower()
         user = User(**data)
@@ -70,7 +76,9 @@ class UserService(BaseService[User]):
 
         if company_id:
             if roles_ids:
-                role = Role.objects.filter(id_role__in=roles_ids, company_id=company_id, is_active=True).first()
+                role = Role.objects.filter(
+                    id_role__in=roles_ids, is_active=True
+                ).first()
                 if role:
                     CompanyMembership.objects.create(
                         user=user,
@@ -86,12 +94,24 @@ class UserService(BaseService[User]):
                     role=None,
                     status=CompanyMembership.MembershipStatus.ACTIVE,
                 )
+        elif roles_ids:
+            from apps.users.services.user_role_service import UserRoleService
+
+            roles = Role.objects.filter(id_role__in=roles_ids, is_active=True)
+            for role in roles:
+                UserRoleService.create_user_role({"user": user, "role": role})
+
         return user
 
     def perform_update(self, instance: User, data: dict) -> User:
         company_id = data.pop("company_id", None)
         password = data.pop("password", None)
         roles_ids = data.pop("roles", None)
+
+        if not company_id:
+            from apps.core.context import get_current_company_id
+
+            company_id = get_current_company_id()
 
         if "email" in data and data["email"]:
             data["email"] = data["email"].strip().lower()
@@ -105,32 +125,42 @@ class UserService(BaseService[User]):
         instance.full_clean()
         instance.save()
 
-
-
-        if roles_ids is not None and company_id:
-            membership = CompanyMembership.objects.filter(
-                user=instance, company_id=company_id
-            ).first()
-
-            if membership:
-                if roles_ids:
-                    role = Role.objects.filter(
-                        id_role__in=roles_ids, company_id=company_id
-                    ).first()
-                    if role:
-                        membership.role = role
-                        membership.save()
-                else:
-                    membership.is_active = False
-                    membership.save()
-            elif roles_ids:
-                role = Role.objects.filter(
-                    id_role__in=roles_ids, company_id=company_id
+        if roles_ids is not None:
+            if company_id:
+                membership = CompanyMembership.objects.filter(
+                    user=instance, company_id=company_id
                 ).first()
-                if role:
-                    CompanyMembership.objects.create(
-                        user=instance, company_id=company_id, role=role, status="ACTIVE"
-                    )
+
+                if membership:
+                    if roles_ids:
+                        role = Role.objects.filter(id_role__in=roles_ids).first()
+                        if role:
+                            membership.role = role
+                            membership.save()
+                    else:
+                        membership.is_active = False
+                        membership.save()
+                elif roles_ids:
+                    role = Role.objects.filter(id_role__in=roles_ids).first()
+                    if role:
+                        CompanyMembership.objects.create(
+                            user=instance,
+                            company_id=company_id,
+                            role=role,
+                            status="ACTIVE",
+                        )
+            else:
+                from apps.users.services.user_role_service import UserRoleService
+
+                for ur in UserRole.objects.filter(user=instance):
+                    ur.delete()
+
+                if roles_ids:
+                    roles = Role.objects.filter(id_role__in=roles_ids, is_active=True)
+                    for role in roles:
+                        UserRoleService.create_user_role(
+                            {"user": instance, "role": role}
+                        )
 
             from apps.core.security.services.permission_service import PermissionService
 
@@ -160,10 +190,7 @@ class UserService(BaseService[User]):
         """
         Crea un nuevo usuario aplicando las reglas de negocio.
         """
-        return UserService().create(
-            company_id=company_id,
-            **validated_data
-        )
+        return UserService().create(company_id=company_id, **validated_data)
 
     @staticmethod
     @transaction.atomic

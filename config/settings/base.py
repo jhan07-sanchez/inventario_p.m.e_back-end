@@ -3,8 +3,8 @@ from datetime import timedelta
 from pathlib import Path
 from urllib.parse import parse_qs, unquote, urlparse
 
-from decouple import Csv, config
 from corsheaders.defaults import default_headers
+from decouple import Csv, config
 
 from .spectacular import *  # noqa: F403
 
@@ -60,6 +60,7 @@ LOCAL_APPS = [
     "apps.configuration.apps.ConfigurationConfig",
     "apps.finance.apps.FinanceConfig",
     "apps.subscriptions.apps.SubscriptionsConfig",
+    "apps.saas_admin.apps.SaasAdminConfig",
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
@@ -84,7 +85,6 @@ MIDDLEWARE = [
 # Configuración CORS Multi-Tenant
 # =======================================
 CORS_ALLOW_HEADERS = list(default_headers) + [
-    "x-company-id",
     "x-company-id",
     "X-Company-ID",
 ]
@@ -151,9 +151,11 @@ def get_database_config():
             "PASSWORD": db_password,
             "HOST": db_host,
             "PORT": db_port,
-            "CONN_MAX_AGE": config("CONN_MAX_AGE", default=60, cast=int),
+            "CONN_MAX_AGE": config("CONN_MAX_AGE", default=0, cast=int),
             "CONN_HEALTH_CHECKS": config("CONN_HEALTH_CHECKS", default=True, cast=bool),
-            "DISABLE_SERVER_SIDE_CURSORS": config("DISABLE_SERVER_SIDE_CURSORS", default=True, cast=bool),
+            "DISABLE_SERVER_SIDE_CURSORS": config(
+                "DISABLE_SERVER_SIDE_CURSORS", default=True, cast=bool
+            ),
             "OPTIONS": options,
         }
 
@@ -176,9 +178,11 @@ def get_database_config():
         "PASSWORD": config("DB_PASSWORD", default=""),
         "HOST": config("DB_HOST", default=""),
         "PORT": config("DB_PORT", default=""),
-        "CONN_MAX_AGE": config("CONN_MAX_AGE", default=60, cast=int),
+        "CONN_MAX_AGE": config("CONN_MAX_AGE", default=0, cast=int),
         "CONN_HEALTH_CHECKS": config("CONN_HEALTH_CHECKS", default=True, cast=bool),
-        "DISABLE_SERVER_SIDE_CURSORS": config("DISABLE_SERVER_SIDE_CURSORS", default=True, cast=bool),
+        "DISABLE_SERVER_SIDE_CURSORS": config(
+            "DISABLE_SERVER_SIDE_CURSORS", default=True, cast=bool
+        ),
         "OPTIONS": options,
     }
 
@@ -311,8 +315,6 @@ LOGGING = {
 }
 
 
-AUTH_PASSWORD_VALIDATORS= [
-    {
-        "NAME": "apps.users.validators.DynamicPasswordLengthValidator"
-    },
+AUTH_PASSWORD_VALIDATORS = [
+    {"NAME": "apps.users.validators.DynamicPasswordLengthValidator"},
 ]

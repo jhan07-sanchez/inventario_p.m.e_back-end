@@ -46,7 +46,9 @@ class PurchaseService(BaseService[Purchase]):
         if not supplier.is_active:
             raise SupplierInactiveException()
 
-        company_id = getattr(dto, "company_id", None) or getattr(supplier, "company_id", None)
+        company_id = getattr(dto, "company_id", None) or getattr(
+            supplier, "company_id", None
+        )
 
         # Crear la cabecera
         purchase = Purchase.objects.create(
@@ -62,11 +64,12 @@ class PurchaseService(BaseService[Purchase]):
         subtotal_sum = Decimal("0.00")
         total_sum = Decimal("0.00")
 
-        # Fetch all products at once to avoid N+1 queries
+        # Fetch all products at once to avoid N+1 queries scoped to company
         product_ids = [d.product_id for d in dto.details]
-        products_map = {
-            p.id_product: p for p in Product.objects.filter(pk__in=product_ids)
-        }
+        prod_qs = Product.objects.filter(pk__in=product_ids)
+        if company_id:
+            prod_qs = prod_qs.filter(company_id=company_id)
+        products_map = {p.id_product: p for p in prod_qs}
 
         # Crear los detalles
         for detail_dto in dto.details:

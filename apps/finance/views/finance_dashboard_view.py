@@ -18,19 +18,24 @@ class FinanceDashboardView(BaseResponseMixin, APIView):
 
     @finance_dashboard_schema
     def get(self, request, *args, **kwargs):
-        company_id = getattr(request, "company_id", None) or request.query_params.get("company_id")
+        company_id = self.get_company_id(request)
+        if not company_id and hasattr(request.user, "memberships"):
+            active_m = request.user.memberships.filter(is_active=True).first()
+            if active_m:
+                company_id = active_m.company_id
+
         period = request.query_params.get("period")
         start_date = request.query_params.get("start_date")
         end_date = request.query_params.get("end_date")
 
         cid = int(company_id) if company_id else None
 
-        #Intentar obtener de la cache
+        # Intentar obtener de la cache por empresa
         cached_data = FinanceCacheService.get_dashboard_cache(
             company_id=cid,
             period=period,
             start_date=start_date,
-            end_date=end_date
+            end_date=end_date,
         )
         if cached_data:
             return self.success_response(
@@ -39,21 +44,21 @@ class FinanceDashboardView(BaseResponseMixin, APIView):
                 data=cached_data,
                 status_code=status.HTTP_200_OK,
             )
-        #Si no esta en cache calcular en BD
+        # Si no esta en cache calcular en BD
         metrics = FinanceDashboardSelector.get_dashboard_metrics(
-            company_id=int(company_id) if company_id else None,
+            company_id=cid,
             period=period,
             start_date=start_date,
             end_date=end_date,
         )
 
-        #Guardar en cache para las proximas peticiones
+        # Guardar en cache para las proximas peticiones
         FinanceCacheService.set_dashboard_cache(
             data=metrics,
             company_id=cid,
             period=period,
             start_date=start_date,
-            end_date=end_date
+            end_date=end_date,
         )
 
         return self.success_response(
@@ -62,4 +67,3 @@ class FinanceDashboardView(BaseResponseMixin, APIView):
             data=metrics,
             status_code=status.HTTP_200_OK,
         )
-

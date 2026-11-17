@@ -36,14 +36,19 @@ class SubscriptionService:
         current_sub = SubscriptionSelector.get_current_subscription(company)
 
         # Si ya existe una suscripción vigente, extendemos desde la fecha de vencimiento actual
-        if current_sub and current_sub.end_date > now and current_sub.status == Subscription.Status.ACTIVE:
-            start_date = current_sub.start_date
+        if (
+            current_sub
+            and current_sub.end_date > now
+            and current_sub.status == Subscription.Status.ACTIVE
+        ):
             end_date = current_sub.end_date + timedelta(days=duration_days)
             current_sub.plan = plan
             current_sub.end_date = end_date
             current_sub.status = status
             current_sub.notes = f"{current_sub.notes}\nRenovación: {notes}".strip()
-            current_sub.save(update_fields=["plan", "end_date", "status", "notes", "updated_at"])
+            current_sub.save(
+                update_fields=["plan", "end_date", "status", "notes", "updated_at"]
+            )
             return current_sub
 
         # De lo contrario, creamos una nueva suscripción
@@ -86,7 +91,11 @@ class SubscriptionService:
         # Si el plan es mensual por defecto son 30 días, anual 365 días
         days = extend_days
         if days is None:
-            days = 365 if subscription.plan.billing_cycle == Plan.BillingCycle.ANNUAL else 30
+            days = (
+                365
+                if subscription.plan.billing_cycle == Plan.BillingCycle.ANNUAL
+                else 30
+            )
 
         now = timezone.now()
         base_date = subscription.end_date if subscription.end_date > now else now
@@ -95,4 +104,3 @@ class SubscriptionService:
         subscription.save(update_fields=["end_date", "status", "updated_at"])
 
         return payment
-

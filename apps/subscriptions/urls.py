@@ -10,4 +10,3 @@ router.register(r"subscriptions", SubscriptionViewSet, basename="subscription")
 urlpatterns = [
     path("", include(router.urls)),
 ]
-

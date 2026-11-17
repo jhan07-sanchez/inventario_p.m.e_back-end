@@ -55,4 +55,3 @@ class FinanceDashboardResponseSerializer(serializers.Serializer):
     sales_by_payment_method = serializers.DictField(child=serializers.CharField())
     accounts = FinanceDashboardAccountSummarySerializer(many=True)
     recent_movements = FinanceDashboardRecentMovementSerializer(many=True)
-

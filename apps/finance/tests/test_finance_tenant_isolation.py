@@ -1,4 +1,5 @@
 from decimal import Decimal
+
 from django.test import TestCase
 from rest_framework.test import APIRequestFactory, force_authenticate
 
@@ -10,8 +11,6 @@ from apps.finance.selectors.finance_dashboard_selector import FinanceDashboardSe
 from apps.finance.selectors.financial_account_selector import FinancialAccountSelector
 from apps.finance.selectors.financial_movement_selector import FinancialMovementSelector
 from apps.finance.views.financial_account_viewset import FinancialAccountViewSet
-from apps.finance.views.financial_movement_viewset import FinancialMovementViewSet
-from apps.finance.views.finance_dashboard_view import FinanceDashboardView
 from apps.users.models import CompanyMembership, Role, User
 
 
@@ -121,8 +120,12 @@ class FinanceTenantIsolationTests(TestCase):
 
     def test_account_selector_isolation(self):
         """Verifica que el selector de cuentas filtre estrictamente por company_id."""
-        accounts_a = FinancialAccountSelector.get_accounts(company_id=self.company_a.id_company)
-        accounts_b = FinancialAccountSelector.get_accounts(company_id=self.company_b.id_company)
+        accounts_a = FinancialAccountSelector.get_accounts(
+            company_id=self.company_a.id_company
+        )
+        accounts_b = FinancialAccountSelector.get_accounts(
+            company_id=self.company_b.id_company
+        )
 
         self.assertEqual(accounts_a.count(), 2)
         self.assertEqual(accounts_b.count(), 1)
@@ -130,24 +133,36 @@ class FinanceTenantIsolationTests(TestCase):
 
     def test_movement_selector_isolation(self):
         """Verifica que los movimientos se aíslen por empresa a través de la cuenta."""
-        movs_a = FinancialMovementSelector.get_movements(company_id=self.company_a.id_company)
-        movs_b = FinancialMovementSelector.get_movements(company_id=self.company_b.id_company)
+        movs_a = FinancialMovementSelector.get_movements(
+            company_id=self.company_a.id_company
+        )
+        movs_b = FinancialMovementSelector.get_movements(
+            company_id=self.company_b.id_company
+        )
 
         self.assertEqual(movs_a.count(), 1)
         self.assertEqual(movs_b.count(), 0)
 
     def test_dashboard_metrics_strict_isolation(self):
         """Verifica que el dashboard financiero no mezcle liquidez ni flujos de caja."""
-        m_a = FinanceDashboardSelector.get_dashboard_metrics(company_id=self.company_a.id_company)
-        m_b = FinanceDashboardSelector.get_dashboard_metrics(company_id=self.company_b.id_company)
+        m_a = FinanceDashboardSelector.get_dashboard_metrics(
+            company_id=self.company_a.id_company
+        )
+        m_b = FinanceDashboardSelector.get_dashboard_metrics(
+            company_id=self.company_b.id_company
+        )
 
         # Empresa A: Liquidez = 150000 + 250000 = 400000; Inflow = 50000
-        self.assertEqual(Decimal(m_a["summary"]["total_liquid_balance"]), Decimal("400000.00"))
+        self.assertEqual(
+            Decimal(m_a["summary"]["total_liquid_balance"]), Decimal("400000.00")
+        )
         self.assertEqual(Decimal(m_a["summary"]["total_inflow"]), Decimal("50000.00"))
         self.assertEqual(len(m_a["accounts"]), 2)
 
         # Empresa B: Liquidez = 10000; Inflow = 0.00
-        self.assertEqual(Decimal(m_b["summary"]["total_liquid_balance"]), Decimal("10000.00"))
+        self.assertEqual(
+            Decimal(m_b["summary"]["total_liquid_balance"]), Decimal("10000.00")
+        )
         self.assertEqual(Decimal(m_b["summary"]["total_inflow"]), Decimal("0.00"))
         self.assertEqual(len(m_b["accounts"]), 1)
         self.assertEqual(len(m_b["recent_movements"]), 0)

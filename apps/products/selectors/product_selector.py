@@ -170,7 +170,9 @@ class ProductSelector(BaseSelector[Product]):
         """
 
         queryset = (
-            ProductSelector().get_active(company_id=company_id).select_related("category", "inventory")
+            ProductSelector()
+            .get_active(company_id=company_id)
+            .select_related("category", "inventory")
         )
 
         query = (query or "").strip()

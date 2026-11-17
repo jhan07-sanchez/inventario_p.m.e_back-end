@@ -26,12 +26,27 @@ class CompanyInfoSelector(BaseSelector[CompanyInfo]):
         )
 
     @staticmethod
-    def get_current() -> CompanyInfo | None:
+    def get_current(company_id: int | None = None) -> CompanyInfo | None:
         """
-        Obtiene la información de empresa activa.
+        Obtiene la información de la empresa activa del contexto.
+        Soporta contexto Multi-Tenant por company_id o contextvars thread-safe.
+        """
+        if not company_id:
+            from apps.core.context import get_current_company_id
 
-        Retorna la primera empresa activa registrada (singleton).
-        """
+            company_id = get_current_company_id()
+
+        if company_id:
+            cache_key = f"company_info_{company_id}"
+            cached_val = cache.get(cache_key)
+            if cached_val is not None:
+                return cached_val
+
+            val = CompanyInfoSelector().get_active().filter(pk=company_id).first()
+            if val:
+                cache.set(cache_key, val, timeout=3600)  # 1 hora
+            return val
+
         cache_key = "company_info_current"
         cached_val = cache.get(cache_key)
 
@@ -40,7 +55,8 @@ class CompanyInfoSelector(BaseSelector[CompanyInfo]):
 
         val = CompanyInfoSelector().get_active().first()
 
-        cache.set(cache_key, val, timeout=3600)  # 1 hora
+        if val:
+            cache.set(cache_key, val, timeout=3600)  # 1 hora
         return val
 
     @staticmethod

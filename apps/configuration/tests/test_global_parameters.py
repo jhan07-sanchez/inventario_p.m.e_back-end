@@ -261,7 +261,9 @@ class GlobalParameterTests(TestCase):
         param = GlobalParameterService.create_parameter(dto_create, user=self.user)
 
         # Attempt to change data_type to INTEGER without changing value -> must fail cross validation
-        dto_update = GlobalParameterUpdateDto(data_type=GlobalParameter.DataType.INTEGER)
+        dto_update = GlobalParameterUpdateDto(
+            data_type=GlobalParameter.DataType.INTEGER
+        )
         with self.assertRaises(ValidationError):
             GlobalParameterService.update_parameter(param, dto_update, user=self.user)
 
@@ -303,7 +305,9 @@ class GlobalParameterTests(TestCase):
 
     def test_catalog_fallback_in_get_typed_value(self):
         # Query parameter not created in DB but present in SYSTEM_PARAMETERS_CATALOG
-        allow_neg = GlobalParameterService.get_typed_value("INVENTORY_ALLOW_NEGATIVE_STOCK")
+        allow_neg = GlobalParameterService.get_typed_value(
+            "INVENTORY_ALLOW_NEGATIVE_STOCK"
+        )
         self.assertIs(allow_neg, False)
 
         timeout = GlobalParameterService.get_typed_value("SESSION_TIMEOUT_MINUTES")
@@ -323,12 +327,15 @@ class GlobalParameterTests(TestCase):
 
         # Deactivate audit recorded
         deact_audit = ConfigurationAudit.objects.filter(
-            parameter_key="DEFAULT_TAX_RATE", action=ConfigurationAudit.Action.DEACTIVATE
+            parameter_key="DEFAULT_TAX_RATE",
+            action=ConfigurationAudit.Action.DEACTIVATE,
         ).first()
         self.assertIsNotNone(deact_audit)
 
         # Restore
-        restored = GlobalParameterService.restore_parameter(self.parameter, user=self.user)
+        restored = GlobalParameterService.restore_parameter(
+            self.parameter, user=self.user
+        )
         self.assertTrue(restored.is_active)
 
         # Restore audit recorded
@@ -344,7 +351,11 @@ class GlobalParameterTests(TestCase):
 
         res = self.client.get("/api/v1/audits/")
         self.assertEqual(res.status_code, status.HTTP_200_OK)
-        results = res.data["data"]["results"] if "results" in res.data["data"] else res.data["data"]
+        results = (
+            res.data["data"]["results"]
+            if "results" in res.data["data"]
+            else res.data["data"]
+        )
         self.assertGreaterEqual(len(results), 1)
 
         # Filter by parameter_key
@@ -355,4 +366,8 @@ class GlobalParameterTests(TestCase):
             if "results" in res_filtered.data["data"]
             else res_filtered.data["data"]
         )
-        self.assertTrue(all(item["parameter_key"] == "DEFAULT_TAX_RATE" for item in filtered_results))
+        self.assertTrue(
+            all(
+                item["parameter_key"] == "DEFAULT_TAX_RATE" for item in filtered_results
+            )
+        )

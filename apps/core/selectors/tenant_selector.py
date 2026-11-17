@@ -19,7 +19,11 @@ class TenantSelector(BaseSelector[ModelType], Generic[ModelType]):
     def _extract_company_id(self, company_or_id: Any) -> Optional[int]:
         if company_or_id is None:
             return None
-        return getattr(company_or_id, "id_company", None) or getattr(company_or_id, "pk", None) or company_or_id
+        return (
+            getattr(company_or_id, "id_company", None)
+            or getattr(company_or_id, "pk", None)
+            or company_or_id
+        )
 
     def get_tenant_queryset(
         self,
@@ -46,7 +50,9 @@ class TenantSelector(BaseSelector[ModelType], Generic[ModelType]):
         Retorna todos los registros de una empresa específica.
         """
         comp_id = self._extract_company_id(company)
-        target_qs = qs if qs is not None else self.get_queryset(include_deleted=include_deleted)
+        target_qs = (
+            qs if qs is not None else self.get_queryset(include_deleted=include_deleted)
+        )
         return target_qs.filter(company_id=comp_id)
 
     def get_active_for_company(
@@ -87,4 +93,3 @@ class TenantSelector(BaseSelector[ModelType], Generic[ModelType]):
         """
         comp_id = self._extract_company_id(company)
         return self.get_for_company(comp_id).filter(**kwargs).exists()
-

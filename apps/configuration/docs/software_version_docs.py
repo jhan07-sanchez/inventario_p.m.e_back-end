@@ -162,3 +162,55 @@ software_version_delete_changelog_schema = extend_schema(
     summary="Eliminar Entrada de Changelog",
     description="Elimina una entrada específica del changelog de una versión.",
 )
+
+software_version_notifications_schema = extend_schema(
+    tags=["Software Versions"],
+    summary="Notificaciones de Nuevas Versiones",
+    description=(
+        "Consulta las notificaciones de versiones publicadas para el usuario autenticado, "
+        "indicando el número de versiones no leídas y el listado de lanzamientos disponibles."
+    ),
+    responses={
+        200: OpenApiResponse(
+            response=build_api_response_schema(
+                name="SoftwareVersionNotificationsResponse",
+                description="Notificaciones de versiones consultadas correctamente.",
+            ),
+            description="Notificaciones consultadas correctamente.",
+        ),
+        401: OpenApiResponse(response=ApiErrorResponseSerializer),
+    },
+)
+
+software_version_mark_read_schema = extend_schema(
+    tags=["Software Versions"],
+    summary="Marcar Versión como Leída",
+    description="Marca una versión de software publicada como leída por el usuario autenticado.",
+    responses={
+        200: OpenApiResponse(
+            response=build_api_response_schema(
+                name="SoftwareVersionMarkReadResponse",
+                description="Versión marcada como leída.",
+            ),
+            description="Versión marcada como leída.",
+        ),
+        401: OpenApiResponse(response=ApiErrorResponseSerializer),
+        404: OpenApiResponse(response=ApiErrorResponseSerializer),
+    },
+)
+
+software_version_mark_all_read_schema = extend_schema(
+    tags=["Software Versions"],
+    summary="Marcar Todas las Versiones como Leídas",
+    description="Marca en bloque todas las versiones de software publicadas como leídas para el usuario autenticado.",
+    responses={
+        200: OpenApiResponse(
+            response=build_api_response_schema(
+                name="SoftwareVersionMarkAllReadResponse",
+                description="Todas las versiones marcadas como leídas.",
+            ),
+            description="Todas las versiones marcadas como leídas.",
+        ),
+        401: OpenApiResponse(response=ApiErrorResponseSerializer),
+    },
+)

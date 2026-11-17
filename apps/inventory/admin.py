@@ -117,7 +117,11 @@ class InventoryMovementAdmin(admin.ModelAdmin):
 
     @admin.display(description="Producto")
     def inventory_product(self, obj):
-        return obj.inventory.product.name if obj.inventory and obj.inventory.product else "-"
+        return (
+            obj.inventory.product.name
+            if obj.inventory and obj.inventory.product
+            else "-"
+        )
 
     def has_add_permission(self, request):
         return False

@@ -28,7 +28,14 @@ class AuditMiddleware(MiddlewareMixin):
 
     @staticmethod
     def _save_audit_log_sync(
-        user_id, method, path, ip_address, user_agent, status_code, payload, company_id=None
+        user_id,
+        method,
+        path,
+        ip_address,
+        user_agent,
+        status_code,
+        payload,
+        company_id=None,
     ):
         try:
             AuditLog.objects.create(
@@ -46,7 +53,14 @@ class AuditMiddleware(MiddlewareMixin):
 
     @staticmethod
     def _save_audit_log_async(
-        user_id, method, path, ip_address, user_agent, status_code, payload, company_id=None
+        user_id,
+        method,
+        path,
+        ip_address,
+        user_agent,
+        status_code,
+        payload,
+        company_id=None,
     ):
         try:
             AuditLog.objects.create(
@@ -104,7 +118,9 @@ class AuditMiddleware(MiddlewareMixin):
             user_id = user.id_user if user else None
             company_id = getattr(request, "company_id", None)
             if not company_id and hasattr(request, "company") and request.company:
-                company_id = getattr(request.company, "id_company", None) or getattr(request.company, "pk", None)
+                company_id = getattr(request.company, "id_company", None) or getattr(
+                    request.company, "pk", None
+                )
 
             if self._is_testing():
                 # En pruebas ejecutamos en el mismo hilo/conexión para evitar violaciones

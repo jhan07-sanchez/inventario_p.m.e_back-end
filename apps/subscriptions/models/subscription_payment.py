@@ -84,10 +84,13 @@ class SubscriptionPayment(ActiveModel):
         verbose_name_plural = "Pagos de Suscripciones"
         ordering = ["-payment_date"]
         indexes = [
-            models.Index(fields=["subscription", "status"], name="sub_pay_sub_stat_idx"),
-            models.Index(fields=["status", "payment_date"], name="sub_pay_stat_date_idx"),
+            models.Index(
+                fields=["subscription", "status"], name="sub_pay_sub_stat_idx"
+            ),
+            models.Index(
+                fields=["status", "payment_date"], name="sub_pay_stat_date_idx"
+            ),
         ]
 
     def __str__(self) -> str:
         return f"Pago #{self.id_payment} - ${self.amount} ({self.get_status_display()})"
-

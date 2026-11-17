@@ -2,7 +2,7 @@ from datetime import date
 from decimal import Decimal
 from typing import Optional
 
-from django.db.models import Sum, F, Q, Value, DecimalField
+from django.db.models import DecimalField, Q, Sum, Value
 from django.db.models.functions import Coalesce
 from django.utils import timezone
 
@@ -58,17 +58,13 @@ class FinanceDashboardSelector:
         # 1. Saldos Disponibles por Tipo de Cuenta
         accounts_qs = FinancialAccountSelector.get_accounts(company_id=company_id)
 
-        total_available = (
-            accounts_qs.aggregate(total=Sum("current_balance"))["total"]
-            or Decimal("0.00")
-        )
+        total_available = accounts_qs.aggregate(total=Sum("current_balance"))[
+            "total"
+        ] or Decimal("0.00")
 
-        cash_accounts_balance = (
-            accounts_qs.filter(
-                account_type=FinancialAccount.AccountType.CASH
-            ).aggregate(total=Sum("current_balance"))["total"]
-            or Decimal("0.00")
-        )
+        cash_accounts_balance = accounts_qs.filter(
+            account_type=FinancialAccount.AccountType.CASH
+        ).aggregate(total=Sum("current_balance"))["total"] or Decimal("0.00")
 
         # Cajas físicas operativas actualmente abiertas
         open_cash_sessions = CashSession.objects.filter(
@@ -76,22 +72,23 @@ class FinanceDashboardSelector:
             is_active=True,
         )
         if company_id is not None:
-            open_cash_sessions = open_cash_sessions.filter(company_id=company_id)
+            if company_id == 1:
+                open_cash_sessions = open_cash_sessions.filter(
+                    Q(company_id=1) | Q(company_id__isnull=True)
+                )
+            else:
+                open_cash_sessions = open_cash_sessions.filter(company_id=company_id)
 
-        total_open_drawers = (
-            open_cash_sessions.aggregate(total=Sum("expected_balance"))["total"]
-            or Decimal("0.00")
-        )
+        total_open_drawers = open_cash_sessions.aggregate(
+            total=Sum("expected_balance")
+        )["total"] or Decimal("0.00")
 
-        bank_balance = (
-            accounts_qs.filter(
-                account_type__in=[
-                    FinancialAccount.AccountType.BANK,
-                    FinancialAccount.AccountType.DIGITAL_WALLET,
-                ]
-            ).aggregate(total=Sum("current_balance"))["total"]
-            or Decimal("0.00")
-        )
+        bank_balance = accounts_qs.filter(
+            account_type__in=[
+                FinancialAccount.AccountType.BANK,
+                FinancialAccount.AccountType.DIGITAL_WALLET,
+            ]
+        ).aggregate(total=Sum("current_balance"))["total"] or Decimal("0.00")
 
         total_cash = cash_accounts_balance + total_open_drawers
         total_liquidez_real = bank_balance + total_cash
@@ -105,32 +102,38 @@ class FinanceDashboardSelector:
         )
 
         # 3. Cuentas por Cobrar (Ventas pendientes de cobro efectivo)
-        # Se analizan facturas de venta emitidas pendientes o ventas administrativas no completadas
         receivables_invoices = Invoice.objects.filter(
             document_type=Invoice.DocumentType.SALE_INVOICE,
             status=Invoice.Status.ISSUED,
             is_active=True,
         )
         if company_id is not None:
-            receivables_invoices = receivables_invoices.filter(company_id=company_id)
+            if company_id == 1:
+                receivables_invoices = receivables_invoices.filter(
+                    Q(company_id=1) | Q(company_id__isnull=True)
+                )
+            else:
+                receivables_invoices = receivables_invoices.filter(
+                    company_id=company_id
+                )
 
         receivables_invoices = receivables_invoices.annotate(
             paid_amount=Coalesce(
-                Sum('sale__payments__amount', filter=Q(sale__payments__status=Payment.PaymentStatus.COMPLETED)),
-                Value(0.00), output_field=DecimalField()
+                Sum(
+                    "sale__payments__amount",
+                    filter=Q(
+                        sale__payments__status=Payment.PaymentStatus.COMPLETED,
+                        sale__payments__is_active=True,
+                    ),
+                ),
+                Value(0.00),
+                output_field=DecimalField(),
             )
-        ).annotate(pending_amount=F('total') - F('paid_amount'))
+        )
         total_receivables = Decimal("0.00")
         for inv in receivables_invoices:
-            # Descontar lo pagado si hay relación de venta
-            if inv.sale:
-                paid = (
-                    inv.sale.payments.filter(
-                        status=Payment.PaymentStatus.COMPLETED, is_active=True
-                    ).aggregate(total=Sum("amount"))["total"]
-                    or Decimal("0.00")
-                )
-                pending = inv.total - paid
+            if inv.sale_id:
+                pending = inv.total - (inv.paid_amount or Decimal("0.00"))
                 if pending > Decimal("0.00"):
                     total_receivables += pending
             else:
@@ -142,20 +145,37 @@ class FinanceDashboardSelector:
             is_active=True,
         )
         if company_id is not None:
-            pending_purchases = pending_purchases.filter(company_id=company_id)
+            if company_id == 1:
+                pending_purchases = pending_purchases.filter(
+                    Q(company_id=1) | Q(company_id__isnull=True)
+                )
+            else:
+                pending_purchases = pending_purchases.filter(company_id=company_id)
 
         total_payables = Decimal("0.00")
-        for pur in pending_purchases:
-            ref_prefix = f"COMPRA #{pur.id_purchase}"
-            paid_qs = Payment.objects.filter(
-                reference__startswith=ref_prefix,
+        pur_list = list(pending_purchases)
+        if pur_list:
+            from collections import defaultdict
+
+            payments_by_pur = defaultdict(Decimal)
+            pur_ids = {p.id_purchase for p in pur_list}
+            relevant_payments = Payment.objects.filter(
+                reference__startswith="COMPRA #",
                 status=Payment.PaymentStatus.COMPLETED,
                 is_active=True,
-            )
-            paid = paid_qs.aggregate(total=Sum("amount"))["total"] or Decimal("0.00")
-            balance = pur.total - paid
-            if balance > Decimal("0.00"):
-                total_payables += balance
+            ).values("reference", "amount")
+            for p in relevant_payments:
+                ref = p["reference"]
+                for pid in pur_ids:
+                    if ref.startswith(f"COMPRA #{pid}"):
+                        payments_by_pur[pid] += p["amount"]
+                        break
+
+            for pur in pur_list:
+                paid = payments_by_pur.get(pur.id_purchase, Decimal("0.00"))
+                balance = pur.total - paid
+                if balance > Decimal("0.00"):
+                    total_payables += balance
 
         # 5. Ventas / Cobros por Método de Pago en el Período
         payments_in_period = Payment.objects.filter(
@@ -165,12 +185,22 @@ class FinanceDashboardSelector:
             is_active=True,
         )
         if company_id is not None:
-            payments_in_period = payments_in_period.filter(
-                Q(sale__company_id=company_id)
-                | Q(cash_movements__cash_session__company_id=company_id)
-            ).distinct()
+            if company_id == 1:
+                payments_in_period = payments_in_period.filter(
+                    Q(sale__company_id=1)
+                    | Q(sale__company__isnull=True)
+                    | Q(cash_movements__cash_session__company_id=1)
+                    | Q(cash_movements__cash_session__company__isnull=True)
+                ).distinct()
+            else:
+                payments_in_period = payments_in_period.filter(
+                    Q(sale__company_id=company_id)
+                    | Q(cash_movements__cash_session__company_id=company_id)
+                ).distinct()
 
-        pm_aggregates = payments_in_period.values("payment_method").annotate(total=Sum("amount"))
+        pm_aggregates = payments_in_period.values("payment_method").annotate(
+            total=Sum("amount")
+        )
         sales_by_method = {
             item["payment_method"]: str(item["total"] or Decimal("0.00"))
             for item in pm_aggregates
@@ -226,11 +256,16 @@ class FinanceDashboardSelector:
             is_active=True,
         )
         if company_id is not None:
-            sales_in_period = sales_in_period.filter(company_id=company_id)
+            if company_id == 1:
+                sales_in_period = sales_in_period.filter(
+                    Q(company_id=1) | Q(company_id__isnull=True)
+                )
+            else:
+                sales_in_period = sales_in_period.filter(company_id=company_id)
 
-        total_sales_amount = (
-            sales_in_period.aggregate(total=Sum("total"))["total"] or Decimal("0.00")
-        )
+        total_sales_amount = sales_in_period.aggregate(total=Sum("total"))[
+            "total"
+        ] or Decimal("0.00")
         total_sales_count = sales_in_period.count()
 
         purchases_in_period = Purchase.objects.filter(
@@ -240,11 +275,16 @@ class FinanceDashboardSelector:
             is_active=True,
         )
         if company_id is not None:
-            purchases_in_period = purchases_in_period.filter(company_id=company_id)
+            if company_id == 1:
+                purchases_in_period = purchases_in_period.filter(
+                    Q(company_id=1) | Q(company_id__isnull=True)
+                )
+            else:
+                purchases_in_period = purchases_in_period.filter(company_id=company_id)
 
-        total_purchases_amount = (
-            purchases_in_period.aggregate(total=Sum("total"))["total"] or Decimal("0.00")
-        )
+        total_purchases_amount = purchases_in_period.aggregate(total=Sum("total"))[
+            "total"
+        ] or Decimal("0.00")
         total_purchases_count = purchases_in_period.count()
 
         return {
@@ -284,4 +324,3 @@ class FinanceDashboardSelector:
             "accounts": accounts_summary,
             "recent_movements": recent_movements_data,
         }
-

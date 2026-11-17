@@ -54,9 +54,12 @@ class CompanyInfoService(BaseService[CompanyInfo]):
 
         if owner_user:
             from apps.users.models import CompanyMembership, Role
+
             # Asignar rol de Administrador o crear membresía
             admin_role = (
-                Role.objects.filter(role_name__icontains="admin", is_active=True).first()
+                Role.objects.filter(
+                    role_name__icontains="admin", is_active=True
+                ).first()
                 or Role.objects.filter(is_active=True).first()
             )
             if admin_role:

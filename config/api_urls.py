@@ -16,4 +16,5 @@ urlpatterns = [
     path("", include("apps.configuration.urls")),
     path("", include("apps.finance.urls")),
     path("", include("apps.subscriptions.urls")),
+    path("saas-admin/", include("apps.saas_admin.urls")),
 ]

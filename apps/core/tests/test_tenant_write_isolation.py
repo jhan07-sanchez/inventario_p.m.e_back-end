@@ -1,4 +1,3 @@
-from decimal import Decimal
 from django.test import TestCase
 from django.urls import reverse
 from rest_framework import status
@@ -168,7 +167,9 @@ class TenantWriteIsolationTests(TestCase):
         # El company_id se mantiene inviolable
         self.assertEqual(cat.company_id, self.company_1.pk)
 
-    def test_post_without_company_header_raises_permission_denied_for_multi_tenant_user(self):
+    def test_post_without_company_header_raises_permission_denied_for_multi_tenant_user(
+        self,
+    ):
         """
         Si un usuario que pertenece a varias empresas intenta crear un recurso
         sin especificar X-Company-ID, debe ser rechazado con 403 Forbidden.

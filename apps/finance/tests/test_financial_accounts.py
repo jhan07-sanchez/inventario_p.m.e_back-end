@@ -97,7 +97,7 @@ class FinancialAccountTests(TestCase):
         self.assertEqual(updated.bank_name, "Banco de Bogotá")
 
     def test_update_duplicate_name_raises_error(self):
-        acc1 = FinancialAccountService.create_account(
+        FinancialAccountService.create_account(
             FinancialAccountCreateDTO(
                 name="Cuenta 1",
                 account_type=FinancialAccount.AccountType.BANK,
@@ -174,7 +174,9 @@ class FinancialAccountTests(TestCase):
         res_list_active = self.client.get(url)
         data_active = res_list_active.data.get("data", {})
         results_active = (
-            data_active.get("results", []) if isinstance(data_active, dict) else data_active
+            data_active.get("results", [])
+            if isinstance(data_active, dict)
+            else data_active
         )
         active_ids = [a["id_financial_account"] for a in results_active]
         self.assertNotIn(account_id, active_ids)

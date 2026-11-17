@@ -63,7 +63,9 @@ class FinancialReconciliationTests(TestCase):
             statement_balance=Decimal("3520000.00"),  # 20,000 más que libros
             notes="Diferencia de $20,000 por intereses a favor",
         )
-        recon = FinancialReconciliationService.create_reconciliation(dto, user=self.user)
+        recon = FinancialReconciliationService.create_reconciliation(
+            dto, user=self.user
+        )
 
         self.assertEqual(
             recon.status, FinancialReconciliation.ReconciliationStatus.DRAFT
@@ -107,7 +109,9 @@ class FinancialReconciliationTests(TestCase):
             end_date=date(2026, 10, 31),
             statement_balance=Decimal("3500000.00"),
         )
-        recon = FinancialReconciliationService.create_reconciliation(dto, user=self.user)
+        recon = FinancialReconciliationService.create_reconciliation(
+            dto, user=self.user
+        )
         FinancialReconciliationService.close_reconciliation(
             reconciliation_id=recon.pk, user=self.user
         )

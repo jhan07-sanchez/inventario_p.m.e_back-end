@@ -6,27 +6,55 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('configuration', '0003_softwareversion_versionchangelogentry_and_more'),
+        ("configuration", "0003_softwareversion_versionchangelogentry_and_more"),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='UserVersionRead',
+            name="UserVersionRead",
             fields=[
-                ('id', models.BigAutoField(primary_key=True, serialize=False, verbose_name='ID Lectura')),
-                ('read_at', models.DateTimeField(auto_now_add=True, verbose_name='Fecha de lectura')),
-                ('user', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='version_reads', to=settings.AUTH_USER_MODEL, verbose_name='Usuario')),
-                ('version', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='user_reads', to='configuration.softwareversion', verbose_name='Versión')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        primary_key=True, serialize=False, verbose_name="ID Lectura"
+                    ),
+                ),
+                (
+                    "read_at",
+                    models.DateTimeField(
+                        auto_now_add=True, verbose_name="Fecha de lectura"
+                    ),
+                ),
+                (
+                    "user",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="version_reads",
+                        to=settings.AUTH_USER_MODEL,
+                        verbose_name="Usuario",
+                    ),
+                ),
+                (
+                    "version",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="user_reads",
+                        to="configuration.softwareversion",
+                        verbose_name="Versión",
+                    ),
+                ),
             ],
             options={
-                'verbose_name': 'Lectura de Versión',
-                'verbose_name_plural': 'Lecturas de Versiones',
-                'db_table': 'user_version_reads',
-                'indexes': [models.Index(fields=['user', 'version'], name='idx_usr_ver_read'), models.Index(fields=['user', '-read_at'], name='idx_usr_read_at')],
-                'unique_together': {('user', 'version')},
+                "verbose_name": "Lectura de Versión",
+                "verbose_name_plural": "Lecturas de Versiones",
+                "db_table": "user_version_reads",
+                "indexes": [
+                    models.Index(fields=["user", "version"], name="idx_usr_ver_read"),
+                    models.Index(fields=["user", "-read_at"], name="idx_usr_read_at"),
+                ],
+                "unique_together": {("user", "version")},
             },
         ),
     ]

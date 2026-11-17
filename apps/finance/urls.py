@@ -11,7 +11,9 @@ from apps.finance.views import (
 )
 
 router = DefaultRouter()
-router.register(r"finance/accounts", FinancialAccountViewSet, basename="financial-accounts")
+router.register(
+    r"finance/accounts", FinancialAccountViewSet, basename="financial-accounts"
+)
 router.register(
     r"finance/categories", FinancialCategoryViewSet, basename="financial-categories"
 )
@@ -28,7 +30,9 @@ router.register(
 )
 
 urlpatterns = [
-    path("finance/dashboard/", FinanceDashboardView.as_view(), name="finance-dashboard"),
+    path(
+        "finance/dashboard/", FinanceDashboardView.as_view(), name="finance-dashboard"
+    ),
     path(
         "finance/dashboard/summary/",
         FinanceDashboardView.as_view(),

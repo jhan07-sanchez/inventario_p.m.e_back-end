@@ -2,7 +2,6 @@ from django.core.exceptions import ValidationError
 from django.test import RequestFactory, TestCase
 
 from apps.company_info.models import CompanyInfo
-from apps.core.models.tenant_model import TenantModel
 from apps.core.selectors.tenant_selector import TenantSelector
 from apps.core.services.tenant_service import TenantService
 from apps.core.views.base_viewset import BaseViewSet
@@ -110,4 +109,3 @@ class TenantIsolationEngineTests(TestCase):
         scoped_qs = view.get_queryset()
         self.assertEqual(scoped_qs.count(), 1)
         self.assertEqual(scoped_qs.first().company_id, self.company_a.id_company)
-

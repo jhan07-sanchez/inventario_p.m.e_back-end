@@ -6,21 +6,30 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('company_info', '0002_companyinfo_owner_user_companyinfo_status_and_more'),
-        ('core', '0002_rename_veltrion_audit_logs'),
+        ("company_info", "0002_companyinfo_owner_user_companyinfo_status_and_more"),
+        ("core", "0002_rename_veltrion_audit_logs"),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='auditlog',
-            name='company',
-            field=models.ForeignKey(blank=True, help_text='Empresa dentro de cuyo contexto se realizó la acción.', null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='audit_logs', to='company_info.companyinfo', verbose_name='Empresa'),
+            model_name="auditlog",
+            name="company",
+            field=models.ForeignKey(
+                blank=True,
+                help_text="Empresa dentro de cuyo contexto se realizó la acción.",
+                null=True,
+                on_delete=django.db.models.deletion.SET_NULL,
+                related_name="audit_logs",
+                to="company_info.companyinfo",
+                verbose_name="Empresa",
+            ),
         ),
         migrations.AddIndex(
-            model_name='auditlog',
-            index=models.Index(fields=['company', '-created_at'], name='audit_comp_created_idx'),
+            model_name="auditlog",
+            index=models.Index(
+                fields=["company", "-created_at"], name="audit_comp_created_idx"
+            ),
         ),
     ]

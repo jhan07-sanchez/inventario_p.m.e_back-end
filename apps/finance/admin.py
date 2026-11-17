@@ -78,4 +78,3 @@ class FinancialReconciliationAdmin(admin.ModelAdmin):
     )
     list_filter = ("status", "end_date")
     search_fields = ("account__name", "notes")
-

@@ -66,4 +66,3 @@ class FinancialCategory(ActiveModel):
 
     def __str__(self) -> str:
         return f"{self.name} ({self.get_category_type_display()})"
-

@@ -116,7 +116,9 @@ class CompanyInfoTests(TestCase):
             tax_id="999888777-1",
             email="empresa2@example.com",
         )
-        second_company = CompanyInfoService.create_company_info(dto, owner_user=self.user)
+        second_company = CompanyInfoService.create_company_info(
+            dto, owner_user=self.user
+        )
         self.assertIsNotNone(second_company.pk)
         self.assertIsNotNone(second_company.uuid)
         self.assertEqual(second_company.business_name, "Segunda Empresa S.A.")

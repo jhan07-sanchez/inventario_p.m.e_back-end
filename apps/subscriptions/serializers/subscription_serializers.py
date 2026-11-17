@@ -92,3 +92,14 @@ class SubscriptionSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ["id_subscription", "start_date"]
 
+
+class ChangePlanRequestSerializer(serializers.Serializer):
+    """
+    Serializador de entrada para el cambio o renovación de plan comercial de la empresa.
+    """
+
+    plan_code = serializers.CharField(
+        required=True,
+        max_length=50,
+        help_text="Código identificador único del plan comercial a contratar (ej. BASIC, PRO, ENTERPRISE).",
+    )

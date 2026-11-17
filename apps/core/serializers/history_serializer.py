@@ -12,13 +12,15 @@ class GenericHistorySerializer(serializers.Serializer):
     history_type = serializers.CharField(max_length=1)
     history_user = serializers.SerializerMethodField()
 
-    SENSITIVE_FIELDS = frozenset({
-        "password",
-        "token",
-        "secret",
-        "refresh_token",
-        "access_token",
-    })
+    SENSITIVE_FIELDS = frozenset(
+        {
+            "password",
+            "token",
+            "secret",
+            "refresh_token",
+            "access_token",
+        }
+    )
 
     def get_history_user(self, obj) -> str:
         user = getattr(obj, "history_user", None)
@@ -53,11 +55,13 @@ class GenericHistorySerializer(serializers.Serializer):
                         old_val = "********" if old_val else None
                         new_val = "********" if new_val else None
 
-                    changes.append({
-                        "field": field_name,
-                        "old": str(old_val) if old_val is not None else None,
-                        "new": str(new_val) if new_val is not None else None,
-                    })
+                    changes.append(
+                        {
+                            "field": field_name,
+                            "old": str(old_val) if old_val is not None else None,
+                            "new": str(new_val) if new_val is not None else None,
+                        }
+                    )
             except Exception:
                 changes = []
 
@@ -96,4 +100,3 @@ class ConfigurationAuditHistorySerializer(serializers.Serializer):
                 }
             ]
         return []
-

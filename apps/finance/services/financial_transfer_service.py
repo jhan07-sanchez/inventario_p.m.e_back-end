@@ -12,11 +12,11 @@ from apps.core.exceptions.custom_exceptions import (
     InvalidFinancialTransferStateException,
 )
 from apps.core.services.base_service import BaseService
-from apps.finance.services.finance_cache_service import FinanceCacheService
 from apps.finance.dto.financial_dto import FinancialTransferCreateDTO
 from apps.finance.models.financial_account import FinancialAccount
 from apps.finance.models.financial_movement import FinancialMovement
 from apps.finance.models.financial_transfer import FinancialTransfer
+from apps.finance.services.finance_cache_service import FinanceCacheService
 
 
 class FinancialTransferService(BaseService[FinancialTransfer]):
@@ -50,8 +50,9 @@ class FinancialTransferService(BaseService[FinancialTransfer]):
         ids = sorted([dto.source_account_id, dto.destination_account_id])
         accounts = {
             acc.pk: acc
-            for acc in FinancialAccount.objects.select_for_update()
-            .filter(pk__in=ids, is_active=True)
+            for acc in FinancialAccount.objects.select_for_update().filter(
+                pk__in=ids, is_active=True
+            )
         }
 
         if dto.source_account_id not in accounts:
@@ -190,7 +191,9 @@ class FinancialTransferService(BaseService[FinancialTransfer]):
         source_acc.save(update_fields=["current_balance", "updated_at"])
 
         transfer.status = FinancialTransfer.TransferStatus.CANCELLED
-        transfer.notes = f"{transfer.notes}\nCancelada por {user.username}: {reason}".strip()
+        transfer.notes = (
+            f"{transfer.notes}\nCancelada por {user.username}: {reason}".strip()
+        )
         transfer.save(update_fields=["status", "notes", "updated_at"])
 
         # Marcar movimientos asociados como CANCELLED

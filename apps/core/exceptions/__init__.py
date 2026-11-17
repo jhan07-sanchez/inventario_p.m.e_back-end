@@ -6,4 +6,3 @@ __all__ = [
     "ErrorCodes",
     "custom_exception_handler",
 ]
-

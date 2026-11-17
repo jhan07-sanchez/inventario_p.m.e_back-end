@@ -53,4 +53,3 @@ class FinancialReconciliationSelector(BaseSelector[FinancialReconciliation]):
         if company_id:
             qs = qs.filter(account__company_id=company_id)
         return qs.first()
-

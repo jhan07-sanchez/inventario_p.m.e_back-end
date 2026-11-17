@@ -106,9 +106,14 @@ class InventoryService(BaseService[Inventory]):
         if supplier_id:
             from apps.suppliers.models import Supplier
 
-            try:
-                supplier = Supplier.objects.get(pk=supplier_id, is_active=True)
-            except Supplier.DoesNotExist:
+            supplier_qs = Supplier.objects.filter(pk=supplier_id, is_active=True)
+            prod_company_id = getattr(
+                getattr(inventory, "product", None), "company_id", None
+            )
+            if prod_company_id:
+                supplier_qs = supplier_qs.filter(company_id=prod_company_id)
+            supplier = supplier_qs.first()
+            if not supplier:
                 raise ValidationError(
                     "El proveedor seleccionado no existe o está inactivo."
                 )
@@ -147,7 +152,9 @@ class InventoryService(BaseService[Inventory]):
         )
 
         DashboardMetricsService.invalidate_inventory_cache(
-            company_id=getattr(getattr(inventory_locked, "product", None), "company_id", None)
+            company_id=getattr(
+                getattr(inventory_locked, "product", None), "company_id", None
+            )
         )
 
         return movement
@@ -207,7 +214,9 @@ class InventoryService(BaseService[Inventory]):
         )
 
         DashboardMetricsService.invalidate_inventory_cache(
-            company_id=getattr(getattr(inventory_locked, "product", None), "company_id", None)
+            company_id=getattr(
+                getattr(inventory_locked, "product", None), "company_id", None
+            )
         )
 
         return movement
@@ -267,7 +276,9 @@ class InventoryService(BaseService[Inventory]):
         )
 
         DashboardMetricsService.invalidate_inventory_cache(
-            company_id=getattr(getattr(inventory_locked, "product", None), "company_id", None)
+            company_id=getattr(
+                getattr(inventory_locked, "product", None), "company_id", None
+            )
         )
 
         return movement

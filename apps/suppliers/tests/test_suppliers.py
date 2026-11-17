@@ -55,7 +55,9 @@ class SupplierTests(TestCase):
         with self.assertRaises(Supplier.DoesNotExist):
             SupplierSelector.get_supplier_by_id(self.supplier.pk, include_deleted=False)
 
-        found = SupplierSelector.get_supplier_by_id(self.supplier.pk, include_deleted=True)
+        found = SupplierSelector.get_supplier_by_id(
+            self.supplier.pk, include_deleted=True
+        )
         self.assertEqual(found.pk, self.supplier.pk)
 
     def test_supplier_service_restore(self):

@@ -58,4 +58,3 @@ class SubscriptionMiddleware:
                 )
 
         return self.get_response(request)
-

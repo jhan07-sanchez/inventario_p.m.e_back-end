@@ -1,6 +1,5 @@
 from decimal import Decimal
 
-
 from django.db import models
 
 from apps.core.models.active_model import ActiveModel
@@ -112,4 +111,3 @@ class FinancialAccount(ActiveModel):
     def __str__(self) -> str:
         suffix = f" ({self.bank_name})" if self.bank_name else ""
         return f"{self.name}{suffix} - ${self.current_balance:,.2f}"
-

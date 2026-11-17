@@ -38,7 +38,10 @@ class CashSessionService(BaseService[CashSession]):
         company_id = getattr(register, "company_id", None)
 
         if CashSession.objects.filter(
-            company_id=company_id, user=user, status=CashSession.SessionStatus.OPEN, is_active=True
+            company_id=company_id,
+            user=user,
+            status=CashSession.SessionStatus.OPEN,
+            is_active=True,
         ).exists():
             raise CashSessionAlreadyOpenException()
 
@@ -81,22 +84,16 @@ class CashSessionService(BaseService[CashSession]):
             )
 
         # Recálculo exacto del saldo esperado en base a movimientos reales en efectivo
-        cash_in = (
-            session.movements.filter(
-                is_active=True,
-                is_cash=True,
-                movement_type=CashMovement.MovementType.IN,
-            ).aggregate(total=models.Sum("amount"))["total"]
-            or Decimal("0.00")
-        )
-        cash_out = (
-            session.movements.filter(
-                is_active=True,
-                is_cash=True,
-                movement_type=CashMovement.MovementType.OUT,
-            ).aggregate(total=models.Sum("amount"))["total"]
-            or Decimal("0.00")
-        )
+        cash_in = session.movements.filter(
+            is_active=True,
+            is_cash=True,
+            movement_type=CashMovement.MovementType.IN,
+        ).aggregate(total=models.Sum("amount"))["total"] or Decimal("0.00")
+        cash_out = session.movements.filter(
+            is_active=True,
+            is_cash=True,
+            movement_type=CashMovement.MovementType.OUT,
+        ).aggregate(total=models.Sum("amount"))["total"] or Decimal("0.00")
         real_expected = session.opening_balance + cash_in - cash_out
         session.expected_balance = real_expected
 

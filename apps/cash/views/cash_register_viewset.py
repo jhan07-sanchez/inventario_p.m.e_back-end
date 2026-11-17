@@ -1,3 +1,4 @@
+from drf_spectacular.utils import extend_schema, extend_schema_view
 from rest_framework import status
 from rest_framework.filters import OrderingFilter, SearchFilter
 
@@ -14,6 +15,11 @@ from apps.core.views.base_viewset import BaseViewSet
 from apps.users.permissions import IsAuthenticatedAndActive
 
 
+@extend_schema_view(
+    update=extend_schema(exclude=True),
+    partial_update=extend_schema(exclude=True),
+    destroy=extend_schema(exclude=True),
+)
 class CashRegisterViewSet(BaseViewSet):
     """
     ViewSet para listar y consultar Cajas Registradoras.

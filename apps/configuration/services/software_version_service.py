@@ -79,7 +79,9 @@ class SoftwareVersionService(BaseService[SoftwareVersion]):
 
         # Crear entradas de changelog iniciales si fueron enviadas
         for idx, entry_data in enumerate(dto.changelog_entries):
-            category = entry_data.get("category", VersionChangelogEntry.Category.FEATURE)
+            category = entry_data.get(
+                "category", VersionChangelogEntry.Category.FEATURE
+            )
             title = entry_data.get("title", "").strip()
             desc = entry_data.get("description", "").strip()
             order = entry_data.get("order", idx)
@@ -142,10 +144,7 @@ class SoftwareVersionService(BaseService[SoftwareVersion]):
             version.min_compatible_version = dto.min_compatible_version.strip()
             update_fields.append("min_compatible_version")
 
-        if (
-            dto.prerequisites is not None
-            and dto.prerequisites != version.prerequisites
-        ):
+        if dto.prerequisites is not None and dto.prerequisites != version.prerequisites:
             version.prerequisites = dto.prerequisites.strip()
             update_fields.append("prerequisites")
 
@@ -234,7 +233,9 @@ class SoftwareVersionService(BaseService[SoftwareVersion]):
 
         latest = SoftwareVersionSelector.get_latest_published_version()
         if latest and not force:
-            if not SoftwareVersionSelector.is_newer_version(version.version, latest.version):
+            if not SoftwareVersionSelector.is_newer_version(
+                version.version, latest.version
+            ):
                 raise SoftwareVersionDowngradeException(
                     f"No es posible publicar la versión {version.version} porque no es "
                     f"superior a la última versión publicada ({latest.version})."
@@ -243,7 +244,9 @@ class SoftwareVersionService(BaseService[SoftwareVersion]):
         version.status = SoftwareVersion.Status.PUBLISHED
         version.published_at = timezone.now()
         version.published_by = user
-        version.save(update_fields=["status", "published_at", "published_by", "updated_at"])
+        version.save(
+            update_fields=["status", "published_at", "published_by", "updated_at"]
+        )
 
         audit_reason = f"Publicación de versión {version.version}."
         if force:
@@ -348,7 +351,9 @@ class SoftwareVersionService(BaseService[SoftwareVersion]):
             status=SoftwareVersion.Status.PUBLISHED, is_active=True
         )
         already_read_ids = set(
-            UserVersionRead.objects.filter(user=user).values_list("version_id", flat=True)
+            UserVersionRead.objects.filter(user=user).values_list(
+                "version_id", flat=True
+            )
         )
 
         to_create = [
@@ -361,4 +366,3 @@ class SoftwareVersionService(BaseService[SoftwareVersion]):
             UserVersionRead.objects.bulk_create(to_create, ignore_conflicts=True)
 
         return len(to_create)
-

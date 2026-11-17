@@ -17,7 +17,7 @@ class Role(BaseModel):
         null=True,
         blank=True,
         verbose_name="Empresa",
-        help_text="Empresa a la que pertenece el rol. Nulo si es un rol de sistema global."
+        help_text="Empresa a la que pertenece el rol. Nulo si es un rol de sistema global.",
     )
     role_name = models.CharField(
         max_length=100,

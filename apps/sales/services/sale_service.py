@@ -49,16 +49,27 @@ class SaleService(BaseService[Sale]):
         customer_id == None indica Consumidor Final (venta POS sin cliente).
         """
 
+        company_id = getattr(dto, "company_id", None)
+        if not company_id:
+            from apps.core.context import get_current_company_id
+
+            company_id = get_current_company_id()
+
         # --- Cliente (opcional) ---
         customer = None
         if dto.customer_id is not None:
-            try:
-                customer = Customer.objects.get(pk=dto.customer_id)
-            except Customer.DoesNotExist:
+            cust_qs = Customer.objects.filter(pk=dto.customer_id)
+            if company_id:
+                cust_qs = cust_qs.filter(company_id=company_id)
+            customer = cust_qs.first()
+            if not customer:
                 raise ValidationError("El cliente seleccionado no existe.")
 
             if not customer.is_active:
                 raise CustomerInactiveException()
+
+            if not company_id and getattr(customer, "company_id", None):
+                company_id = customer.company_id
 
         if not user or not user.is_active:
             raise ValidationError("El usuario que registra la venta no está activo.")
@@ -67,6 +78,7 @@ class SaleService(BaseService[Sale]):
             raise SaleHasNoDetailsException()
 
         sale = Sale.objects.create(
+            company_id=company_id,
             sale_number="TEMP",
             customer=customer,
             user=user,
@@ -84,11 +96,12 @@ class SaleService(BaseService[Sale]):
 
         sale.sale_number = f"VTA-{sale.id_sale:06d}"
 
-        # Fetch all products at once to avoid N+1 queries
+        # Fetch all products at once to avoid N+1 queries scoped to company
         product_ids = [d.product_id for d in dto.details]
-        products_map = {
-            p.id_product: p for p in Product.objects.filter(pk__in=product_ids)
-        }
+        prod_qs = Product.objects.filter(pk__in=product_ids)
+        if company_id:
+            prod_qs = prod_qs.filter(company_id=company_id)
+        products_map = {p.id_product: p for p in prod_qs}
 
         subtotal_sum = Decimal("0.00")
 
@@ -199,11 +212,11 @@ class SaleService(BaseService[Sale]):
         update_fields = ["updated_at"]
 
         if dto.customer_id is not None:
-            try:
-                customer = Customer.objects.get(
-                    pk=dto.customer_id,
-                )
-            except Customer.DoesNotExist:
+            cust_qs = Customer.objects.filter(pk=dto.customer_id)
+            if sale.company_id:
+                cust_qs = cust_qs.filter(company_id=sale.company_id)
+            customer = cust_qs.first()
+            if not customer:
                 raise ValidationError("El cliente seleccionado no existe.")
 
             if not customer.is_active:
@@ -424,12 +437,22 @@ class SaleService(BaseService[Sale]):
 
         template = (
             InvoiceTemplate.objects.filter(
+                company_id=sale.company_id,
                 document_type=InvoiceTemplate.DocumentType.SALE_INVOICE,
                 is_active=True,
             )
             .order_by("-is_default")
             .first()
         )
+        if template is None:
+            template = (
+                InvoiceTemplate.objects.filter(
+                    document_type=InvoiceTemplate.DocumentType.SALE_INVOICE,
+                    is_active=True,
+                )
+                .order_by("-is_default")
+                .first()
+            )
 
         if template is None:
             raise ValidationError(
@@ -625,9 +648,19 @@ class SaleService(BaseService[Sale]):
         from apps.cash.services.payment_service import PaymentService
         from apps.core.enums import PaymentMethod, PaymentStatus
 
-        session = CashSession.objects.filter(
+        session_qs = CashSession.objects.filter(
             user=user, status=CashSession.SessionStatus.OPEN, is_active=True
-        ).first()
+        )
+        if sale.company_id:
+            if sale.company_id == 1:
+                from django.db.models import Q
+
+                session_qs = session_qs.filter(
+                    Q(company_id=1) | Q(company_id__isnull=True)
+                )
+            else:
+                session_qs = session_qs.filter(company_id=sale.company_id)
+        session = session_qs.first()
 
         if sale.sale_type == sale.SaleType.POS and not session:
             raise ValidationError(
@@ -670,16 +703,32 @@ class SaleService(BaseService[Sale]):
             )
             CashMovementService.create_movement(movement_dto)
 
-        #--- Integración con módulo financiero ---
+        # --- Integración con módulo financiero ---
         try:
+            from apps.core.enums import PaymentMethod
+            from apps.finance.dto import FinancialMovementCreateDTO
             from apps.finance.models import FinancialAccount, FinancialMovement
             from apps.finance.services import FinancialMovementService
-            from apps.finance.dto import FinancialMovementCreateDTO
-            from apps.core.enums import PaymentMethod
 
-            #Buscamos la cuenta contable segun el metodo de pago
-            account_type = FinancialAccount.AccountType.CASH if PaymentMethod.is_cash(sale.payment_method) else FinancialAccount.AccountType.BANK
-            account = FinancialAccount.objects.filter(account_type=account_type, is_active=True).first()
+            # Buscamos la cuenta contable segun el metodo de pago y empresa
+            account_type = (
+                FinancialAccount.AccountType.CASH
+                if PaymentMethod.is_cash(sale.payment_method)
+                else FinancialAccount.AccountType.BANK
+            )
+            account_qs = FinancialAccount.objects.filter(
+                account_type=account_type, is_active=True
+            )
+            if sale.company_id:
+                if sale.company_id == 1:
+                    from django.db.models import Q
+
+                    account_qs = account_qs.filter(
+                        Q(company_id=1) | Q(company__isnull=True)
+                    )
+                else:
+                    account_qs = account_qs.filter(company_id=sale.company_id)
+            account = account_qs.first()
 
             if account:
                 movement_dto = FinancialMovementCreateDTO(
@@ -696,7 +745,10 @@ class SaleService(BaseService[Sale]):
 
         except Exception as e:
             import logging
-            logging.getLogger(__name__).error(f"Error al registrar movimiento financiero para la venta {sale.sale_number}: {str(e)}")
+
+            logging.getLogger(__name__).error(
+                f"Error al registrar movimiento financiero para la venta {sale.sale_number}: {str(e)}"
+            )
 
     @staticmethod
     def _reverse_sale_payment(sale: Sale, user):
@@ -709,9 +761,19 @@ class SaleService(BaseService[Sale]):
         from apps.cash.services.cash_movement_service import CashMovementService
         from apps.core.enums import PaymentMethod, PaymentStatus
 
-        session = CashSession.objects.filter(
+        session_qs = CashSession.objects.filter(
             user=user, status=CashSession.SessionStatus.OPEN, is_active=True
-        ).first()
+        )
+        if sale.company_id:
+            if sale.company_id == 1:
+                from django.db.models import Q
+
+                session_qs = session_qs.filter(
+                    Q(company_id=1) | Q(company_id__isnull=True)
+                )
+            else:
+                session_qs = session_qs.filter(company_id=sale.company_id)
+        session = session_qs.first()
 
         payments = sale.payments.exclude(status=PaymentStatus.CANCELLED)
         for payment in payments:

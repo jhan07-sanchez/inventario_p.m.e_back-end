@@ -4,15 +4,15 @@ from rest_framework.decorators import action
 
 from apps.cash.docs.cash_docs import (
     cash_session_add_movement_schema,
+    cash_session_audit_summary_schema,
     cash_session_close_schema,
     cash_session_current_schema,
     cash_session_detail_schema,
+    cash_session_financial_summary_schema,
+    cash_session_last_closing_balance_schema,
     cash_session_list_schema,
     cash_session_movements_schema,
     cash_session_open_schema,
-    cash_session_financial_summary_schema,
-    cash_session_last_closing_balance_schema,
-    cash_session_audit_summary_schema,
 )
 from apps.cash.models.cash_session import CashSession
 from apps.cash.selectors.cash_session_selector import CashSessionSelector
@@ -52,7 +52,10 @@ class CashSessionViewSet(BaseGenericViewSet):
             "movements": (IsAuthenticatedAndActive, HasPermission("cash.view")),
             "audit_summary": (IsAuthenticatedAndActive, HasPermission("cash.view")),
             "financial_summary": (IsAuthenticatedAndActive, HasPermission("cash.view")),
-            "last_closing_balance": (IsAuthenticatedAndActive, HasPermission("cash.view")),
+            "last_closing_balance": (
+                IsAuthenticatedAndActive,
+                HasPermission("cash.view"),
+            ),
         }
         classes = permission_map.get(
             self.action, (IsAuthenticatedAndActive, HasPermission("cash.view"))
@@ -105,7 +108,9 @@ class CashSessionViewSet(BaseGenericViewSet):
     @action(detail=False, methods=["get"], url_path="current")
     def current(self, request):
         company_id = getattr(request, "company_id", None)
-        session = CashSessionSelector.get_current_session(request.user, company_id=company_id)
+        session = CashSessionSelector.get_current_session(
+            request.user, company_id=company_id
+        )
         if not session:
             return self.error_response(
                 message="No tienes una sesión de caja abierta.",
@@ -229,7 +234,9 @@ class CashSessionViewSet(BaseGenericViewSet):
                 status_code=status.HTTP_400_BAD_REQUEST,
             )
 
-        last_session = CashSessionSelector.get_last_closed_session(int(cash_register_id))
+        last_session = CashSessionSelector.get_last_closed_session(
+            int(cash_register_id)
+        )
         if not last_session:
             return self.success_response(
                 message="No hay sesiones cerradas previas para esta caja.",

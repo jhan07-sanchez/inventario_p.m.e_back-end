@@ -16,12 +16,8 @@ class FinancialMovementListSerializer(serializers.ModelSerializer):
     payment_method_display = serializers.CharField(
         source="get_payment_method_display", read_only=True
     )
-    status_display = serializers.CharField(
-        source="get_status_display", read_only=True
-    )
-    user_name = serializers.CharField(
-        source="user.username", read_only=True
-    )
+    status_display = serializers.CharField(source="get_status_display", read_only=True)
+    user_name = serializers.CharField(source="user.username", read_only=True)
 
     class Meta:
         model = FinancialMovement
@@ -54,8 +50,12 @@ class FinancialMovementListSerializer(serializers.ModelSerializer):
 
 class FinancialMovementCreateSerializer(serializers.Serializer):
     account_id = serializers.IntegerField()
-    category_id = serializers.IntegerField(required=False, allow_null=True, default=None)
-    movement_type = serializers.ChoiceField(choices=FinancialMovement.MovementType.choices)
+    category_id = serializers.IntegerField(
+        required=False, allow_null=True, default=None
+    )
+    movement_type = serializers.ChoiceField(
+        choices=FinancialMovement.MovementType.choices
+    )
     amount = serializers.DecimalField(max_digits=14, decimal_places=2)
     payment_method = serializers.ChoiceField(
         choices=PaymentMethod.choices, default=PaymentMethod.TRANSFER
@@ -65,9 +65,7 @@ class FinancialMovementCreateSerializer(serializers.Serializer):
     reference = serializers.CharField(
         max_length=100, required=False, allow_blank=True, default=""
     )
-    notes = serializers.CharField(
-        required=False, allow_blank=True, default=""
-    )
+    notes = serializers.CharField(required=False, allow_blank=True, default="")
 
     def to_dto(self) -> FinancialMovementCreateDTO:
         data = self.validated_data
@@ -87,4 +85,3 @@ class FinancialMovementCreateSerializer(serializers.Serializer):
 
 class FinancialMovementReverseSerializer(serializers.Serializer):
     reason = serializers.CharField(max_length=255)
-

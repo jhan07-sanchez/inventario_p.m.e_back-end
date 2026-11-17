@@ -9,6 +9,7 @@ from apps.company_info.docs.company_info_docs import (
     company_info_delete_schema,
     company_info_detail_schema,
     company_info_list_schema,
+    company_info_my_companies_schema,
     company_info_partial_update_schema,
     company_info_remove_logo_schema,
     company_info_update_schema,
@@ -54,9 +55,7 @@ class CompanyInfoViewSet(BaseViewSet):
                 # para reportes o tickets, pero limitamos a view si es necesario
                 HasPermission("settings.view"),
             ),
-            "my_companies": (
-                IsAuthenticatedAndActive,
-            ),
+            "my_companies": (IsAuthenticatedAndActive,),
             "create": (
                 IsAuthenticatedAndActive,
                 HasPermission("settings.update"),
@@ -167,6 +166,7 @@ class CompanyInfoViewSet(BaseViewSet):
             status_code=status.HTTP_200_OK,
         )
 
+    @company_info_my_companies_schema
     @action(detail=False, methods=["get"], url_path="my-companies")
     def my_companies(self, request):
         """
@@ -208,7 +208,9 @@ class CompanyInfoViewSet(BaseViewSet):
                     "business_name": m.company.business_name,
                     "trade_name": m.company.trade_name,
                     "tax_id": m.company.tax_id,
-                    "logo": request.build_absolute_uri(m.company.logo.url) if m.company.logo else None,
+                    "logo": request.build_absolute_uri(m.company.logo.url)
+                    if m.company.logo
+                    else None,
                     "role_name": m.role.role_name,
                     "id_role": m.role.id_role,
                     "is_owner": m.is_owner,

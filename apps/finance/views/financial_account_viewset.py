@@ -1,4 +1,5 @@
 from django.core.exceptions import ValidationError
+from drf_spectacular.utils import extend_schema, extend_schema_view
 from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.filters import OrderingFilter, SearchFilter
@@ -29,6 +30,9 @@ from apps.finance.services.financial_account_service import FinancialAccountServ
 from apps.users.permissions import IsAuthenticatedAndActive
 
 
+@extend_schema_view(
+    partial_update=extend_schema(exclude=True),
+)
 class FinancialAccountViewSet(BaseViewSet):
     """
     ViewSet para la administración de Cuentas Financieras (cajas, bancos, billeteras).
@@ -56,7 +60,7 @@ class FinancialAccountViewSet(BaseViewSet):
         return [permission() for permission in classes]
 
     def get_queryset(self):
-        company_id = getattr(self.request, "company_id", None) or self.request.query_params.get("company_id")
+        company_id = self.get_company_id(self.request)
         account_type = self.request.query_params.get("account_type")
         include_deleted_param = self.request.query_params.get("include_deleted")
         include_deleted = (
@@ -124,9 +128,10 @@ class FinancialAccountViewSet(BaseViewSet):
         serializer.is_valid(raise_exception=True)
 
         dto = serializer.to_dto()
-        company_id = getattr(request, "company_id", None) or dto.company_id
+        company_id = self.get_company_id(request) or dto.company_id
         if company_id != dto.company_id:
             from dataclasses import replace
+
             dto = replace(dto, company_id=company_id)
 
         account = FinancialAccountService.create_account(dto)
@@ -138,7 +143,6 @@ class FinancialAccountViewSet(BaseViewSet):
             data=output,
             status_code=status.HTTP_201_CREATED,
         )
-
 
     @finance_account_update_schema
     def update(self, request, *args, **kwargs):

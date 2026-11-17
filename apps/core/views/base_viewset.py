@@ -11,6 +11,72 @@ class BaseResponseMixin:
     Mixin con helpers de respuestas estandarizadas para la API.
     """
 
+    def get_company_id(self, request=None) -> int | None:
+        """
+        Resuelve de forma robusta y segura el ID de la empresa activa del contexto de la petición.
+        Busca en request.company_id, headers HTTP (X-Company-ID), contextvars, y membresías activas.
+        """
+        req = request or getattr(self, "request", None)
+        if not req:
+            from apps.core.context import get_current_company_id
+
+            return get_current_company_id()
+
+        company_id = getattr(req, "company_id", None)
+        if company_id:
+            return company_id
+
+        # 1. Verificar headers HTTP (case-insensitive)
+        headers = getattr(req, "headers", {})
+        header_val = (
+            headers.get("X-Company-ID")
+            or headers.get("x-company-id")
+            or req.META.get("HTTP_X_COMPANY_ID")
+            or req.query_params.get("company_id")
+            if hasattr(req, "query_params")
+            else None
+        )
+        if header_val:
+            try:
+                cid = int(str(header_val).strip())
+                req.company_id = cid
+                from apps.core.context import set_current_company_id
+
+                set_current_company_id(cid)
+                return cid
+            except (ValueError, TypeError):
+                pass
+
+        # 2. Contextvars thread-safe
+        from apps.core.context import get_current_company_id, set_current_company_id
+
+        ctx_id = get_current_company_id()
+        if ctx_id:
+            req.company_id = ctx_id
+            return ctx_id
+
+        # 3. Si el usuario pertenece a una única empresa activa, confinar a esa empresa
+        user = getattr(req, "user", None)
+        if (
+            user
+            and getattr(user, "is_authenticated", False)
+            and hasattr(user, "memberships")
+        ):
+            from apps.users.models import CompanyMembership
+
+            active_m = user.memberships.filter(
+                is_active=True,
+                status=CompanyMembership.MembershipStatus.ACTIVE,
+                company__is_active=True,
+            )
+            if active_m.count() == 1:
+                cid = active_m.first().company_id
+                req.company_id = cid
+                set_current_company_id(cid)
+                return cid
+
+        return None
+
     @staticmethod
     def success_response(
         *,
@@ -85,27 +151,49 @@ class TenantIsolationMixin:
             return qs
 
         fields = [f.name for f in model._meta.fields]
-        kw = lambda field: {f"{field}__in": company_ids} if company_ids is not None else {f"{field}": company_id}
+
+        def kw(field):
+            return (
+                {f"{field}__in": company_ids}
+                if company_ids is not None
+                else {f"{field}": company_id}
+            )
 
         # 1. Modelos con relación directa 'company' o 'company_id' (TenantModel)
         if "company" in fields or "company_id" in fields or hasattr(model, "company"):
+            from django.db.models import Q
+
+            if company_id == 1 and not company_ids:
+                return qs.filter(Q(company_id=1) | Q(company_id__isnull=True))
             return qs.filter(**kw("company_id"))
 
         # 2. Modelo User (aislado por membresías activas de la empresa)
         if model._meta.app_label == "users" and model.__name__ == "User":
             filter_kwargs = (
-                {"memberships__company_id__in": company_ids, "memberships__is_active": True}
+                {
+                    "memberships__company_id__in": company_ids,
+                    "memberships__is_active": True,
+                }
                 if company_ids is not None
-                else {"memberships__company_id": company_id, "memberships__is_active": True}
+                else {
+                    "memberships__company_id": company_id,
+                    "memberships__is_active": True,
+                }
             )
             return qs.filter(**filter_kwargs).distinct()
 
         # 3. Modelo UserRole (aislado por membresía de la empresa)
         if model._meta.app_label == "users" and model.__name__ == "UserRole":
             filter_kwargs = (
-                {"user__memberships__company_id__in": company_ids, "user__memberships__is_active": True}
+                {
+                    "user__memberships__company_id__in": company_ids,
+                    "user__memberships__is_active": True,
+                }
                 if company_ids is not None
-                else {"user__memberships__company_id": company_id, "user__memberships__is_active": True}
+                else {
+                    "user__memberships__company_id": company_id,
+                    "user__memberships__is_active": True,
+                }
             )
             return qs.filter(**filter_kwargs).distinct()
 
@@ -139,6 +227,7 @@ class TenantIsolationMixin:
         # 10. Modelo Payment (aislado a través de sale__company_id o cash_movements__cash_session__company_id)
         if model._meta.app_label == "cash" and model.__name__ == "Payment":
             from django.db.models import Q
+
             if company_ids is not None:
                 return qs.filter(
                     Q(sale__company_id__in=company_ids)
@@ -151,9 +240,20 @@ class TenantIsolationMixin:
 
         # 11. Modelos Financieros indirectos
         if model._meta.app_label == "finance":
+            from django.db.models import Q
+
             if model.__name__ in ("FinancialMovement", "FinancialReconciliation"):
+                if company_id == 1 and not company_ids:
+                    return qs.filter(
+                        Q(account__company_id=1) | Q(account__company__isnull=True)
+                    )
                 return qs.filter(**kw("account__company_id"))
             if model.__name__ == "FinancialTransfer":
+                if company_id == 1 and not company_ids:
+                    return qs.filter(
+                        Q(source_account__company_id=1)
+                        | Q(source_account__company__isnull=True)
+                    )
                 return qs.filter(**kw("source_account__company_id"))
 
         # 12. Subscriptions Payment
@@ -178,6 +278,9 @@ class TenantIsolationMixin:
 
         user = getattr(request, "user", None)
         company_id = getattr(request, "company_id", None)
+        if not company_id and hasattr(self, "get_company_id"):
+            company_id = self.get_company_id(request)
+
         if not company_id and hasattr(request, "company") and request.company:
             company_id = getattr(request.company, "id_company", None) or getattr(
                 request.company, "pk", None
@@ -194,9 +297,15 @@ class TenantIsolationMixin:
             return self._apply_tenant_filter(qs, company_id=company_id)
 
         # Si no hay company_id explícito, pero el usuario pertenece a empresas activas, confinamos a sus empresas
-        if user and getattr(user, "is_authenticated", False) and hasattr(user, "memberships"):
+        if (
+            user
+            and getattr(user, "is_authenticated", False)
+            and hasattr(user, "memberships")
+        ):
             user_company_ids = list(
-                user.memberships.filter(is_active=True).values_list("company_id", flat=True)
+                user.memberships.filter(is_active=True).values_list(
+                    "company_id", flat=True
+                )
             )
             if user_company_ids:
                 return self._apply_tenant_filter(qs, company_ids=user_company_ids)
@@ -263,10 +372,14 @@ class BaseViewSet(TenantIsolationMixin, BaseResponseMixin, ModelViewSet):
         def wrapped_validate(attrs):
             validated_attrs = original_validate(attrs)
             company_id = getattr(self.request, "company_id", None)
-            if not company_id and hasattr(self.request, "company") and self.request.company:
-                company_id = getattr(self.request.company, "id_company", None) or getattr(
-                    self.request.company, "pk", None
-                )
+            if (
+                not company_id
+                and hasattr(self.request, "company")
+                and self.request.company
+            ):
+                company_id = getattr(
+                    self.request.company, "id_company", None
+                ) or getattr(self.request.company, "pk", None)
 
             model = (
                 getattr(serializer.Meta, "model", None)
@@ -316,10 +429,14 @@ class BaseViewSet(TenantIsolationMixin, BaseResponseMixin, ModelViewSet):
 
         if self._is_tenant_model(model):
             company_id = getattr(self.request, "company_id", None)
-            if not company_id and hasattr(self.request, "company") and self.request.company:
-                company_id = getattr(self.request.company, "id_company", None) or getattr(
-                    self.request.company, "pk", None
-                )
+            if (
+                not company_id
+                and hasattr(self.request, "company")
+                and self.request.company
+            ):
+                company_id = getattr(
+                    self.request.company, "id_company", None
+                ) or getattr(self.request.company, "pk", None)
 
             user = getattr(self.request, "user", None)
             user_has_memberships = (

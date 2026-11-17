@@ -57,4 +57,3 @@ class FinancialReconciliationCreateDTO:
     end_date: date
     statement_balance: Decimal
     notes: str = ""
-

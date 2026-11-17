@@ -231,9 +231,7 @@ class DashboardMetricsService:
                         current_stock__lte=F("minimum_stock"),
                     )
                     if company_id is not None:
-                        inv_low_qs = inv_low_qs.filter(
-                            product__company_id=company_id
-                        )
+                        inv_low_qs = inv_low_qs.filter(product__company_id=company_id)
                     cache[key] = inv_low_qs.count()
 
                 elif key == "products_critical":
@@ -243,9 +241,7 @@ class DashboardMetricsService:
                         current_stock=0,
                     )
                     if company_id is not None:
-                        inv_crit_qs = inv_crit_qs.filter(
-                            product__company_id=company_id
-                        )
+                        inv_crit_qs = inv_crit_qs.filter(product__company_id=company_id)
                     cache[key] = inv_crit_qs.count()
 
                 elif key == "inventory_alerts":
@@ -276,17 +272,13 @@ class DashboardMetricsService:
                         status=Purchase.Status.PENDING
                     )
                     if company_id is not None:
-                        purch_pend_qs = purch_pend_qs.filter(
-                            company_id=company_id
-                        )
+                        purch_pend_qs = purch_pend_qs.filter(company_id=company_id)
                     cache[key] = purch_pend_qs.count()
 
                 elif key == "inventory_total_value":
                     inv_val_qs = Inventory.objects.all()
                     if company_id is not None:
-                        inv_val_qs = inv_val_qs.filter(
-                            product__company_id=company_id
-                        )
+                        inv_val_qs = inv_val_qs.filter(product__company_id=company_id)
                     val = inv_val_qs.aggregate(
                         total=Sum(F("current_stock") * F("product__purchase_price"))
                     )["total"]
@@ -301,9 +293,7 @@ class DashboardMetricsService:
                         hour=0, minute=0, second=0, microsecond=0
                     )
 
-                    sales_qs = Sale.objects.filter(
-                        status=Sale.SaleStatus.COMPLETED
-                    )
+                    sales_qs = Sale.objects.filter(status=Sale.SaleStatus.COMPLETED)
                     if company_id is not None:
                         sales_qs = sales_qs.filter(company_id=company_id)
 
@@ -317,9 +307,7 @@ class DashboardMetricsService:
 
                     cache[key] = {
                         "total_month": (
-                            float(total_month)
-                            if total_month is not None
-                            else 0.0
+                            float(total_month) if total_month is not None else 0.0
                         ),
                         "sales_today_count": sales_today_count,
                     }
@@ -576,9 +564,7 @@ class DashboardMetricsService:
                         sale__updated_at__gte=thirty_days_ago,
                     )
                     if company_id is not None:
-                        sale_det_qs = sale_det_qs.filter(
-                            sale__company_id=company_id
-                        )
+                        sale_det_qs = sale_det_qs.filter(sale__company_id=company_id)
 
                     rows = (
                         sale_det_qs.values(
@@ -608,14 +594,11 @@ class DashboardMetricsService:
                         status=Sale.SaleStatus.COMPLETED
                     )
                     if company_id is not None:
-                        sales_latest_qs = sales_latest_qs.filter(
-                            company_id=company_id
-                        )
+                        sales_latest_qs = sales_latest_qs.filter(company_id=company_id)
 
-                    sales = (
-                        sales_latest_qs.select_related("customer")
-                        .order_by("-updated_at")[:5]
-                    )
+                    sales = sales_latest_qs.select_related("customer").order_by(
+                        "-updated_at"
+                    )[:5]
                     items = []
                     for sale_obj in sales:
                         customer_name = "Consumidor Final"

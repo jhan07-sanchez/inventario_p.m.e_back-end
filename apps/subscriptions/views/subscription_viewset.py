@@ -1,10 +1,15 @@
-from drf_spectacular.utils import extend_schema, extend_schema_view
+from drf_spectacular.utils import extend_schema_view
 from rest_framework import permissions, status, viewsets
 from rest_framework.decorators import action
-from rest_framework.response import Response
 
 from apps.core.utils.api_response import ApiResponse
-from apps.subscriptions.models import Plan, Subscription
+from apps.subscriptions.docs.subscription_docs import (
+    plan_detail_schema,
+    plan_list_schema,
+    subscription_change_plan_schema,
+    subscription_current_schema,
+)
+from apps.subscriptions.models import Plan
 from apps.subscriptions.selectors.subscription_selector import SubscriptionSelector
 from apps.subscriptions.serializers.subscription_serializers import (
     PlanSerializer,
@@ -14,8 +19,8 @@ from apps.subscriptions.services.subscription_service import SubscriptionService
 
 
 @extend_schema_view(
-    list=extend_schema(summary="Listar planes comerciales activos"),
-    retrieve=extend_schema(summary="Consultar detalles de un plan"),
+    list=plan_list_schema,
+    retrieve=plan_detail_schema,
 )
 class PlanViewSet(viewsets.ReadOnlyModelViewSet):
     """
@@ -33,11 +38,9 @@ class SubscriptionViewSet(viewsets.ViewSet):
     """
 
     permission_classes = [permissions.IsAuthenticated]
+    serializer_class = SubscriptionSerializer
 
-    @extend_schema(
-        summary="Consultar suscripción y cuotas de consumo de la empresa actual",
-        description="Retorna el estado de la suscripción, fecha de corte, días de gracia y consumo actual vs límites.",
-    )
+    @subscription_current_schema
     @action(detail=False, methods=["get"], url_path="current")
     def current(self, request):
         company = getattr(request, "company", None)
@@ -59,10 +62,7 @@ class SubscriptionViewSet(viewsets.ViewSet):
             message="Información de suscripción obtenida exitosamente.",
         )
 
-    @extend_schema(
-        summary="Cambiar o actualizar el plan de suscripción de la empresa",
-        request={"application/json": {"type": "object", "properties": {"plan_code": {"type": "string"}}}},
-    )
+    @subscription_change_plan_schema
     @action(detail=False, methods=["post"], url_path="change-plan")
     def change_plan(self, request):
         company = getattr(request, "company", None)
@@ -73,8 +73,13 @@ class SubscriptionViewSet(viewsets.ViewSet):
             )
 
         # Solo el dueño o administrador puede cambiar de plan
-        membership = request.user.memberships.filter(company=company, is_active=True).first()
-        if not membership or (not membership.is_owner and getattr(membership.role, "role_name", "") != "ADMIN"):
+        membership = request.user.memberships.filter(
+            company=company, is_active=True
+        ).first()
+        if not membership or (
+            not membership.is_owner
+            and getattr(membership.role, "role_name", "") != "ADMIN"
+        ):
             return ApiResponse.error(
                 message="Solo el propietario o administrador de la empresa puede modificar el plan de suscripción.",
                 status_code=status.HTTP_403_FORBIDDEN,

@@ -1,4 +1,5 @@
 from django.core.exceptions import ValidationError
+from drf_spectacular.utils import extend_schema, extend_schema_view
 from rest_framework import status
 from rest_framework.filters import OrderingFilter, SearchFilter
 
@@ -19,6 +20,11 @@ from apps.finance.services.financial_category_service import FinancialCategorySe
 from apps.users.permissions import IsAuthenticatedAndActive
 
 
+@extend_schema_view(
+    update=extend_schema(exclude=True),
+    partial_update=extend_schema(exclude=True),
+    destroy=extend_schema(exclude=True),
+)
 class FinancialCategoryViewSet(BaseViewSet):
     """
     ViewSet para categorías financieras de ingresos y egresos.
@@ -44,7 +50,9 @@ class FinancialCategoryViewSet(BaseViewSet):
 
     def get_queryset(self):
         cat_type = self.request.query_params.get("category_type")
-        company_id = getattr(self.request, "company_id", None) or self.request.query_params.get("company_id")
+        company_id = getattr(
+            self.request, "company_id", None
+        ) or self.request.query_params.get("company_id")
         qs = FinancialCategorySelector.get_categories(
             category_type=cat_type,
             company_id=int(company_id) if company_id else None,
@@ -88,7 +96,9 @@ class FinancialCategoryViewSet(BaseViewSet):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        company_id = getattr(request, "company_id", None) or serializer.validated_data.get("company_id")
+        company_id = getattr(
+            request, "company_id", None
+        ) or serializer.validated_data.get("company_id")
         try:
             cat = FinancialCategoryService.create_category(
                 name=serializer.validated_data["name"],

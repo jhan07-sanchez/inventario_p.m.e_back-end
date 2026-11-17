@@ -80,6 +80,30 @@ company_info_detail_schema = extend_schema(
     },
 )
 
+company_info_my_companies_schema = extend_schema(
+    tags=["Company Info"],
+    summary="Listar Empresas del Usuario (Company Switcher)",
+    description=(
+        "Retorna el catálogo de empresas a las que pertenece el usuario autenticado "
+        "con sus respectivos roles y membresías activas, permitiendo el cambio contextual "
+        "en el frontend (Company Switcher). Si el usuario es superusuario, retorna todas las empresas activas."
+    ),
+    responses={
+        200: OpenApiResponse(
+            response=build_api_response_schema(
+                name="MyCompaniesApiResponse",
+                data_serializer=CompanyInfoSerializer,
+                is_list=True,
+            ),
+            description="Empresas del usuario obtenidas correctamente.",
+        ),
+        401: OpenApiResponse(
+            response=ApiErrorResponseSerializer,
+            description="Usuario no autenticado o token expirado.",
+        ),
+    },
+)
+
 company_info_current_schema = extend_schema(
     tags=["Company Info"],
     summary="Obtener Empresa Actual",
@@ -199,6 +223,30 @@ company_info_update_schema = extend_schema(
         404: OpenApiResponse(
             response=ApiErrorResponseSerializer,
             description="Empresa no encontrada.",
+        ),
+    },
+)
+
+company_info_my_companies_schema = extend_schema(
+    tags=["Company Info"],
+    summary="Listar Empresas del Usuario (Company Switcher)",
+    description=(
+        "Retorna el catálogo de empresas a las que pertenece el usuario autenticado "
+        "con sus respectivos roles y membresías activas, permitiendo el cambio contextual "
+        "en el frontend (Company Switcher). Si el usuario es superusuario, retorna todas las empresas activas."
+    ),
+    responses={
+        200: OpenApiResponse(
+            response=build_api_response_schema(
+                name="MyCompaniesApiResponse",
+                data_serializer=CompanyInfoSerializer,
+                is_list=True,
+            ),
+            description="Empresas del usuario obtenidas correctamente.",
+        ),
+        401: OpenApiResponse(
+            response=ApiErrorResponseSerializer,
+            description="Usuario no autenticado o token expirado.",
         ),
     },
 )
@@ -357,6 +405,30 @@ company_info_remove_logo_schema = extend_schema(
         404: OpenApiResponse(
             response=ApiErrorResponseSerializer,
             description="Empresa no encontrada.",
+        ),
+    },
+)
+
+company_info_my_companies_schema = extend_schema(
+    tags=["Company Info"],
+    summary="Listar Empresas del Usuario (Company Switcher)",
+    description=(
+        "Retorna el catálogo de empresas a las que pertenece el usuario autenticado "
+        "con sus respectivos roles y membresías activas, permitiendo el cambio contextual "
+        "en el frontend (Company Switcher). Si el usuario es superusuario, retorna todas las empresas activas."
+    ),
+    responses={
+        200: OpenApiResponse(
+            response=build_api_response_schema(
+                name="MyCompaniesApiResponse",
+                data_serializer=CompanyInfoSerializer,
+                is_list=True,
+            ),
+            description="Empresas del usuario obtenidas correctamente.",
+        ),
+        401: OpenApiResponse(
+            response=ApiErrorResponseSerializer,
+            description="Usuario no autenticado o token expirado.",
         ),
     },
 )

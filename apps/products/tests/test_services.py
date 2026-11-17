@@ -14,7 +14,9 @@ from apps.products.services.product_service import ProductService
 
 class ProductServiceTests(TestCase):
     def setUp(self):
-        self.category = Category.objects.create(name="Materiales Eléctricos", is_active=True)
+        self.category = Category.objects.create(
+            name="Materiales Eléctricos", is_active=True
+        )
         self.service = ProductService()
 
     def test_create_product_success(self):
@@ -46,31 +48,37 @@ class ProductServiceTests(TestCase):
             ProductService.create_product(data)
 
     def test_create_product_duplicate_code_fails(self):
-        ProductService.create_product({
-            "code": "DUP-001",
-            "name": "Producto Original",
-            "category": self.category,
-            "purchase_price": Decimal("10.00"),
-            "sale_price": Decimal("15.00"),
-        })
-
-        with self.assertRaises(ProductAlreadyExistsException):
-            ProductService.create_product({
+        ProductService.create_product(
+            {
                 "code": "DUP-001",
-                "name": "Otro Producto",
+                "name": "Producto Original",
                 "category": self.category,
                 "purchase_price": Decimal("10.00"),
                 "sale_price": Decimal("15.00"),
-            })
+            }
+        )
+
+        with self.assertRaises(ProductAlreadyExistsException):
+            ProductService.create_product(
+                {
+                    "code": "DUP-001",
+                    "name": "Otro Producto",
+                    "category": self.category,
+                    "purchase_price": Decimal("10.00"),
+                    "sale_price": Decimal("15.00"),
+                }
+            )
 
     def test_deactivate_and_restore_product(self):
-        product = ProductService.create_product({
-            "code": "REST-001",
-            "name": "Producto a Restaurar",
-            "category": self.category,
-            "purchase_price": Decimal("5.00"),
-            "sale_price": Decimal("10.00"),
-        })
+        product = ProductService.create_product(
+            {
+                "code": "REST-001",
+                "name": "Producto a Restaurar",
+                "category": self.category,
+                "purchase_price": Decimal("5.00"),
+                "sale_price": Decimal("10.00"),
+            }
+        )
 
         ProductService.deactivate_product(product)
         product.refresh_from_db()

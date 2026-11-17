@@ -93,4 +93,3 @@ class Plan(ActiveModel):
 
     def __str__(self) -> str:
         return f"{self.name} ({self.code}) - ${self.price}/{self.get_billing_cycle_display()}"
-

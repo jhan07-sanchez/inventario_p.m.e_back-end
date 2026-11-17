@@ -13,6 +13,9 @@ from apps.configuration.docs import (
     software_version_history_schema,
     software_version_latest_schema,
     software_version_list_schema,
+    software_version_mark_all_read_schema,
+    software_version_mark_read_schema,
+    software_version_notifications_schema,
     software_version_partial_update_schema,
     software_version_publish_schema,
     software_version_update_schema,
@@ -60,14 +63,38 @@ class SoftwareVersionViewSet(BaseViewSet):
             "notifications": (IsAuthenticatedAndActive,),
             "mark_as_read": (IsAuthenticatedAndActive,),
             "mark_all_read": (IsAuthenticatedAndActive,),
-            "create": (IsAuthenticatedAndActive, HasPermission("system.manage_releases")),
-            "update": (IsAuthenticatedAndActive, HasPermission("system.manage_releases")),
-            "partial_update": (IsAuthenticatedAndActive, HasPermission("system.manage_releases")),
-            "destroy": (IsAuthenticatedAndActive, HasPermission("system.manage_releases")),
-            "publish": (IsAuthenticatedAndActive, HasPermission("system.manage_releases")),
-            "withdraw": (IsAuthenticatedAndActive, HasPermission("system.manage_releases")),
-            "add_changelog": (IsAuthenticatedAndActive, HasPermission("system.manage_releases")),
-            "delete_changelog": (IsAuthenticatedAndActive, HasPermission("system.manage_releases")),
+            "create": (
+                IsAuthenticatedAndActive,
+                HasPermission("system.manage_releases"),
+            ),
+            "update": (
+                IsAuthenticatedAndActive,
+                HasPermission("system.manage_releases"),
+            ),
+            "partial_update": (
+                IsAuthenticatedAndActive,
+                HasPermission("system.manage_releases"),
+            ),
+            "destroy": (
+                IsAuthenticatedAndActive,
+                HasPermission("system.manage_releases"),
+            ),
+            "publish": (
+                IsAuthenticatedAndActive,
+                HasPermission("system.manage_releases"),
+            ),
+            "withdraw": (
+                IsAuthenticatedAndActive,
+                HasPermission("system.manage_releases"),
+            ),
+            "add_changelog": (
+                IsAuthenticatedAndActive,
+                HasPermission("system.manage_releases"),
+            ),
+            "delete_changelog": (
+                IsAuthenticatedAndActive,
+                HasPermission("system.manage_releases"),
+            ),
         }
 
         classes = permission_map.get(
@@ -164,7 +191,9 @@ class SoftwareVersionViewSet(BaseViewSet):
 
         try:
             dto = serializer.to_dto()
-            updated = SoftwareVersionService.update_version(version, dto, user=request.user)
+            updated = SoftwareVersionService.update_version(
+                version, dto, user=request.user
+            )
             res_serializer = SoftwareVersionDetailSerializer(updated)
             return self.success_response(
                 message="Versión actualizada correctamente.",
@@ -261,7 +290,9 @@ class SoftwareVersionViewSet(BaseViewSet):
         serializer.is_valid(raise_exception=True)
 
         dto = serializer.to_dto()
-        entry = SoftwareVersionService.add_changelog_entry(version, dto, user=request.user)
+        entry = SoftwareVersionService.add_changelog_entry(
+            version, dto, user=request.user
+        )
         res_serializer = VersionChangelogEntrySerializer(entry)
         return self.success_response(
             message="Entrada de changelog agregada correctamente.",
@@ -333,6 +364,7 @@ class SoftwareVersionViewSet(BaseViewSet):
             status_code=status.HTTP_200_OK,
         )
 
+    @software_version_notifications_schema
     @action(detail=False, methods=["get"], url_path="notifications")
     def notifications(self, request):
         """
@@ -347,6 +379,7 @@ class SoftwareVersionViewSet(BaseViewSet):
             status_code=status.HTTP_200_OK,
         )
 
+    @software_version_mark_read_schema
     @action(detail=True, methods=["post"], url_path="read")
     def mark_as_read(self, request, pk=None):
         """
@@ -368,6 +401,7 @@ class SoftwareVersionViewSet(BaseViewSet):
             status_code=status.HTTP_200_OK,
         )
 
+    @software_version_mark_all_read_schema
     @action(detail=False, methods=["post"], url_path="mark-all-read")
     def mark_all_read(self, request):
         """
@@ -380,4 +414,3 @@ class SoftwareVersionViewSet(BaseViewSet):
             data={"marked_count": marked_count, "unread_count": 0},
             status_code=status.HTTP_200_OK,
         )
-

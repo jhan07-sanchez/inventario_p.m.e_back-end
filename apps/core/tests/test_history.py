@@ -59,7 +59,9 @@ class SystemHistoryViewSetTests(APITestCase):
 
     def test_history_user_model_filter_by_object_id(self):
         # Using custom primary key id_user
-        res = self.client.get(f"/api/v1/history/?model=user&object_id={self.user.id_user}")
+        res = self.client.get(
+            f"/api/v1/history/?model=user&object_id={self.user.id_user}"
+        )
         self.assertEqual(res.status_code, status.HTTP_200_OK)
         self.assertEqual(res.data["code"], "SUCCESS")
         results = res.data["data"]["results"]
@@ -89,7 +91,9 @@ class SystemHistoryViewSetTests(APITestCase):
         results = res.data["data"]["results"]
         self.assertGreaterEqual(len(results), 1)
 
-        match = next((item for item in results if item["object_repr"] == "TEST_HIST_KEY"), None)
+        match = next(
+            (item for item in results if item["object_repr"] == "TEST_HIST_KEY"), None
+        )
         self.assertIsNotNone(match)
         self.assertEqual(match["history_user"], "history_admin")
         self.assertEqual(len(match["changes"]), 1)
@@ -101,12 +105,16 @@ class SystemHistoryViewSetTests(APITestCase):
         self.user.set_password("newpassword123")
         self.user.save()
 
-        res = self.client.get(f"/api/v1/history/?model=user&object_id={self.user.id_user}")
+        res = self.client.get(
+            f"/api/v1/history/?model=user&object_id={self.user.id_user}"
+        )
         self.assertEqual(res.status_code, status.HTTP_200_OK)
         results = res.data["data"]["results"]
 
         # Find update record with changes
-        update_record = next((item for item in results if item["action"] == "Actualización"), None)
+        update_record = next(
+            (item for item in results if item["action"] == "Actualización"), None
+        )
         self.assertIsNotNone(update_record)
         if update_record and update_record.get("changes"):
             for change in update_record["changes"]:

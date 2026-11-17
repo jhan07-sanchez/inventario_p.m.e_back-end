@@ -57,7 +57,9 @@ class SecurityService:
         active_company_data = None
 
         if getattr(user, "is_superuser", False):
-            for c in CompanyInfo.objects.filter(is_active=True).order_by("business_name"):
+            for c in CompanyInfo.objects.filter(is_active=True).order_by(
+                "business_name"
+            ):
                 info = {
                     "id_company": c.id_company,
                     "uuid": str(c.uuid),
@@ -75,7 +77,11 @@ class SecurityService:
                     active_company_data = info
         elif hasattr(user, "memberships"):
             memberships = (
-                user.memberships.filter(is_active=True,status=CompanyMembership.MembershipStatus.ACTIVE, company__is_active=True)
+                user.memberships.filter(
+                    is_active=True,
+                    status=CompanyMembership.MembershipStatus.ACTIVE,
+                    company__is_active=True,
+                )
                 .select_related("company", "role")
                 .order_by("-is_owner", "company__business_name")
             )

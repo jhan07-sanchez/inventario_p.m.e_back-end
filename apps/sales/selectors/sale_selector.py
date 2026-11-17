@@ -1,4 +1,5 @@
 from typing import Any
+
 from django.db.models import Prefetch, QuerySet
 from django.shortcuts import get_object_or_404
 
@@ -92,9 +93,7 @@ class SaleSelector(BaseSelector[Sale]):
         )
 
     @staticmethod
-    def get_by_sale_number(
-        sale_number: str, company_id: Any = None
-    ) -> Sale | None:
+    def get_by_sale_number(sale_number: str, company_id: Any = None) -> Sale | None:
         """
         Obtiene una venta mediante su número de venta.
         """
@@ -142,9 +141,7 @@ class SaleSelector(BaseSelector[Sale]):
         )
 
     @staticmethod
-    def exists_by_sale_number(
-        sale_number: str, company_id: Any = None
-    ) -> bool:
+    def exists_by_sale_number(sale_number: str, company_id: Any = None) -> bool:
         """
         Comprueba si existe una venta con el número indicado.
         """

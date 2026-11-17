@@ -4,6 +4,7 @@ Garantiza que ningún cliente pueda inyectar o modificar la empresa (company_id)
 """
 
 from typing import Any
+
 from rest_framework import serializers
 
 
@@ -56,5 +57,5 @@ class BaseModelSerializer(TenantSerializerMixin, serializers.ModelSerializer):
     Serializador de modelo base para toda la plataforma.
     Aplica protección multi-tenant y estandarización de campos.
     """
-    pass
 
+    pass
