@@ -88,6 +88,7 @@ STORAGES = {
         "BACKEND": "django.core.files.storage.FileSystemStorage",
     },
     "staticfiles": {
-        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+        # ✅ FIX: Usar CompressedStaticFilesStorage para evitar el error 500 en Render
+        "BACKEND": "whitenoise.storage.CompressedStaticFilesStorage",
     },
 }
