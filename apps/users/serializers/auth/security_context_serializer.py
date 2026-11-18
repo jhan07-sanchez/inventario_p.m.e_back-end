@@ -22,6 +22,16 @@ class SecurityContextResponseSerializer(serializers.Serializer):
         child=serializers.DictField(child=serializers.BooleanField()),
         read_only=True,
     )
+    companies = serializers.ListField(
+        child=serializers.DictField(),
+        read_only=True,
+        required=False,
+    )
+    active_company = serializers.DictField(
+        read_only=True,
+        required=False,
+        allow_null=True,
+    )
 
     def to_representation(self, instance: SecurityContextResult) -> dict:
         """Convierte un ``SecurityContextResult`` en contexto de autorización."""
@@ -30,4 +40,6 @@ class SecurityContextResponseSerializer(serializers.Serializer):
             "roles": instance.roles,
             "permissions": instance.permissions,
             "actions": instance.actions,
+            "companies": getattr(instance, "companies", []),
+            "active_company": getattr(instance, "active_company", None),
         }

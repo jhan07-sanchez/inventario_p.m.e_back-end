@@ -183,7 +183,9 @@ finance_account_delete_schema = extend_schema(
     description="Realiza el borrado lógico (soft delete) de una cuenta financiera.",
     responses={
         200: OpenApiResponse(
-            response=build_api_response_schema(name="FinancialAccountDeleteApiResponse"),
+            response=build_api_response_schema(
+                name="FinancialAccountDeleteApiResponse"
+            ),
             description="Cuenta financiera desactivada correctamente.",
         ),
         401: OpenApiResponse(response=ApiErrorResponseSerializer),
@@ -274,7 +276,8 @@ finance_movement_list_schema = extend_schema(
     tags=TAG_FINANCE,
     summary="Listar Movimientos Financieros",
     description="Obtiene el historial paginado de ingresos y egresos monetarios.",
-    parameters=pagination_parameters + [
+    parameters=pagination_parameters
+    + [
         OpenApiParameter(
             name="account_id",
             type=OpenApiTypes.INT,

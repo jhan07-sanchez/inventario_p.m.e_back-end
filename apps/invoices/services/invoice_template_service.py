@@ -123,7 +123,8 @@ class InvoiceTemplateService(BaseService[InvoiceTemplate]):
             CompanyInfoSelector,
         )
 
-        company = CompanyInfoSelector.get_current()
+        comp_id = getattr(template, "company_id", None)
+        company = CompanyInfoSelector.get_current(company_id=comp_id)
         comp_name = company.business_name if company else "Inventario P.M.E"
         comp_tax_id = f"NIT: {company.tax_id}" if company and company.tax_id else ""
         comp_phone = (company.phone or company.mobile) if company else ""
@@ -237,6 +238,12 @@ class InvoiceTemplateService(BaseService[InvoiceTemplate]):
         }
 
     @staticmethod
+    def _invalidate_cache(doc_type: str, company_id: int | None = None) -> None:
+        cache.delete(f"invoice_default_template_{doc_type}")
+        if company_id:
+            cache.delete(f"invoice_default_template_{company_id}_{doc_type}")
+
+    @staticmethod
     @transaction.atomic
     def set_default(template: InvoiceTemplate) -> InvoiceTemplate:
         """
@@ -251,7 +258,9 @@ class InvoiceTemplateService(BaseService[InvoiceTemplate]):
         template.is_default = True
         template.save(update_fields=["is_default", "updated_at"])
 
-        cache.delete(f"invoice_default_template_{template.document_type}")
+        InvoiceTemplateService._invalidate_cache(
+            template.document_type, getattr(template, "company_id", None)
+        )
         return template
 
     @staticmethod
@@ -279,7 +288,9 @@ class InvoiceTemplateService(BaseService[InvoiceTemplate]):
             is_default=dto.is_default,
         )
 
-        cache.delete(f"invoice_default_template_{dto.document_type}")
+        InvoiceTemplateService._invalidate_cache(
+            dto.document_type, getattr(template, "company_id", None)
+        )
         return template
 
     @staticmethod
@@ -339,7 +350,9 @@ class InvoiceTemplateService(BaseService[InvoiceTemplate]):
             ]
         )
 
-        cache.delete(f"invoice_default_template_{template.document_type}")
+        InvoiceTemplateService._invalidate_cache(
+            template.document_type, getattr(template, "company_id", None)
+        )
         return template
 
     @staticmethod
@@ -349,7 +362,9 @@ class InvoiceTemplateService(BaseService[InvoiceTemplate]):
             raise ValidationError("La plantilla ya se encuentra inactiva.")
 
         InvoiceTemplateService().delete(template)
-        cache.delete(f"invoice_default_template_{template.document_type}")
+        InvoiceTemplateService._invalidate_cache(
+            template.document_type, getattr(template, "company_id", None)
+        )
 
     @staticmethod
     @transaction.atomic
@@ -362,5 +377,7 @@ class InvoiceTemplateService(BaseService[InvoiceTemplate]):
             return template
 
         restored = InvoiceTemplateService().restore(template)
-        cache.delete(f"invoice_default_template_{template.document_type}")
+        InvoiceTemplateService._invalidate_cache(
+            template.document_type, getattr(template, "company_id", None)
+        )
         return restored

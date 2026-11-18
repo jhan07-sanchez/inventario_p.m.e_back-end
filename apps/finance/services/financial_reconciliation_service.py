@@ -8,10 +8,10 @@ from apps.core.exceptions.custom_exceptions import (
     InvalidFinancialReconciliationDatesException,
 )
 from apps.core.services.base_service import BaseService
-from apps.finance.services.finance_cache_service import FinanceCacheService
 from apps.finance.dto.financial_dto import FinancialReconciliationCreateDTO
 from apps.finance.models.financial_account import FinancialAccount
 from apps.finance.models.financial_reconciliation import FinancialReconciliation
+from apps.finance.services.finance_cache_service import FinanceCacheService
 
 
 class FinancialReconciliationService(BaseService[FinancialReconciliation]):
@@ -28,6 +28,7 @@ class FinancialReconciliationService(BaseService[FinancialReconciliation]):
         cls,
         dto: FinancialReconciliationCreateDTO,
         user,
+        company_id: int | None = None,
     ) -> FinancialReconciliation:
         if dto.start_date > dto.end_date:
             raise InvalidFinancialReconciliationDatesException(
@@ -39,6 +40,11 @@ class FinancialReconciliationService(BaseService[FinancialReconciliation]):
         except FinancialAccount.DoesNotExist:
             raise FinancialAccountNotFoundException(
                 "La cuenta financiera especificada no existe o está inactiva."
+            )
+
+        if company_id is not None and account.company_id != company_id:
+            raise FinancialAccountNotFoundException(
+                "La cuenta financiera especificada no pertenece a la empresa activa."
             )
 
         # El saldo en libros actual según el sistema
@@ -77,7 +83,10 @@ class FinancialReconciliationService(BaseService[FinancialReconciliation]):
                 "La conciliación financiera no existe o está inactiva."
             )
 
-        if reconciliation.status == FinancialReconciliation.ReconciliationStatus.RECONCILED:
+        if (
+            reconciliation.status
+            == FinancialReconciliation.ReconciliationStatus.RECONCILED
+        ):
             raise FinancialReconciliationAlreadyClosedException(
                 "La conciliación ya se encuentra cerrada y conciliada."
             )
@@ -88,9 +97,7 @@ class FinancialReconciliationService(BaseService[FinancialReconciliation]):
         reconciliation.difference = (
             reconciliation.statement_balance - reconciliation.book_balance
         )
-        reconciliation.status = (
-            FinancialReconciliation.ReconciliationStatus.RECONCILED
-        )
+        reconciliation.status = FinancialReconciliation.ReconciliationStatus.RECONCILED
         reconciliation.reconciled_at = timezone.now()
         reconciliation.save(
             update_fields=[

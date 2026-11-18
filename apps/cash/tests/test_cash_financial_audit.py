@@ -1,7 +1,6 @@
 from decimal import Decimal
 
 from django.core.cache import cache
-from django.core.exceptions import ValidationError
 from django.test import TestCase
 from django.urls import reverse
 from rest_framework import status
@@ -29,7 +28,6 @@ from apps.purchases.dto.purchase_dto import (
     PurchaseDetailCreateDTO,
     PurchasePayDTO,
 )
-from apps.purchases.models.purchase import Purchase
 from apps.purchases.services.purchase_payment_service import PurchasePaymentService
 from apps.purchases.services.purchase_service import PurchaseService
 from apps.suppliers.models.supplier import Supplier
@@ -164,8 +162,8 @@ class CashFinancialAuditTests(TestCase):
 
         denominations_data = {
             "100000": 2,  # 200,000
-            "50000": 4,   # 200,000
-            "20000": 5,   # 100,000
+            "50000": 4,  # 200,000
+            "20000": 5,  # 100,000
         }  # Total = 500,000
 
         close_dto = CashSessionCloseDto(
@@ -212,7 +210,9 @@ class CashFinancialAuditTests(TestCase):
         # Consultar de nuevo
         res2 = self.client.get(f"{url}?cash_register_id={self.register.pk}")
         self.assertEqual(res2.status_code, status.HTTP_200_OK)
-        self.assertEqual(Decimal(res2.data["data"]["last_closing_balance"]), Decimal("350.00"))
+        self.assertEqual(
+            Decimal(res2.data["data"]["last_closing_balance"]), Decimal("350.00")
+        )
         self.assertEqual(res2.data["data"]["session_id"], session.pk)
 
     def test_purchase_cash_payment_integration(self):

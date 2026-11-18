@@ -10,9 +10,6 @@ from rest_framework.test import APIClient
 from apps.core.enums import PaymentMethod
 from apps.core.exceptions.custom_exceptions import (
     FinancialAccountNotFoundException,
-    FinancialCategoryNotFoundException,
-    FinancialMovementAlreadyReversedException,
-    FinancialMovementNotFoundException,
     InsufficientAccountFundsException,
     InvalidFinancialAmountException,
     InvalidFinancialMovementStateException,
@@ -155,7 +152,9 @@ class FinancialMovementTests(TestCase):
         self.account.refresh_from_db()
 
         self.assertEqual(original_mov.status, FinancialMovement.MovementStatus.REVERSED)
-        self.assertEqual(counter_mov.movement_type, FinancialMovement.MovementType.INFLOW)
+        self.assertEqual(
+            counter_mov.movement_type, FinancialMovement.MovementType.INFLOW
+        )
         self.assertEqual(counter_mov.reversal_of, original_mov)
         self.assertEqual(self.account.current_balance, Decimal("1000000.00"))
 

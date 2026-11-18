@@ -58,7 +58,9 @@ class CustomerTests(TestCase):
         with self.assertRaises(Customer.DoesNotExist):
             CustomerSelector.get_customer_by_id(self.customer.pk, include_deleted=False)
 
-        found = CustomerSelector.get_customer_by_id(self.customer.pk, include_deleted=True)
+        found = CustomerSelector.get_customer_by_id(
+            self.customer.pk, include_deleted=True
+        )
         self.assertEqual(found.pk, self.customer.pk)
 
     def test_customer_service_restore(self):

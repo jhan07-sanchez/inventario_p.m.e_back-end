@@ -1,5 +1,7 @@
 from decimal import Decimal
 
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
 from apps.invoices.dto.invoice_dto import (
@@ -96,29 +98,25 @@ class InvoiceRetrieveSerializer(serializers.ModelSerializer):
     def _get_payment_info(self, obj):
         if not hasattr(obj, "_cached_payment_info"):
             from decimal import Decimal
+
             from django.db.models import Sum
+
             from apps.cash.models.payment import Payment
 
             paid = Decimal("0.00")
             if obj.purchase_id:
                 ref_prefix = f"COMPRA #{obj.purchase_id}"
-                paid = (
-                    Payment.objects.filter(
-                        reference__startswith=ref_prefix,
-                        status=Payment.PaymentStatus.COMPLETED,
-                        is_active=True,
-                    ).aggregate(total=Sum("amount"))["total"]
-                    or Decimal("0.00")
-                )
+                paid = Payment.objects.filter(
+                    reference__startswith=ref_prefix,
+                    status=Payment.PaymentStatus.COMPLETED,
+                    is_active=True,
+                ).aggregate(total=Sum("amount"))["total"] or Decimal("0.00")
             elif obj.sale_id:
-                paid = (
-                    Payment.objects.filter(
-                        sale_id=obj.sale_id,
-                        status=Payment.PaymentStatus.COMPLETED,
-                        is_active=True,
-                    ).aggregate(total=Sum("amount"))["total"]
-                    or Decimal("0.00")
-                )
+                paid = Payment.objects.filter(
+                    sale_id=obj.sale_id,
+                    status=Payment.PaymentStatus.COMPLETED,
+                    is_active=True,
+                ).aggregate(total=Sum("amount"))["total"] or Decimal("0.00")
 
             diff = obj.total - paid
             pending = diff if diff > Decimal("0.00") else Decimal("0.00")
@@ -136,12 +134,15 @@ class InvoiceRetrieveSerializer(serializers.ModelSerializer):
             }
         return obj._cached_payment_info
 
+    @extend_schema_field(OpenApiTypes.DECIMAL)
     def get_total_paid(self, obj):
         return self._get_payment_info(obj)["total_paid"]
 
+    @extend_schema_field(OpenApiTypes.DECIMAL)
     def get_pending_balance(self, obj):
         return self._get_payment_info(obj)["pending_balance"]
 
+    @extend_schema_field(OpenApiTypes.STR)
     def get_payment_status(self, obj):
         return self._get_payment_info(obj)["payment_status"]
 

@@ -13,11 +13,11 @@ from apps.core.exceptions.custom_exceptions import (
     InvalidFinancialMovementTypeException,
 )
 from apps.core.services.base_service import BaseService
-from apps.finance.services.finance_cache_service import FinanceCacheService
 from apps.finance.dto.financial_dto import FinancialMovementCreateDTO
 from apps.finance.models.financial_account import FinancialAccount
 from apps.finance.models.financial_category import FinancialCategory
 from apps.finance.models.financial_movement import FinancialMovement
+from apps.finance.services.finance_cache_service import FinanceCacheService
 
 
 class FinancialMovementService(BaseService[FinancialMovement]):
@@ -35,6 +35,7 @@ class FinancialMovementService(BaseService[FinancialMovement]):
         cls,
         dto: FinancialMovementCreateDTO,
         user,
+        company_id: int | None = None,
     ) -> FinancialMovement:
         if dto.amount <= Decimal("0.00"):
             raise InvalidFinancialAmountException(
@@ -50,6 +51,11 @@ class FinancialMovementService(BaseService[FinancialMovement]):
                 "La cuenta financiera especificada no existe o se encuentra inactiva."
             )
 
+        if company_id is not None and account.company_id != company_id:
+            raise FinancialAccountNotFoundException(
+                "La cuenta financiera especificada no pertenece a la empresa activa."
+            )
+
         category = None
         if dto.category_id:
             try:
@@ -59,6 +65,15 @@ class FinancialMovementService(BaseService[FinancialMovement]):
             except FinancialCategory.DoesNotExist:
                 raise FinancialCategoryNotFoundException(
                     "La categoría financiera especificada no existe o está inactiva."
+                )
+
+            if (
+                company_id is not None
+                and category.company_id
+                and category.company_id != company_id
+            ):
+                raise FinancialCategoryNotFoundException(
+                    "La categoría financiera especificada no pertenece a la empresa activa."
                 )
 
         # Validaciones de saldo para egresos
@@ -132,7 +147,9 @@ class FinancialMovementService(BaseService[FinancialMovement]):
                 "Este movimiento ya ha sido reversado previamente."
             )
 
-        account = FinancialAccount.objects.select_for_update().get(pk=original.account_id)
+        account = FinancialAccount.objects.select_for_update().get(
+            pk=original.account_id
+        )
 
         # Determinar el tipo del contra-movimiento
         if original.movement_type == FinancialMovement.MovementType.INFLOW:

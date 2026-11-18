@@ -1,4 +1,5 @@
 from django.core.exceptions import ValidationError
+from drf_spectacular.utils import extend_schema, extend_schema_view
 from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.filters import OrderingFilter, SearchFilter
@@ -25,6 +26,11 @@ from apps.finance.services.financial_reconciliation_service import (
 from apps.users.permissions import IsAuthenticatedAndActive
 
 
+@extend_schema_view(
+    update=extend_schema(exclude=True),
+    partial_update=extend_schema(exclude=True),
+    destroy=extend_schema(exclude=True),
+)
 class FinancialReconciliationViewSet(BaseViewSet):
     """
     ViewSet para conciliar y arquear saldos de cuentas financieras.
@@ -50,13 +56,18 @@ class FinancialReconciliationViewSet(BaseViewSet):
         return [permission() for permission in classes]
 
     def get_queryset(self):
+        company_id = getattr(
+            self.request, "company_id", None
+        ) or self.request.query_params.get("company_id")
         account_id = self.request.query_params.get("account_id")
         status_param = self.request.query_params.get("status")
 
-        return FinancialReconciliationSelector.get_reconciliations(
+        qs = FinancialReconciliationSelector.get_reconciliations(
+            company_id=int(company_id) if company_id else None,
             account_id=int(account_id) if account_id else None,
             status=status_param,
         )
+        return self.isolate_queryset(qs)
 
     def get_serializer_class(self):
         if self.action == "create":
@@ -81,13 +92,7 @@ class FinancialReconciliationViewSet(BaseViewSet):
 
     @finance_reconciliation_detail_schema
     def retrieve(self, request, *args, **kwargs):
-        instance = FinancialReconciliationSelector.get_reconciliation_by_id(kwargs["pk"])
-        if not instance:
-            return self.error_response(
-                message="Conciliación financiera no encontrada.",
-                code="FINANCIAL_RECONCILIATION_NOT_FOUND",
-                status_code=status.HTTP_404_NOT_FOUND,
-            )
+        instance = self.get_object()
         serializer = self.get_serializer(instance)
         return self.success_response(
             message="Conciliación financiera obtenida.",
@@ -103,7 +108,9 @@ class FinancialReconciliationViewSet(BaseViewSet):
 
         try:
             recon = FinancialReconciliationService.create_reconciliation(
-                serializer.to_dto(), user=request.user
+                serializer.to_dto(),
+                user=request.user,
+                company_id=getattr(request, "company_id", None),
             )
             output = FinancialReconciliationListSerializer(recon).data
             return self.success_response(
@@ -120,11 +127,12 @@ class FinancialReconciliationViewSet(BaseViewSet):
     @finance_reconciliation_close_schema
     @action(detail=True, methods=["post"], url_path="close")
     def close(self, request, pk=None):
+        recon = self.get_object()
         try:
-            recon = FinancialReconciliationService.close_reconciliation(
-                reconciliation_id=pk, user=request.user
+            closed_recon = FinancialReconciliationService.close_reconciliation(
+                reconciliation_id=recon.pk, user=request.user
             )
-            output = FinancialReconciliationListSerializer(recon).data
+            output = FinancialReconciliationListSerializer(closed_recon).data
             return self.success_response(
                 message="Conciliación aprobada y cerrada satisfactoriamente.",
                 code="FINANCIAL_RECONCILIATION_CLOSED",

@@ -109,4 +109,3 @@ class FinancialTransfer(ActiveModel):
             f"{self.source_account.name} -> {self.destination_account.name} "
             f"(${self.amount:,.2f})"
         )
-

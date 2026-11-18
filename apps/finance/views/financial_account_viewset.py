@@ -1,4 +1,5 @@
 from django.core.exceptions import ValidationError
+from drf_spectacular.utils import extend_schema, extend_schema_view
 from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.filters import OrderingFilter, SearchFilter
@@ -29,6 +30,9 @@ from apps.finance.services.financial_account_service import FinancialAccountServ
 from apps.users.permissions import IsAuthenticatedAndActive
 
 
+@extend_schema_view(
+    partial_update=extend_schema(exclude=True),
+)
 class FinancialAccountViewSet(BaseViewSet):
     """
     ViewSet para la administración de Cuentas Financieras (cajas, bancos, billeteras).
@@ -56,7 +60,7 @@ class FinancialAccountViewSet(BaseViewSet):
         return [permission() for permission in classes]
 
     def get_queryset(self):
-        company_id = self.request.query_params.get("company_id")
+        company_id = self.get_company_id(self.request)
         account_type = self.request.query_params.get("account_type")
         include_deleted_param = self.request.query_params.get("include_deleted")
         include_deleted = (
@@ -72,12 +76,13 @@ class FinancialAccountViewSet(BaseViewSet):
             elif is_active_param.lower() in ["false", "0", "no"]:
                 is_active = False
 
-        return FinancialAccountSelector.get_accounts(
+        qs = FinancialAccountSelector.get_accounts(
             company_id=int(company_id) if company_id else None,
             account_type=account_type,
             include_deleted=include_deleted,
             is_active=is_active,
         )
+        return self.isolate_queryset(qs)
 
     def get_serializer_class(self):
         if self.action == "list":
@@ -108,15 +113,7 @@ class FinancialAccountViewSet(BaseViewSet):
 
     @finance_account_detail_schema
     def retrieve(self, request, *args, **kwargs):
-        instance = FinancialAccountSelector.get_account_by_id(
-            kwargs["pk"], include_deleted=True
-        )
-        if not instance:
-            return self.error_response(
-                message="Cuenta financiera no encontrada.",
-                code="FINANCIAL_ACCOUNT_NOT_FOUND",
-                status_code=status.HTTP_404_NOT_FOUND,
-            )
+        instance = self.get_object()
         serializer = self.get_serializer(instance)
         return self.success_response(
             message="Cuenta financiera obtenida.",
@@ -130,7 +127,14 @@ class FinancialAccountViewSet(BaseViewSet):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        account = FinancialAccountService.create_account(serializer.to_dto())
+        dto = serializer.to_dto()
+        company_id = self.get_company_id(request) or dto.company_id
+        if company_id != dto.company_id:
+            from dataclasses import replace
+
+            dto = replace(dto, company_id=company_id)
+
+        account = FinancialAccountService.create_account(dto)
         output = FinancialAccountDetailSerializer(account).data
 
         return self.success_response(
@@ -140,14 +144,14 @@ class FinancialAccountViewSet(BaseViewSet):
             status_code=status.HTTP_201_CREATED,
         )
 
-
     @finance_account_update_schema
     def update(self, request, *args, **kwargs):
+        instance = self.get_object()
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
         account = FinancialAccountService.update_account(
-            kwargs["pk"], serializer.to_dto()
+            instance.pk, serializer.to_dto()
         )
         output = FinancialAccountDetailSerializer(account).data
 
@@ -160,8 +164,8 @@ class FinancialAccountViewSet(BaseViewSet):
 
     @finance_account_delete_schema
     def destroy(self, request, *args, **kwargs):
-
-        FinancialAccountService.deactivate_account(kwargs["pk"])
+        instance = self.get_object()
+        FinancialAccountService.deactivate_account(instance.pk)
 
         return self.success_response(
             message="Cuenta financiera desactivada exitosamente.",

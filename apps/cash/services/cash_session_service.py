@@ -28,17 +28,22 @@ class CashSessionService(BaseService[CashSession]):
     @staticmethod
     @transaction.atomic
     def open_session(dto: CashSessionOpenDto, user) -> CashSession:
-        if CashSession.objects.filter(
-            user=user, status=CashSession.SessionStatus.OPEN, is_active=True
-        ).exists():
-            raise CashSessionAlreadyOpenException()
-
         try:
             register = CashRegister.objects.select_for_update().get(
                 pk=dto.cash_register_id, is_active=True
             )
         except CashRegister.DoesNotExist:
             raise CashRegisterNotFoundException()
+
+        company_id = getattr(register, "company_id", None)
+
+        if CashSession.objects.filter(
+            company_id=company_id,
+            user=user,
+            status=CashSession.SessionStatus.OPEN,
+            is_active=True,
+        ).exists():
+            raise CashSessionAlreadyOpenException()
 
         if CashSession.objects.filter(
             cash_register=register,
@@ -53,6 +58,7 @@ class CashSessionService(BaseService[CashSession]):
             )
 
         session = CashSession.objects.create(
+            company_id=company_id,
             cash_register=register,
             user=user,
             opening_balance=dto.opening_balance,
@@ -78,22 +84,16 @@ class CashSessionService(BaseService[CashSession]):
             )
 
         # Recálculo exacto del saldo esperado en base a movimientos reales en efectivo
-        cash_in = (
-            session.movements.filter(
-                is_active=True,
-                is_cash=True,
-                movement_type=CashMovement.MovementType.IN,
-            ).aggregate(total=models.Sum("amount"))["total"]
-            or Decimal("0.00")
-        )
-        cash_out = (
-            session.movements.filter(
-                is_active=True,
-                is_cash=True,
-                movement_type=CashMovement.MovementType.OUT,
-            ).aggregate(total=models.Sum("amount"))["total"]
-            or Decimal("0.00")
-        )
+        cash_in = session.movements.filter(
+            is_active=True,
+            is_cash=True,
+            movement_type=CashMovement.MovementType.IN,
+        ).aggregate(total=models.Sum("amount"))["total"] or Decimal("0.00")
+        cash_out = session.movements.filter(
+            is_active=True,
+            is_cash=True,
+            movement_type=CashMovement.MovementType.OUT,
+        ).aggregate(total=models.Sum("amount"))["total"] or Decimal("0.00")
         real_expected = session.opening_balance + cash_in - cash_out
         session.expected_balance = real_expected
 

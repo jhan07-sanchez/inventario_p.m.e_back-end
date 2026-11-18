@@ -133,4 +133,3 @@ SYSTEM_PARAMETERS_CATALOG: Dict[str, Dict[str, Any]] = {
         "category": ParameterCategory.GENERAL,
     },
 }
-

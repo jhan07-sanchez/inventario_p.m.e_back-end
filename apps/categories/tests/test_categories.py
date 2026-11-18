@@ -53,7 +53,9 @@ class CategoryTests(TestCase):
         with self.assertRaises(Category.DoesNotExist):
             CategorySelector.get_category_by_id(self.category.pk, include_deleted=False)
 
-        found = CategorySelector.get_category_by_id(self.category.pk, include_deleted=True)
+        found = CategorySelector.get_category_by_id(
+            self.category.pk, include_deleted=True
+        )
         self.assertEqual(found.pk, self.category.pk)
 
     def test_category_service_restore(self):

@@ -24,6 +24,9 @@ from .software_version_docs import (
     software_version_history_schema,
     software_version_latest_schema,
     software_version_list_schema,
+    software_version_mark_all_read_schema,
+    software_version_mark_read_schema,
+    software_version_notifications_schema,
     software_version_partial_update_schema,
     software_version_publish_schema,
     software_version_update_schema,
@@ -56,4 +59,7 @@ __all__ = [
     "software_version_destroy_schema",
     "software_version_partial_update_schema",
     "software_version_delete_changelog_schema",
+    "software_version_notifications_schema",
+    "software_version_mark_read_schema",
+    "software_version_mark_all_read_schema",
 ]

@@ -131,4 +131,3 @@ class FinanceCacheService:
             )
         except Exception as e:
             logger.warning(f"[FINANCE CACHE] Error al invalidar caché: {e}")
-

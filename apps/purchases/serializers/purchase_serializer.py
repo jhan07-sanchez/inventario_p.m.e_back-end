@@ -65,17 +65,15 @@ class PurchaseListSerializer(serializers.ModelSerializer):
     def _get_paid_amount(self, obj):
         if not hasattr(obj, "_cached_paid"):
             from django.db.models import Sum
+
             from apps.cash.models.payment import Payment
 
             ref_prefix = f"COMPRA #{obj.id_purchase}"
-            total = (
-                Payment.objects.filter(
-                    reference__startswith=ref_prefix,
-                    status=Payment.PaymentStatus.COMPLETED,
-                    is_active=True,
-                ).aggregate(total=Sum("amount"))["total"]
-                or Decimal("0.00")
-            )
+            total = Payment.objects.filter(
+                reference__startswith=ref_prefix,
+                status=Payment.PaymentStatus.COMPLETED,
+                is_active=True,
+            ).aggregate(total=Sum("amount"))["total"] or Decimal("0.00")
             obj._cached_paid = total
         return obj._cached_paid
 
@@ -138,17 +136,15 @@ class PurchaseRetrieveSerializer(serializers.ModelSerializer):
     def _get_paid_amount(self, obj):
         if not hasattr(obj, "_cached_paid"):
             from django.db.models import Sum
+
             from apps.cash.models.payment import Payment
 
             ref_prefix = f"COMPRA #{obj.id_purchase}"
-            total = (
-                Payment.objects.filter(
-                    reference__startswith=ref_prefix,
-                    status=Payment.PaymentStatus.COMPLETED,
-                    is_active=True,
-                ).aggregate(total=Sum("amount"))["total"]
-                or Decimal("0.00")
-            )
+            total = Payment.objects.filter(
+                reference__startswith=ref_prefix,
+                status=Payment.PaymentStatus.COMPLETED,
+                is_active=True,
+            ).aggregate(total=Sum("amount"))["total"] or Decimal("0.00")
             obj._cached_paid = total
         return obj._cached_paid
 
@@ -236,7 +232,7 @@ class PurchaseCreateSerializer(serializers.Serializer):
         many=True, required=True, allow_empty=False
     )
 
-    def to_dto(self) -> PurchaseCreateDTO:
+    def to_dto(self, company_id: int | None = None) -> PurchaseCreateDTO:
         validated_data = self.validated_data
         details_data = validated_data.get("details", [])
 
@@ -254,6 +250,7 @@ class PurchaseCreateSerializer(serializers.Serializer):
             issue_date=validated_data.get("issue_date"),
             notes=validated_data.get("notes"),
             details=details_dto,
+            company_id=company_id,
         )
 
 
@@ -281,17 +278,15 @@ class PurchasePaySerializer(serializers.Serializer):
     cash_session_id = serializers.IntegerField(
         required=False, allow_null=True, default=None
     )
-    reference = serializers.CharField(
-        required=False, allow_blank=True, default=""
-    )
-    notes = serializers.CharField(
-        required=False, allow_blank=True, default=""
-    )
+    reference = serializers.CharField(required=False, allow_blank=True, default="")
+    notes = serializers.CharField(required=False, allow_blank=True, default="")
 
     def to_dto(self) -> PurchasePayDTO:
         return PurchasePayDTO(
             amount=self.validated_data["amount"],
-            payment_method=self.validated_data.get("payment_method", PaymentMethod.CASH),
+            payment_method=self.validated_data.get(
+                "payment_method", PaymentMethod.CASH
+            ),
             cash_session_id=self.validated_data.get("cash_session_id"),
             reference=self.validated_data.get("reference", ""),
             notes=self.validated_data.get("notes", ""),

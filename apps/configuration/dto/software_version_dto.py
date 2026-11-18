@@ -36,4 +36,3 @@ class ChangelogEntryDto:
     title: str
     description: str = ""
     order: int = 0
-

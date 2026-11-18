@@ -8,12 +8,12 @@ from apps.core.exceptions.custom_exceptions import (
     InvalidFinancialAmountException,
 )
 from apps.core.services.base_service import BaseService
-from apps.finance.services.finance_cache_service import FinanceCacheService
 from apps.finance.dto.financial_dto import (
     FinancialAccountCreateDTO,
     FinancialAccountUpdateDTO,
 )
 from apps.finance.models.financial_account import FinancialAccount
+from apps.finance.services.finance_cache_service import FinanceCacheService
 
 
 class FinancialAccountService(BaseService[FinancialAccount]):
@@ -76,13 +76,10 @@ class FinancialAccountService(BaseService[FinancialAccount]):
             raise FinancialAccountNotFoundException()
 
         if dto.name and dto.name.strip() != account.name:
-            existing = (
-                FinancialAccount.objects.filter(
-                    name__iexact=dto.name.strip(),
-                    is_active=True,
-                )
-                .exclude(pk=account_id)
-            )
+            existing = FinancialAccount.objects.filter(
+                name__iexact=dto.name.strip(),
+                is_active=True,
+            ).exclude(pk=account_id)
             if account.company_id:
                 existing = existing.filter(company_id=account.company_id)
             if existing.exists():
@@ -129,7 +126,9 @@ class FinancialAccountService(BaseService[FinancialAccount]):
         Valida que no exista otra cuenta activa con el mismo nombre.
         """
         try:
-            account = FinancialAccount.all_objects.select_for_update().get(pk=account_id)
+            account = FinancialAccount.all_objects.select_for_update().get(
+                pk=account_id
+            )
         except FinancialAccount.DoesNotExist:
             raise FinancialAccountNotFoundException()
 

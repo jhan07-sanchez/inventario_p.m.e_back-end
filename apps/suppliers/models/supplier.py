@@ -1,9 +1,9 @@
 from django.db import models
 
-from apps.core.models.active_model import ActiveModel
+from apps.core.models.tenant_model import TenantModel
 
 
-class Supplier(ActiveModel):
+class Supplier(TenantModel):
     """
     Modelo que representa un proveedor en el sistema inventario-pme.
     """
@@ -33,9 +33,9 @@ class Supplier(ActiveModel):
 
     document_number = models.CharField(
         max_length=30,
-        unique=True,
+        db_index=True,
         verbose_name="Número de Documento",
-        help_text="Número único de identificación del proveedor.",
+        help_text="Número de identificación del proveedor.",
     )
 
     first_name = models.CharField(
@@ -113,12 +113,12 @@ class Supplier(ActiveModel):
 
         indexes = [
             models.Index(
-                fields=["document_number"],
-                name="supplier_document_idx",
+                fields=["company", "is_active"],
+                name="supplier_comp_act_idx",
             ),
             models.Index(
-                fields=["is_active"],
-                name="supplier_active_idx",
+                fields=["company", "document_number"],
+                name="supplier_comp_doc_idx",
             ),
             models.Index(
                 fields=["last_name"],
@@ -127,6 +127,13 @@ class Supplier(ActiveModel):
             models.Index(
                 fields=["business_name"],
                 name="supplier_business_name_idx",
+            ),
+        ]
+
+        constraints = [
+            models.UniqueConstraint(
+                fields=["company", "document_type", "document_number"],
+                name="unique_supplier_doc_per_company",
             ),
         ]
 

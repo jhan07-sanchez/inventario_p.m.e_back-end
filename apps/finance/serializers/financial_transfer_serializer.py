@@ -11,12 +11,8 @@ class FinancialTransferListSerializer(serializers.ModelSerializer):
     destination_account_name = serializers.CharField(
         source="destination_account.name", read_only=True
     )
-    status_display = serializers.CharField(
-        source="get_status_display", read_only=True
-    )
-    user_name = serializers.CharField(
-        source="user.username", read_only=True
-    )
+    status_display = serializers.CharField(source="get_status_display", read_only=True)
+    user_name = serializers.CharField(source="user.username", read_only=True)
 
     class Meta:
         model = FinancialTransfer
@@ -47,9 +43,7 @@ class FinancialTransferCreateSerializer(serializers.Serializer):
     reference = serializers.CharField(
         max_length=100, required=False, allow_blank=True, default=""
     )
-    notes = serializers.CharField(
-        required=False, allow_blank=True, default=""
-    )
+    notes = serializers.CharField(required=False, allow_blank=True, default="")
 
     def to_dto(self) -> FinancialTransferCreateDTO:
         data = self.validated_data
@@ -65,4 +59,3 @@ class FinancialTransferCreateSerializer(serializers.Serializer):
 
 class FinancialTransferCancelSerializer(serializers.Serializer):
     reason = serializers.CharField(max_length=255)
-

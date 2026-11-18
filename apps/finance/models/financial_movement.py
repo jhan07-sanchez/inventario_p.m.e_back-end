@@ -171,4 +171,3 @@ class FinancialMovement(ActiveModel):
             f"Movimiento #{self.id_financial_movement}: {self.account.name} "
             f"[{sign}${self.amount:,.2f}] - {self.description}"
         )
-

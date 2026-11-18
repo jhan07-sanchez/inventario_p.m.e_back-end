@@ -43,4 +43,3 @@ class FinancialCategorySelector(BaseSelector[FinancialCategory]):
             .filter(pk=category_id)
             .first()
         )
-

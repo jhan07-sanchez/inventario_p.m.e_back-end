@@ -1,5 +1,5 @@
 from django.core.cache import cache
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from rest_framework import status
 from rest_framework.test import APIClient
 
@@ -119,7 +119,9 @@ class SoftwareVersionUnitTests(TestCase):
         )
         # Intentar retirar versión en borrador debe fallar
         with self.assertRaises(SoftwareVersionCannotWithdrawException):
-            SoftwareVersionService.withdraw_version(version, user=self.user, reason="Error")
+            SoftwareVersionService.withdraw_version(
+                version, user=self.user, reason="Error"
+            )
 
         SoftwareVersionService.publish_version(version, user=self.user)
         withdrawn = SoftwareVersionService.withdraw_version(
@@ -127,6 +129,7 @@ class SoftwareVersionUnitTests(TestCase):
         )
         self.assertEqual(withdrawn.status, SoftwareVersion.Status.WITHDRAWN)
 
+    @override_settings(APP_VERSION="1.0.0")
     def test_check_for_updates_selector(self):
         # Con versión instalada = 1.0.0
         # No hay versiones publicadas
@@ -138,7 +141,9 @@ class SoftwareVersionUnitTests(TestCase):
             SoftwareVersionCreateDto(
                 version="1.2.0",
                 priority="MANDATORY",
-                changelog_entries=[{"category": "SECURITY", "title": "Parche de seguridad"}],
+                changelog_entries=[
+                    {"category": "SECURITY", "title": "Parche de seguridad"}
+                ],
             ),
             user=self.user,
         )
@@ -313,7 +318,9 @@ class SoftwareVersionApiTests(TestCase):
                 "version": "1.4.0",
                 "name": "Lanzamiento PME",
                 "priority": "RECOMMENDED",
-                "changelog_entries": [{"category": "FEATURE", "title": "Nueva función"}],
+                "changelog_entries": [
+                    {"category": "FEATURE", "title": "Nueva función"}
+                ],
             },
             format="json",
         )
@@ -353,7 +360,9 @@ class SoftwareVersionApiTests(TestCase):
                 {"version": v_num, "name": f"Ver {v_num}"},
                 format="json",
             )
-            self.client.post(f"/api/v1/versions/{res.data['data']['id_version']}/publish/")
+            self.client.post(
+                f"/api/v1/versions/{res.data['data']['id_version']}/publish/"
+            )
 
         # Cliente tiene 2 no leídas
         self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.admin_token}")

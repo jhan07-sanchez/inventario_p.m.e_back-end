@@ -110,12 +110,8 @@ class GlobalParameterUpdateSerializer(serializers.Serializer):
         dt = attrs.get("data_type")
         instance = getattr(self, "instance", None)
 
-        target_dt = (
-            dt if dt is not None else (instance.data_type if instance else None)
-        )
-        target_val = (
-            val if val is not None else (instance.value if instance else None)
-        )
+        target_dt = dt if dt is not None else (instance.data_type if instance else None)
+        target_val = val if val is not None else (instance.value if instance else None)
 
         if target_dt is not None and target_val is not None:
             from apps.configuration.services.global_parameter_service import (
@@ -140,4 +136,3 @@ class GlobalParameterUpdateSerializer(serializers.Serializer):
             data_type=v.get("data_type"),
             description=v.get("description"),
         )
-

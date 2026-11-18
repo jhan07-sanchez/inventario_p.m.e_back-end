@@ -36,7 +36,9 @@ class SoftwareVersionListSerializer(serializers.ModelSerializer):
     """
 
     status_display = serializers.CharField(source="get_status_display", read_only=True)
-    priority_display = serializers.CharField(source="get_priority_display", read_only=True)
+    priority_display = serializers.CharField(
+        source="get_priority_display", read_only=True
+    )
     total_changes = serializers.SerializerMethodField()
     published_by_name = serializers.SerializerMethodField()
 
@@ -74,7 +76,9 @@ class SoftwareVersionDetailSerializer(serializers.ModelSerializer):
     """
 
     status_display = serializers.CharField(source="get_status_display", read_only=True)
-    priority_display = serializers.CharField(source="get_priority_display", read_only=True)
+    priority_display = serializers.CharField(
+        source="get_priority_display", read_only=True
+    )
     changelog_entries = VersionChangelogEntrySerializer(many=True, read_only=True)
     changelog_grouped = serializers.SerializerMethodField()
     created_by_name = serializers.SerializerMethodField()
@@ -123,12 +127,14 @@ class SoftwareVersionDetailSerializer(serializers.ModelSerializer):
                     "category_display": entry.get_category_display(),
                     "entries": [],
                 }
-            grouped[cat]["entries"].append({
-                "id_entry": entry.id_entry,
-                "title": entry.title,
-                "description": entry.description,
-                "order": entry.order,
-            })
+            grouped[cat]["entries"].append(
+                {
+                    "id_entry": entry.id_entry,
+                    "title": entry.title,
+                    "description": entry.description,
+                    "order": entry.order,
+                }
+            )
         return grouped
 
 
@@ -170,7 +176,9 @@ class SoftwareVersionCreateSerializer(serializers.Serializer):
     """
 
     version = serializers.CharField(max_length=20, required=True)
-    name = serializers.CharField(max_length=150, required=False, allow_blank=True, default="")
+    name = serializers.CharField(
+        max_length=150, required=False, allow_blank=True, default=""
+    )
     description = serializers.CharField(required=False, allow_blank=True, default="")
     priority = serializers.ChoiceField(
         choices=SoftwareVersion.Priority.choices,
@@ -181,7 +189,9 @@ class SoftwareVersionCreateSerializer(serializers.Serializer):
         max_length=20, required=False, allow_blank=True, default=""
     )
     prerequisites = serializers.CharField(required=False, allow_blank=True, default="")
-    upgrade_instructions = serializers.CharField(required=False, allow_blank=True, default="")
+    upgrade_instructions = serializers.CharField(
+        required=False, allow_blank=True, default=""
+    )
     changelog_entries = serializers.ListField(
         child=serializers.DictField(),
         required=False,
@@ -201,8 +211,12 @@ class SoftwareVersionCreateSerializer(serializers.Serializer):
             version=self.validated_data["version"],
             name=self.validated_data.get("name", ""),
             description=self.validated_data.get("description", ""),
-            priority=self.validated_data.get("priority", SoftwareVersion.Priority.RECOMMENDED),
-            min_compatible_version=self.validated_data.get("min_compatible_version", ""),
+            priority=self.validated_data.get(
+                "priority", SoftwareVersion.Priority.RECOMMENDED
+            ),
+            min_compatible_version=self.validated_data.get(
+                "min_compatible_version", ""
+            ),
             prerequisites=self.validated_data.get("prerequisites", ""),
             upgrade_instructions=self.validated_data.get("upgrade_instructions", ""),
             changelog_entries=self.validated_data.get("changelog_entries", []),

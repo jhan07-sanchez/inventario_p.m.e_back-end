@@ -39,7 +39,7 @@ class AuthService:
         user = User.objects.filter(email=email).first()
 
         if user and user.is_locked_out:
-            #Calculamos el tiempo exacto
+            # Calculamos el tiempo exacto
             remaining_time = user.lockout_until - timezone.now()
             remaining_minutes = max(1, int(remaining_time.total_seconds() / 60))
             raise AccountLockedException(remaining_minutes=remaining_minutes)

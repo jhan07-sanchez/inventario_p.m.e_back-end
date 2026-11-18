@@ -100,4 +100,3 @@ class FinancialReconciliation(ActiveModel):
             f"Conciliación #{self.id_reconciliation} - {self.account.name} "
             f"[{self.end_date}] (Dif: ${self.difference:,.2f})"
         )
-

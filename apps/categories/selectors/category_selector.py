@@ -17,11 +17,7 @@ class CategorySelector(BaseSelector[Category]):
         """
         Retorna el queryset base de categorías ordenadas por nombre.
         """
-        return (
-            super()
-            .get_queryset(include_deleted=include_deleted)
-            .order_by("name")
-        )
+        return super().get_queryset(include_deleted=include_deleted).order_by("name")
 
     @staticmethod
     def get_categories() -> QuerySet[Category]:

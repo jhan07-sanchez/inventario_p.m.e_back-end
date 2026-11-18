@@ -47,4 +47,3 @@ class ExceptionHandlerTests(TestCase):
         self.assertFalse(response.data["success"])
         self.assertEqual(response.data["code"], "TEST_ERROR")
         self.assertEqual(response.data["meta"], {"retry_after": 60})
-

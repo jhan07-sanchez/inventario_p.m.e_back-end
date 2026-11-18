@@ -65,9 +65,10 @@ class InventoryMovementViewSet(BaseGenericViewSet):
 
     def get_queryset(self):
         """
-        Retorna el queryset global de movimientos de inventario.
+        Retorna el queryset global de movimientos de inventario aislado por tenant.
         """
-        return InventoryMovementSelector().get_queryset()
+        qs = InventoryMovementSelector().get_queryset()
+        return self.isolate_queryset(qs)
 
     def get_serializer_class(self):
         """
@@ -101,9 +102,9 @@ class InventoryMovementViewSet(BaseGenericViewSet):
     @movement_detail_schema
     def retrieve(self, request, *args, **kwargs):
         """
-        Obtiene el detalle de un movimiento.
+        Obtiene el detalle de un movimiento garantizando aislamiento tenant.
         """
-        movement = InventoryMovementSelector.get_by_id(kwargs["pk"])
+        movement = self.get_object()
         serializer = self.get_serializer(movement)
 
         return self.success_response(

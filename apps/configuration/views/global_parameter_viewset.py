@@ -294,7 +294,8 @@ class GlobalParameterViewSet(BaseViewSet):
         )
 
         # 1. Información corporativa
-        company = CompanyInfoSelector.get_current()
+        cid = self.get_company_id(request)
+        company = CompanyInfoSelector.get_current(company_id=cid)
         company_data = (
             CompanyInfoSerializer(company, context={"request": request}).data
             if company
@@ -305,7 +306,9 @@ class GlobalParameterViewSet(BaseViewSet):
         default_templates = {}
         for doc_type_choice in InvoiceTemplate.DocumentType.choices:
             doc_type = doc_type_choice[0]
-            tmpl = InvoiceTemplateSelector.get_default_template(doc_type)
+            tmpl = InvoiceTemplateSelector.get_default_template(
+                doc_type, company_id=cid
+            )
             default_templates[doc_type] = {
                 "id": tmpl.id if tmpl else None,
                 "name": tmpl.name if tmpl else None,

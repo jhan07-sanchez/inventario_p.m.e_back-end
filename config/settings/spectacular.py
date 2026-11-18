@@ -24,6 +24,8 @@ REST_FRAMEWORK = {
     "DEFAULT_THROTTLE_RATES": {
         "auth_login": "5/minute",
         "auth_refresh": "10/minute",
+        "saas_impersonate": "10/minute",
+        "saas_action": "20/minute",
     },
 }
 
@@ -96,6 +98,10 @@ SPECTACULAR_SETTINGS = {
         "FinancialMovementStatusEnum": "apps.finance.models.financial_movement.FinancialMovement.MovementStatus",
         "FinancialTransferStatusEnum": "apps.finance.models.financial_transfer.FinancialTransfer.TransferStatus",
         "FinancialReconciliationStatusEnum": "apps.finance.models.financial_reconciliation.FinancialReconciliation.ReconciliationStatus",
+        "SoftwareVersionStatusEnum": "apps.configuration.models.software_version.SoftwareVersion.Status",
+        "SubscriptionStatusEnum": "apps.subscriptions.models.subscription.Subscription.Status",
+        "CompanyStatusEnum": "apps.company_info.models.company_info.CompanyInfo.CompanyStatus",
+        "CompanyMembershipStatusEnum": "apps.users.models.company_membership.CompanyMembership.MembershipStatus",
     },
     # Configuramos los esquemas globales y componentes de seguridad
     "COMPONENTS": {
@@ -210,9 +216,24 @@ SPECTACULAR_SETTINGS = {
             "name": "Software Versions",
             "description": "Historial de versiones del software y lanzamientos.",
         },
+        {
+            "name": "SaaS Admin",
+            "description": "Panel administrativo global del SaaS: métricas de negocio, gestión de inquilinos e impersonación.",
+        },
+        {
+            "name": "Subscriptions",
+            "description": "Catálogo de planes comerciales, suscripciones y control de cuotas de recursos.",
+        },
     ],
     "EXTENSIONS_ROOT": {
         "x-tagGroups": [
+            {
+                "name": "Plataforma SaaS",
+                "tags": [
+                    "SaaS Admin",
+                    "Subscriptions",
+                ],
+            },
             {
                 "name": "Seguridad y Accesos",
                 "tags": [
@@ -260,4 +281,16 @@ SPECTACULAR_SETTINGS = {
     "POSTPROCESSING_HOOKS": [
         "drf_spectacular.hooks.postprocess_schema_enums",
     ],
+    "SWAGGER_UI_SETTINGS": {
+        "deepLinking": True,
+        "persistAuthorization": True,
+        "displayOperationId": False,
+        "filter": True,
+    },
+    "REDOC_UI_SETTINGS": {
+        "expandResponses": "200,201",
+        "hideDownloadButton": False,
+    },
+    # Distribución local de ReDoc.
+    "REDOC_DIST": "SIDECAR",
 }

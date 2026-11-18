@@ -62,7 +62,17 @@ class GlobalParameterService(BaseService[GlobalParameter]):
                 if isinstance(value, bool):
                     return
                 v_str = str(value).strip().lower()
-                if v_str not in ["true", "false", "1", "0", "t", "f", "yes", "no", "si"]:
+                if v_str not in [
+                    "true",
+                    "false",
+                    "1",
+                    "0",
+                    "t",
+                    "f",
+                    "yes",
+                    "no",
+                    "si",
+                ]:
                     raise ValueError("Valor no reconocido como booleano.")
 
             elif data_type == GlobalParameter.DataType.STRING:
@@ -220,9 +230,7 @@ class GlobalParameterService(BaseService[GlobalParameter]):
             return parameter
 
         # Validación cruzada obligatoria: asegura que el valor existente sea compatible con el nuevo tipo
-        GlobalParameterService.validate_value_by_data_type(
-            final_value, final_data_type
-        )
+        GlobalParameterService.validate_value_by_data_type(final_value, final_data_type)
 
         parameter.full_clean()
         parameter.save(update_fields=update_fields)
@@ -301,4 +309,3 @@ class GlobalParameterService(BaseService[GlobalParameter]):
         )
 
         return restored
-

@@ -3,6 +3,7 @@ from datetime import timedelta
 from pathlib import Path
 from urllib.parse import parse_qs, unquote, urlparse
 
+from corsheaders.defaults import default_headers
 from decouple import Csv, config
 
 from .spectacular import *  # noqa: F403
@@ -39,6 +40,7 @@ THIRD_PARTY_APPS = [
     "rest_framework",
     "corsheaders",
     "drf_spectacular",
+    "drf_spectacular_sidecar",
     "rest_framework_simplejwt.token_blacklist",
     "simple_history",
 ]
@@ -58,6 +60,8 @@ LOCAL_APPS = [
     "apps.cash.apps.CashConfig",
     "apps.configuration.apps.ConfigurationConfig",
     "apps.finance.apps.FinanceConfig",
+    "apps.subscriptions.apps.SubscriptionsConfig",
+    "apps.saas_admin.apps.SaasAdminConfig",
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
@@ -70,10 +74,20 @@ MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "apps.core.middlewares.tenant_context_middleware.TenantContextMiddleware",
+    "apps.core.middlewares.subscription_middleware.SubscriptionMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "apps.core.middlewares.audit_middleware.AuditMiddleware",
     "simple_history.middleware.HistoryRequestMiddleware",
+]
+
+# =======================================
+# Configuración CORS Multi-Tenant
+# =======================================
+CORS_ALLOW_HEADERS = list(default_headers) + [
+    "x-company-id",
+    "X-Company-ID",
 ]
 
 ROOT_URLCONF = "config.urls"
@@ -138,9 +152,11 @@ def get_database_config():
             "PASSWORD": db_password,
             "HOST": db_host,
             "PORT": db_port,
-            "CONN_MAX_AGE": config("CONN_MAX_AGE", default=60, cast=int),
+            "CONN_MAX_AGE": config("CONN_MAX_AGE", default=0, cast=int),
             "CONN_HEALTH_CHECKS": config("CONN_HEALTH_CHECKS", default=True, cast=bool),
-            "DISABLE_SERVER_SIDE_CURSORS": config("DISABLE_SERVER_SIDE_CURSORS", default=True, cast=bool),
+            "DISABLE_SERVER_SIDE_CURSORS": config(
+                "DISABLE_SERVER_SIDE_CURSORS", default=True, cast=bool
+            ),
             "OPTIONS": options,
         }
 
@@ -163,9 +179,11 @@ def get_database_config():
         "PASSWORD": config("DB_PASSWORD", default=""),
         "HOST": config("DB_HOST", default=""),
         "PORT": config("DB_PORT", default=""),
-        "CONN_MAX_AGE": config("CONN_MAX_AGE", default=60, cast=int),
+        "CONN_MAX_AGE": config("CONN_MAX_AGE", default=0, cast=int),
         "CONN_HEALTH_CHECKS": config("CONN_HEALTH_CHECKS", default=True, cast=bool),
-        "DISABLE_SERVER_SIDE_CURSORS": config("DISABLE_SERVER_SIDE_CURSORS", default=True, cast=bool),
+        "DISABLE_SERVER_SIDE_CURSORS": config(
+            "DISABLE_SERVER_SIDE_CURSORS", default=True, cast=bool
+        ),
         "OPTIONS": options,
     }
 
@@ -298,8 +316,6 @@ LOGGING = {
 }
 
 
-AUTH_PASSWORD_VALIDATORS= [
-    {
-        "NAME": "apps.users.validators.DynamicPasswordLengthValidator"
-    },
+AUTH_PASSWORD_VALIDATORS = [
+    {"NAME": "apps.users.validators.DynamicPasswordLengthValidator"},
 ]

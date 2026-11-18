@@ -45,8 +45,24 @@ class InvoiceService(BaseService[Invoice]):
         if not dto.items:
             raise InvoiceHasNoItemsException()
 
-        # Chequear unicidad manual por race conditions
-        if Invoice.objects.filter(invoice_number=dto.invoice_number).exists():
+        # Determinar contexto de empresa (Tenant)
+        company_id = None
+        if sale and getattr(sale, "company_id", None):
+            company_id = sale.company_id
+        elif purchase and getattr(purchase, "company_id", None):
+            company_id = purchase.company_id
+        elif template and getattr(template, "company_id", None):
+            company_id = template.company_id
+        if not company_id:
+            from apps.core.context import get_current_company_id
+
+            company_id = get_current_company_id()
+
+        # Chequear unicidad manual por race conditions dentro de la empresa
+        inv_check = Invoice.objects.filter(invoice_number=dto.invoice_number)
+        if company_id:
+            inv_check = inv_check.filter(company_id=company_id)
+        if inv_check.exists():
             raise ValidationError("El número de factura ya existe.")
 
         # Obtener datos de la empresa activos (usa selector cacheado)
@@ -54,7 +70,7 @@ class InvoiceService(BaseService[Invoice]):
             CompanyInfoSelector,
         )
 
-        company = CompanyInfoSelector.get_current()
+        company = CompanyInfoSelector.get_current(company_id=company_id)
 
         c_name = company.business_name if company else ""
         c_tax_id = company.tax_id if company else ""
@@ -70,6 +86,7 @@ class InvoiceService(BaseService[Invoice]):
 
         # Crear cabecera
         invoice = Invoice.objects.create(
+            company_id=company_id,
             invoice_number=dto.invoice_number,
             document_type=dto.document_type,
             template=template,

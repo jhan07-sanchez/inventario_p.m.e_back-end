@@ -38,7 +38,10 @@ class DashboardBuilder:
     """
 
     @staticmethod
-    def build(effective_permissions: dict[str, bool]) -> dict:
+    def build(
+        effective_permissions: dict[str, bool],
+        company_id: int | None = None,
+    ) -> dict:
         """
         Construye la configuración del dashboard.
 
@@ -51,6 +54,8 @@ class DashboardBuilder:
             effective_permissions:
                 Diccionario ``{código: bool}`` con los permisos
                 efectivos del usuario.
+            company_id:
+                ID de la empresa activa para aislar métricas de widgets.
 
         Returns:
             Diccionario con la clave ``"widgets"`` conteniendo
@@ -73,6 +78,8 @@ class DashboardBuilder:
             if has_access:
                 visible_widgets.extend(module.widgets)
 
-        widgets_data = DashboardMetricsService.get_metrics(visible_widgets)
+        widgets_data = DashboardMetricsService.get_metrics(
+            visible_widgets, company_id=company_id
+        )
 
         return {"widgets": widgets_data}

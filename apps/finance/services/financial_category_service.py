@@ -60,13 +60,10 @@ class FinancialCategoryService(BaseService[FinancialCategory]):
             raise FinancialCategoryNotFoundException()
 
         if name and name.strip() != category.name:
-            existing = (
-                FinancialCategory.objects.filter(
-                    name__iexact=name.strip(),
-                    is_active=True,
-                )
-                .exclude(pk=category_id)
-            )
+            existing = FinancialCategory.objects.filter(
+                name__iexact=name.strip(),
+                is_active=True,
+            ).exclude(pk=category_id)
             if category.company_id:
                 existing = existing.filter(company_id=category.company_id)
             if existing.exists():

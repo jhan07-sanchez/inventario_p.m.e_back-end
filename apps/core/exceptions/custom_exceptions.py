@@ -321,14 +321,16 @@ class InvalidPaymentAmountException(BusinessException):
 
 class AccountLockedException(BusinessException):
     """Se lanza cuando la cuenta esta bloqueada temporalmente."""
+
     default_detail = "La cuenta está bloqueada temporalmente por demasiados intentos fallidos. Intente más tarde."
     default_code = ErrorCodes.ACCOUNT_LOCKED
     status_code = 403
+
     def __init__(self, remaining_minutes: int = 15, detail: str = None):
         if detail is None:
             detail = self.default_detail
         super().__init__(detail)
-        #Aqui guardamos los datos crudos
+        # Aqui guardamos los datos crudos
         self.extra_data = {"remaining_minutes": remaining_minutes}
 
 
@@ -364,7 +366,9 @@ class FinancialMovementNotFoundException(BusinessException):
 
 
 class InsufficientAccountFundsException(BusinessException):
-    default_detail = "Fondos insuficientes en la cuenta financiera para realizar esta operación."
+    default_detail = (
+        "Fondos insuficientes en la cuenta financiera para realizar esta operación."
+    )
     default_code = ErrorCodes.INSUFFICIENT_ACCOUNT_FUNDS
 
 
@@ -379,7 +383,9 @@ class FinancialMovementAlreadyReversedException(BusinessException):
 
 
 class InvalidFinancialMovementStateException(BusinessException):
-    default_detail = "El estado actual del movimiento financiero no permite realizar esta operación."
+    default_detail = (
+        "El estado actual del movimiento financiero no permite realizar esta operación."
+    )
     default_code = ErrorCodes.INVALID_FINANCIAL_MOVEMENT_STATE
 
 
@@ -431,6 +437,7 @@ class FinancialCategoryInactiveException(BusinessException):
     default_code = ErrorCodes.FINANCIAL_CATEGORY_INACTIVE
     status_code = 400
 
+
 class SoftwareVersionNotFoundException(BusinessException):
     default_detail = "La versión de software especificada no existe."
     default_code = ErrorCodes.SOFTWARE_VERSION_NOT_FOUND
@@ -444,7 +451,9 @@ class SoftwareVersionAlreadyExistsException(BusinessException):
 
 
 class SoftwareVersionAlreadyPublishedException(BusinessException):
-    default_detail = "La versión ya se encuentra publicada y no puede ser modificada directamente."
+    default_detail = (
+        "La versión ya se encuentra publicada y no puede ser modificada directamente."
+    )
     default_code = ErrorCodes.SOFTWARE_VERSION_ALREADY_PUBLISHED
     status_code = 400
 
@@ -462,7 +471,50 @@ class SoftwareVersionDowngradeException(BusinessException):
 
 
 class SoftwareVersionCannotWithdrawException(BusinessException):
-    default_detail = "Solo se pueden retirar versiones que se encuentren en estado publicado."
+    default_detail = (
+        "Solo se pueden retirar versiones que se encuentren en estado publicado."
+    )
     default_code = ErrorCodes.SOFTWARE_VERSION_CANNOT_WITHDRAW
     status_code = 400
 
+
+class TenantNotFoundException(BusinessException):
+    default_detail = "La empresa especificada no existe."
+    default_code = ErrorCodes.SAAS_TENANT_NOT_FOUND
+    status_code = 404
+
+
+class SubscriptionNotFoundException(BusinessException):
+    default_detail = "La empresa no tiene una suscripción activa."
+    default_code = ErrorCodes.SAAS_SUBSCRIPTION_NOT_FOUND
+    status_code = 404
+
+
+class InvalidTenantActionException(BusinessException):
+    default_detail = "La acción solicitada no es válida para esta empresa."
+    default_code = ErrorCodes.SAAS_INVALID_ACTION
+    status_code = 400
+
+
+class ImpersonationFailedException(BusinessException):
+    default_detail = "No fue posible generar el token de soporte."
+    default_code = ErrorCodes.SAAS_IMPERSONATION_FAILED
+    status_code = 400
+
+
+class TargetUserNotInTenantException(BusinessException):
+    default_detail = "El usuario objetivo no pertenece a la empresa especificada o su membresía no está activa."
+    default_code = ErrorCodes.SAAS_TARGET_USER_NOT_IN_TENANT
+    status_code = 400
+
+
+class CannotImpersonateSuperuserException(BusinessException):
+    default_detail = "Por motivos de seguridad, no está permitido impersonar a otro Superadministrador."
+    default_code = ErrorCodes.SAAS_CANNOT_IMPERSONATE_SUPERUSER
+    status_code = 403
+
+
+class ChainedImpersonationDeniedException(BusinessException):
+    default_detail = "No se permiten sesiones de impersonación encadenadas."
+    default_code = ErrorCodes.SAAS_CHAINED_IMPERSONATION_DENIED
+    status_code = 403

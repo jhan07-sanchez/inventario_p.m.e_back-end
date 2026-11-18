@@ -5,11 +5,11 @@ from django.core.validators import MinValueValidator
 from django.db import models
 
 from apps.core.enums import PaymentMethod
-from apps.core.models.active_model import ActiveModel
+from apps.core.models.tenant_model import TenantModel
 from apps.customers.models.customer import Customer
 
 
-class Sale(ActiveModel):
+class Sale(TenantModel):
     """
     Modelo que representa una venta en el sistema.
 
@@ -36,10 +36,9 @@ class Sale(ActiveModel):
 
     sale_number = models.CharField(
         max_length=30,
-        unique=True,
         db_index=True,
         verbose_name="Número de venta",
-        help_text="Número único que identifica la venta.",
+        help_text="Número que identifica la venta.",
     )
 
     class SaleType(models.TextChoices):
@@ -177,6 +176,14 @@ class Sale(ActiveModel):
 
         indexes = [
             models.Index(
+                fields=["company", "status"],
+                name="sale_comp_status_idx",
+            ),
+            models.Index(
+                fields=["company", "sale_date"],
+                name="sale_comp_date_idx",
+            ),
+            models.Index(
                 fields=["status"],
                 name="sale_status_idx",
             ),
@@ -203,6 +210,13 @@ class Sale(ActiveModel):
             models.Index(
                 fields=["-updated_at"],
                 name="sale_updated_desc_idx",
+            ),
+        ]
+
+        constraints = [
+            models.UniqueConstraint(
+                fields=["company", "sale_number"],
+                name="unique_sale_number_per_company",
             ),
         ]
 

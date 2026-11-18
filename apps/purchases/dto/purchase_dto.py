@@ -21,6 +21,7 @@ class PurchaseCreateDTO:
     issue_date: Optional[date]
     notes: Optional[str]
     details: list[PurchaseDetailCreateDTO]
+    company_id: Optional[int] = None
 
 
 @dataclass(frozen=True, slots=True)

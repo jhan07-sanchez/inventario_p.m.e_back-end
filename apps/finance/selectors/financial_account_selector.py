@@ -32,7 +32,12 @@ class FinancialAccountSelector(BaseSelector[FinancialAccount]):
             qs = qs.filter(is_active=True)
 
         if company_id:
-            qs = qs.filter(company_id=company_id)
+            if company_id == 1:
+                from django.db.models import Q
+
+                qs = qs.filter(Q(company_id=1) | Q(company__isnull=True))
+            else:
+                qs = qs.filter(company_id=company_id)
         if account_type:
             qs = qs.filter(account_type=account_type)
         return qs
@@ -41,15 +46,23 @@ class FinancialAccountSelector(BaseSelector[FinancialAccount]):
     def get_account_by_id(
         cls,
         account_id: int,
+        company_id: Optional[int] = None,
         include_deleted: bool = False,
     ) -> Optional[FinancialAccount]:
-        return (
+        qs = (
             cls()
             .get_all(include_deleted=include_deleted)
             .select_related("company")
             .filter(pk=account_id)
-            .first()
         )
+        if company_id:
+            if company_id == 1:
+                from django.db.models import Q
+
+                qs = qs.filter(Q(company_id=1) | Q(company__isnull=True))
+            else:
+                qs = qs.filter(company_id=company_id)
+        return qs.first()
 
     @classmethod
     def get_total_balance(
@@ -60,4 +73,3 @@ class FinancialAccountSelector(BaseSelector[FinancialAccount]):
         qs = cls.get_accounts(company_id=company_id, account_type=account_type)
         total = qs.aggregate(total=Sum("current_balance"))["total"]
         return total or Decimal("0.00")
-

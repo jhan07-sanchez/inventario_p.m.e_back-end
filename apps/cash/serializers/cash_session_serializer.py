@@ -1,3 +1,5 @@
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
 from apps.cash.dto.cash_session_dto import CashSessionCloseDto, CashSessionOpenDto
@@ -30,11 +32,13 @@ class CashSessionRetrieveSerializer(serializers.ModelSerializer):
             "denominations",
         ]
 
+    @extend_schema_field(OpenApiTypes.OBJECT)
     def get_denominations(self, obj):
         if not obj.notes or "DENOMINATIONS:" not in obj.notes:
             return None
         try:
             import json
+
             part = obj.notes.split("DENOMINATIONS:", 1)[1].strip()
             return json.loads(part)
         except Exception:

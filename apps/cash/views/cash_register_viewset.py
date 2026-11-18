@@ -1,3 +1,4 @@
+from drf_spectacular.utils import extend_schema, extend_schema_view
 from rest_framework import status
 from rest_framework.filters import OrderingFilter, SearchFilter
 
@@ -14,6 +15,11 @@ from apps.core.views.base_viewset import BaseViewSet
 from apps.users.permissions import IsAuthenticatedAndActive
 
 
+@extend_schema_view(
+    update=extend_schema(exclude=True),
+    partial_update=extend_schema(exclude=True),
+    destroy=extend_schema(exclude=True),
+)
 class CashRegisterViewSet(BaseViewSet):
     """
     ViewSet para listar y consultar Cajas Registradoras.
@@ -37,7 +43,9 @@ class CashRegisterViewSet(BaseViewSet):
         return [permission() for permission in classes]
 
     def get_queryset(self):
-        return CashRegisterSelector.get_all()
+        company_id = getattr(self.request, "company_id", None)
+        qs = CashRegisterSelector.get_all(company_id=company_id)
+        return self.isolate_queryset(qs)
 
     def get_serializer_class(self):
         return CashRegisterSerializer
@@ -68,7 +76,8 @@ class CashRegisterViewSet(BaseViewSet):
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        serializer.save()
+        company_id = getattr(request, "company_id", None)
+        serializer.save(company_id=company_id)
         return self.success_response(
             message="Caja registrada correctamente.",
             code="CASH_REGISTER_CREATED",

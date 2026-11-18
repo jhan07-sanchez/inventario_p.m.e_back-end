@@ -46,8 +46,13 @@ class PurchaseService(BaseService[Purchase]):
         if not supplier.is_active:
             raise SupplierInactiveException()
 
+        company_id = getattr(dto, "company_id", None) or getattr(
+            supplier, "company_id", None
+        )
+
         # Crear la cabecera
         purchase = Purchase.objects.create(
+            company_id=company_id,
             supplier=supplier,
             issue_date=dto.issue_date or timezone.now().date(),
             notes=dto.notes,
@@ -59,11 +64,12 @@ class PurchaseService(BaseService[Purchase]):
         subtotal_sum = Decimal("0.00")
         total_sum = Decimal("0.00")
 
-        # Fetch all products at once to avoid N+1 queries
+        # Fetch all products at once to avoid N+1 queries scoped to company
         product_ids = [d.product_id for d in dto.details]
-        products_map = {
-            p.id_product: p for p in Product.objects.filter(pk__in=product_ids)
-        }
+        prod_qs = Product.objects.filter(pk__in=product_ids)
+        if company_id:
+            prod_qs = prod_qs.filter(company_id=company_id)
+        products_map = {p.id_product: p for p in prod_qs}
 
         # Crear los detalles
         for detail_dto in dto.details:
@@ -102,7 +108,9 @@ class PurchaseService(BaseService[Purchase]):
         purchase.total = total_sum
         purchase.save(update_fields=["subtotal", "total", "updated_at"])
 
-        DashboardMetricsService.invalidate_purchases_cache()
+        DashboardMetricsService.invalidate_purchases_cache(
+            company_id=getattr(purchase, "company_id", None)
+        )
 
         return purchase
 
@@ -144,7 +152,9 @@ class PurchaseService(BaseService[Purchase]):
         purchase.status = Purchase.Status.PENDING
         purchase.save(update_fields=["status", "updated_at"])
 
-        DashboardMetricsService.invalidate_purchases_cache()
+        DashboardMetricsService.invalidate_purchases_cache(
+            company_id=getattr(purchase, "company_id", None)
+        )
 
         return purchase
 
@@ -203,8 +213,12 @@ class PurchaseService(BaseService[Purchase]):
         purchase.status = Purchase.Status.RECEIVED
         purchase.save(update_fields=["status", "updated_at"])
 
-        DashboardMetricsService.invalidate_purchases_cache()
-        DashboardMetricsService.invalidate_inventory_cache()
+        DashboardMetricsService.invalidate_purchases_cache(
+            company_id=getattr(purchase, "company_id", None)
+        )
+        DashboardMetricsService.invalidate_inventory_cache(
+            company_id=getattr(purchase, "company_id", None)
+        )
 
         return purchase
 
@@ -272,7 +286,9 @@ class PurchaseService(BaseService[Purchase]):
         invoice = InvoiceService.create_invoice(invoice_dto)
         InvoiceService.issue_invoice(invoice)
 
-        DashboardMetricsService.invalidate_purchases_cache()
+        DashboardMetricsService.invalidate_purchases_cache(
+            company_id=getattr(purchase, "company_id", None)
+        )
 
         return purchase
 
@@ -291,7 +307,9 @@ class PurchaseService(BaseService[Purchase]):
         purchase.status = Purchase.Status.CANCELLED
         purchase.save(update_fields=["status", "updated_at"])
 
-        DashboardMetricsService.invalidate_purchases_cache()
+        DashboardMetricsService.invalidate_purchases_cache(
+            company_id=getattr(purchase, "company_id", None)
+        )
 
         return purchase
 
@@ -305,7 +323,9 @@ class PurchaseService(BaseService[Purchase]):
             raise ValidationError("La compra ya se encuentra desactivada.")
 
         PurchaseService().delete(purchase)
-        DashboardMetricsService.invalidate_purchases_cache()
+        DashboardMetricsService.invalidate_purchases_cache(
+            company_id=getattr(purchase, "company_id", None)
+        )
 
     @staticmethod
     @transaction.atomic
@@ -317,5 +337,7 @@ class PurchaseService(BaseService[Purchase]):
             return purchase
 
         instance = PurchaseService().restore(purchase)
-        DashboardMetricsService.invalidate_purchases_cache()
+        DashboardMetricsService.invalidate_purchases_cache(
+            company_id=getattr(purchase, "company_id", None)
+        )
         return instance

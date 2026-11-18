@@ -29,8 +29,5 @@ class FinancialCategoryCreateUpdateSerializer(serializers.Serializer):
         choices=FinancialCategory.CategoryType.choices,
         default=FinancialCategory.CategoryType.OUTFLOW,
     )
-    description = serializers.CharField(
-        required=False, allow_blank=True, default=""
-    )
+    description = serializers.CharField(required=False, allow_blank=True, default="")
     company_id = serializers.IntegerField(required=False, allow_null=True, default=None)
-

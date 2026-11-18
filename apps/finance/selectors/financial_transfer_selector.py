@@ -18,6 +18,7 @@ class FinancialTransferSelector(BaseSelector[FinancialTransfer]):
     @classmethod
     def get_transfers(
         cls,
+        company_id: Optional[int] = None,
         source_account_id: Optional[int] = None,
         destination_account_id: Optional[int] = None,
         account_id: Optional[int] = None,
@@ -33,14 +34,15 @@ class FinancialTransferSelector(BaseSelector[FinancialTransfer]):
         )
         if not include_deleted:
             qs = qs.filter(is_active=True)
+        if company_id:
+            qs = qs.filter(source_account__company_id=company_id)
         if source_account_id:
             qs = qs.filter(source_account_id=source_account_id)
         if destination_account_id:
             qs = qs.filter(destination_account_id=destination_account_id)
         if account_id:
             qs = qs.filter(
-                Q(source_account_id=account_id)
-                | Q(destination_account_id=account_id)
+                Q(source_account_id=account_id) | Q(destination_account_id=account_id)
             )
         if status:
             qs = qs.filter(status=status)
@@ -54,12 +56,15 @@ class FinancialTransferSelector(BaseSelector[FinancialTransfer]):
     def get_transfer_by_id(
         cls,
         transfer_id: int,
+        company_id: Optional[int] = None,
         include_deleted: bool = False,
     ) -> Optional[FinancialTransfer]:
-        return (
+        qs = (
             cls()
             .get_all(include_deleted=include_deleted)
             .select_related("source_account", "destination_account", "user")
             .filter(pk=transfer_id)
-            .first()
         )
+        if company_id:
+            qs = qs.filter(source_account__company_id=company_id)
+        return qs.first()

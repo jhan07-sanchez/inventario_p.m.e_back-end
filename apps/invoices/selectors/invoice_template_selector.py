@@ -33,22 +33,38 @@ class InvoiceTemplateSelector(BaseSelector[InvoiceTemplate]):
         )
 
     @staticmethod
-    def get_default_template(document_type: str) -> InvoiceTemplate | None:
+    def get_default_template(
+        document_type: str, company_id: int | None = None
+    ) -> InvoiceTemplate | None:
         """
         Retorna la plantilla por defecto para un tipo de documento.
         """
-        cache_key = f"invoice_default_template_{document_type}"
+        if not company_id:
+            from apps.core.context import get_current_company_id
+
+            company_id = get_current_company_id()
+
+        cache_key = (
+            f"invoice_default_template_{company_id}_{document_type}"
+            if company_id
+            else f"invoice_default_template_{document_type}"
+        )
         cached_val = cache.get(cache_key)
 
         if cached_val is not None:
             return cached_val
 
-        val = (
+        qs = (
             InvoiceTemplateSelector()
             .get_queryset()
             .filter(document_type=document_type, is_active=True, is_default=True)
-            .first()
         )
+        if company_id:
+            val = qs.filter(company_id=company_id).first()
+            if not val and company_id == 1:
+                val = qs.filter(company__isnull=True).first()
+        else:
+            val = qs.first()
 
         cache.set(cache_key, val, timeout=3600)  # 1 hora
         return val

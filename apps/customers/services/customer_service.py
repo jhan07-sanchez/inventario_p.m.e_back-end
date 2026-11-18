@@ -36,6 +36,10 @@ class CustomerService(BaseService[Customer]):
                 document_number=document_number,
             )
 
+            company_id = data.get("company_id") or getattr(instance, "company_id", None)
+            if company_id:
+                query = query.filter(company_id=company_id)
+
             if instance is not None:
                 query = query.exclude(
                     pk=instance.pk,

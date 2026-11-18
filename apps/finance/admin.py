@@ -13,6 +13,7 @@ from apps.finance.models import (
 class FinancialAccountAdmin(admin.ModelAdmin):
     list_display = (
         "name",
+        "company",
         "account_type",
         "bank_name",
         "account_number",
@@ -20,15 +21,17 @@ class FinancialAccountAdmin(admin.ModelAdmin):
         "currency",
         "is_active",
     )
-    list_filter = ("account_type", "is_active", "currency")
-    search_fields = ("name", "bank_name", "account_number")
+    list_filter = ("company", "account_type", "is_active", "currency")
+    search_fields = ("name", "bank_name", "account_number", "company__business_name")
+    raw_id_fields = ("company",)
 
 
 @admin.register(FinancialCategory)
 class FinancialCategoryAdmin(admin.ModelAdmin):
-    list_display = ("name", "category_type", "is_active")
-    list_filter = ("category_type", "is_active")
-    search_fields = ("name",)
+    list_display = ("name", "company", "category_type", "is_active")
+    list_filter = ("company", "category_type", "is_active")
+    search_fields = ("name", "company__business_name")
+    raw_id_fields = ("company",)
 
 
 @admin.register(FinancialMovement)
@@ -75,4 +78,3 @@ class FinancialReconciliationAdmin(admin.ModelAdmin):
     )
     list_filter = ("status", "end_date")
     search_fields = ("account__name", "notes")
-

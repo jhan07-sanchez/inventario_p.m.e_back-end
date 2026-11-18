@@ -6,9 +6,7 @@ from apps.finance.models.financial_reconciliation import FinancialReconciliation
 
 class FinancialReconciliationListSerializer(serializers.ModelSerializer):
     account_name = serializers.CharField(source="account.name", read_only=True)
-    status_display = serializers.CharField(
-        source="get_status_display", read_only=True
-    )
+    status_display = serializers.CharField(source="get_status_display", read_only=True)
     user_name = serializers.CharField(source="user.username", read_only=True)
 
     class Meta:
@@ -38,9 +36,7 @@ class FinancialReconciliationCreateSerializer(serializers.Serializer):
     start_date = serializers.DateField()
     end_date = serializers.DateField()
     statement_balance = serializers.DecimalField(max_digits=14, decimal_places=2)
-    notes = serializers.CharField(
-        required=False, allow_blank=True, default=""
-    )
+    notes = serializers.CharField(required=False, allow_blank=True, default="")
 
     def to_dto(self) -> FinancialReconciliationCreateDTO:
         data = self.validated_data
@@ -51,4 +47,3 @@ class FinancialReconciliationCreateSerializer(serializers.Serializer):
             statement_balance=data["statement_balance"],
             notes=data.get("notes", ""),
         )
-

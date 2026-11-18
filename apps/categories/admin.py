@@ -7,29 +7,37 @@ from apps.categories.models import Category
 class CategoryAdmin(admin.ModelAdmin):
     list_display = (
         "id_category",
+        "company",
         "name",
-        "description",
         "parent",
         "is_active",
+        "created_at",
     )
 
     search_fields = (
         "name",
-        "parent",
+        "parent__name",
+        "company__business_name",
+        "company__tax_id",
     )
 
     list_filter = (
+        "company",
         "is_active",
         "parent",
+        "created_at",
     )
 
     ordering = ("id_category",)
 
+    raw_id_fields = ("company", "parent")
+
     fieldsets = (
         (
-            "Informacion principal",
+            "Información Principal",
             {
                 "fields": (
+                    "company",
                     "name",
                     "description",
                     "parent",
@@ -37,11 +45,11 @@ class CategoryAdmin(admin.ModelAdmin):
             },
         ),
         (
-            "Estado y Notas",
+            "Estado",
             {"fields": ("is_active",)},
         ),
         (
-            "Fechas importantes",
+            "Fechas Importantes",
             {
                 "fields": (
                     "created_at",
@@ -56,11 +64,8 @@ class CategoryAdmin(admin.ModelAdmin):
         "updated_at",
     )
 
-    exclude = ("delete_at",)
+    exclude = ("deleted_at",)
 
     def get_queryset(self, request):
-        """
-        Muestra todos las categorias incluyendo las eliminadas logicamente.
-        """
-
+        """Muestra todas las categorías incluyendo las eliminadas lógicamente."""
         return Category.all_objects.all()

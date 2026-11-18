@@ -1,3 +1,4 @@
+from django.db.models import Q
 from django.shortcuts import get_object_or_404
 
 from apps.core.selectors.base_selector import BaseSelector
@@ -16,11 +17,14 @@ class RoleSelector(BaseSelector[Role]):
         super().__init__(Role)
 
     @staticmethod
-    def get_roles():
+    def get_roles(company_id: int | None = None):
         """
         Retorna todos los roles ordenados por nombre.
         """
-        return RoleSelector().get_all().order_by("role_name")
+        qs = Role.objects.all()
+        if company_id:
+            return qs.filter(Q(company_id=company_id) | Q(company_id__isnull=True))
+        return qs.filter(company__isnull=True)
 
     @staticmethod
     def get_active_roles():

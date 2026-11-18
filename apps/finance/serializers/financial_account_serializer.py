@@ -78,9 +78,7 @@ class FinancialAccountCreateSerializer(serializers.Serializer):
     initial_balance = serializers.DecimalField(
         max_digits=14, decimal_places=2, default=Decimal("0.00")
     )
-    description = serializers.CharField(
-        required=False, allow_blank=True, default=""
-    )
+    description = serializers.CharField(required=False, allow_blank=True, default="")
     company_id = serializers.IntegerField(required=False, allow_null=True, default=None)
 
     def to_dto(self) -> FinancialAccountCreateDTO:
@@ -105,12 +103,8 @@ class FinancialAccountUpdateSerializer(serializers.Serializer):
     account_number = serializers.CharField(
         max_length=60, required=False, allow_blank=True
     )
-    bank_name = serializers.CharField(
-        max_length=100, required=False, allow_blank=True
-    )
-    description = serializers.CharField(
-        required=False, allow_blank=True
-    )
+    bank_name = serializers.CharField(max_length=100, required=False, allow_blank=True)
+    description = serializers.CharField(required=False, allow_blank=True)
 
     def to_dto(self) -> FinancialAccountUpdateDTO:
         data = self.validated_data
@@ -121,4 +115,3 @@ class FinancialAccountUpdateSerializer(serializers.Serializer):
             bank_name=data.get("bank_name"),
             description=data.get("description"),
         )
-

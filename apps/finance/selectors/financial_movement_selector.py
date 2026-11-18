@@ -19,6 +19,7 @@ class FinancialMovementSelector(BaseSelector[FinancialMovement]):
     @classmethod
     def get_movements(
         cls,
+        company_id: Optional[int] = None,
         account_id: Optional[int] = None,
         movement_type: Optional[str] = None,
         category_id: Optional[int] = None,
@@ -34,6 +35,13 @@ class FinancialMovementSelector(BaseSelector[FinancialMovement]):
         )
         if not include_deleted:
             qs = qs.filter(is_active=True)
+        if company_id:
+            if company_id == 1:
+                qs = qs.filter(
+                    Q(account__company_id=1) | Q(account__company__isnull=True)
+                )
+            else:
+                qs = qs.filter(account__company_id=company_id)
         if account_id:
             qs = qs.filter(account_id=account_id)
         if movement_type:
@@ -52,19 +60,28 @@ class FinancialMovementSelector(BaseSelector[FinancialMovement]):
     def get_movement_by_id(
         cls,
         movement_id: int,
+        company_id: Optional[int] = None,
         include_deleted: bool = False,
     ) -> Optional[FinancialMovement]:
-        return (
+        qs = (
             cls()
             .get_all(include_deleted=include_deleted)
             .select_related("account", "category", "user", "transfer", "reversal_of")
             .filter(pk=movement_id)
-            .first()
         )
+        if company_id:
+            if company_id == 1:
+                qs = qs.filter(
+                    Q(account__company_id=1) | Q(account__company__isnull=True)
+                )
+            else:
+                qs = qs.filter(account__company_id=company_id)
+        return qs.first()
 
     @classmethod
     def get_period_totals(
         cls,
+        company_id: Optional[int] = None,
         account_id: Optional[int] = None,
         start_date: Optional[date] = None,
         end_date: Optional[date] = None,
@@ -75,6 +92,7 @@ class FinancialMovementSelector(BaseSelector[FinancialMovement]):
         Por defecto excluye transferencias internas entre cuentas propias para no inflar ingresos o gastos.
         """
         qs = cls.get_movements(
+            company_id=company_id,
             account_id=account_id,
             status=FinancialMovement.MovementStatus.COMPLETED,
             start_date=start_date,
@@ -83,23 +101,16 @@ class FinancialMovementSelector(BaseSelector[FinancialMovement]):
         if exclude_transfers:
             qs = qs.filter(~Q(origin_type=FinancialMovement.OriginType.TRANSFER))
 
-        income = (
-            qs.filter(movement_type=FinancialMovement.MovementType.INFLOW).aggregate(
-                total=Sum("amount")
-            )["total"]
-            or Decimal("0.00")
-        )
+        income = qs.filter(
+            movement_type=FinancialMovement.MovementType.INFLOW
+        ).aggregate(total=Sum("amount"))["total"] or Decimal("0.00")
 
-        expense = (
-            qs.filter(movement_type=FinancialMovement.MovementType.OUTFLOW).aggregate(
-                total=Sum("amount")
-            )["total"]
-            or Decimal("0.00")
-        )
+        expense = qs.filter(
+            movement_type=FinancialMovement.MovementType.OUTFLOW
+        ).aggregate(total=Sum("amount"))["total"] or Decimal("0.00")
 
         return {
             "income": income,
             "expense": expense,
             "net": income - expense,
         }
-
