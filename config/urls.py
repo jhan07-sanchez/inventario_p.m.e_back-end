@@ -32,15 +32,15 @@ urlpatterns = [
     # Endpoint de verificación de salud para Render y balanceadores
     path("health/", root_health_check, name="health-check"),
     # OpenAPI Schema (YAML/JSON)
-    path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
+    path("api/v1/schema/", SpectacularAPIView.as_view(), name="schema"),
     # Swagger UI
     path(
-        "api/docs/",
+        "api/v1/docs/",
         SpectacularSwaggerView.as_view(url_name="schema"),
         name="swagger-ui",
     ),
     # ReDoc
-    path("api/redoc/", SpectacularRedocView.as_view(url_name="schema"), name="redoc"),
+    path("api/v1/redoc/", SpectacularRedocView.as_view(url_name="schema"), name="redoc"),
     # API endpoints
     path("api/v1/", include("config.api_urls")),
 ]
