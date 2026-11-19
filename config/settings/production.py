@@ -42,7 +42,7 @@ ALLOWED_HOSTS = config(
 CORS_ALLOW_ALL_ORIGINS = False
 CORS_ALLOWED_ORIGINS = config(
     "CORS_ALLOWED_ORIGINS",
-    default="https://inventario-pme.com",
+    default="https://inventariopme.infinity.click",
     cast=Csv(),
 )
 
