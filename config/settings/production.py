@@ -39,12 +39,9 @@ ALLOWED_HOSTS = config(
 )
 
 # CORS estrictamente restringido al dominio del frontend
-CORS_ALLOW_ALL_ORIGINS = False
-CORS_ALLOWED_ORIGINS = config(
-    "CORS_ALLOWED_ORIGINS",
-    default="https://inventario-pme.com",
-    cast=Csv(),
-)
+#CORS_ALLOW_ALL_ORIGINS = False
+#CORS_ALLOWED_ORIGINS = config(
+#)
 
 # CSRF Trusted Origins para llamadas seguras autenticadas
 CSRF_TRUSTED_ORIGINS = config(
