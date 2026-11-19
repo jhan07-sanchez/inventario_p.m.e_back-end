@@ -49,6 +49,7 @@ class UserDetailSerializer(serializers.ModelSerializer):
         fields = (
             "id_user",
             "username",
+            "is_superuser",
             "first_name",
             "last_name",
             "email",

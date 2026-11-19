@@ -196,7 +196,6 @@ class ImpersonationService:
         raise BusinessException(
             "La empresa no cuenta con usuarios activos elegibles para soporte.",
             code="SAAS_NO_ELIGIBLE_USERS",
-            status_code=400,
         )
 
     @staticmethod
