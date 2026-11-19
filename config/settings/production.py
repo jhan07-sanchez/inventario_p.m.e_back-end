@@ -39,9 +39,12 @@ ALLOWED_HOSTS = config(
 )
 
 # CORS estrictamente restringido al dominio del frontend
-#CORS_ALLOW_ALL_ORIGINS = False
-#CORS_ALLOWED_ORIGINS = config(
-#)
+CORS_ALLOW_ALL_ORIGINS = False
+CORS_ALLOWED_ORIGINS = config(
+    "CORS_ALLOWED_ORIGINS",
+    default="https://inventariopme.infinity.click",
+    cast=Csv(),
+)
 
 # CSRF Trusted Origins para llamadas seguras autenticadas
 CSRF_TRUSTED_ORIGINS = config(
