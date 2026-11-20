@@ -101,6 +101,18 @@ class UserService(BaseService[User]):
             for role in roles:
                 UserRoleService.create_user_role({"user": user, "role": role})
 
+        if company_id:
+            try:
+                from apps.notifications.services import NotificationService
+
+                NotificationService().notify_user_created(
+                    username=user.username,
+                    company_id=company_id,
+                    origin_id=str(user.pk),
+                )
+            except Exception:
+                pass
+
         return user
 
     def perform_update(self, instance: User, data: dict) -> User:

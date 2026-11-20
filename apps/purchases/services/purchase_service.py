@@ -112,6 +112,20 @@ class PurchaseService(BaseService[Purchase]):
             company_id=getattr(purchase, "company_id", None)
         )
 
+        try:
+            from apps.notifications.services import NotificationService
+
+            supp_name = getattr(getattr(purchase, "supplier", None), "name", "Proveedor")
+            NotificationService().notify_purchase_registered(
+                purchase_number=str(getattr(purchase, "purchase_number", purchase.pk)),
+                total_amount=float(purchase.total),
+                supplier_name=supp_name,
+                company_id=getattr(purchase, "company_id", None),
+                origin_id=str(purchase.pk),
+            )
+        except Exception:
+            pass
+
         return purchase
 
     @staticmethod
@@ -155,6 +169,20 @@ class PurchaseService(BaseService[Purchase]):
         DashboardMetricsService.invalidate_purchases_cache(
             company_id=getattr(purchase, "company_id", None)
         )
+
+        try:
+            from apps.notifications.services import NotificationService
+
+            supp_name = getattr(getattr(purchase, "supplier", None), "name", "Proveedor")
+            NotificationService().notify_purchase_registered(
+                purchase_number=str(getattr(purchase, "purchase_number", purchase.pk)),
+                total_amount=float(purchase.total),
+                supplier_name=supp_name,
+                company_id=getattr(purchase, "company_id", None),
+                origin_id=str(purchase.pk),
+            )
+        except Exception:
+            pass
 
         return purchase
 
@@ -290,6 +318,20 @@ class PurchaseService(BaseService[Purchase]):
             company_id=getattr(purchase, "company_id", None)
         )
 
+        try:
+            from apps.notifications.services import NotificationService
+
+            supp_name = getattr(getattr(purchase, "supplier", None), "name", "Proveedor")
+            NotificationService().notify_purchase_registered(
+                purchase_number=str(getattr(purchase, "purchase_number", purchase.pk)),
+                total_amount=float(purchase.total),
+                supplier_name=supp_name,
+                company_id=getattr(purchase, "company_id", None),
+                origin_id=str(purchase.pk),
+            )
+        except Exception:
+            pass
+
         return purchase
 
     @staticmethod
@@ -310,6 +352,18 @@ class PurchaseService(BaseService[Purchase]):
         DashboardMetricsService.invalidate_purchases_cache(
             company_id=getattr(purchase, "company_id", None)
         )
+
+        try:
+            from apps.notifications.services import NotificationService
+
+            NotificationService().notify_purchase_cancelled(
+                purchase_number=str(getattr(purchase, "purchase_number", purchase.pk)),
+                reason="Compra cancelada.",
+                company_id=getattr(purchase, "company_id", None),
+                origin_id=str(purchase.pk),
+            )
+        except Exception:
+            pass
 
         return purchase
 

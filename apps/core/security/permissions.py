@@ -53,14 +53,35 @@ def HasPermission(permission_code: str):
             if not (user and user.is_authenticated and user.is_active):
                 return False
 
-            if user.is_superuser:
-                return True
-
             company_id = getattr(request, "company_id", None)
             if not company_id and hasattr(request, "company") and request.company:
                 company_id = getattr(request.company, "id_company", None) or getattr(
                     request.company, "pk", None
                 )
+
+            # Control de Entitlements por Empresa: Si opera en contexto de empresa,
+            # verificar si el módulo está contratado en el plan
+            if company_id:
+                from apps.subscriptions.services.company_entitlement_service import (
+                    CompanyEntitlementService,
+                )
+
+                module_code = permission_code.split(".", 1)[0]
+                company = getattr(request, "company", None)
+                if not company:
+                    from apps.company_info.models import CompanyInfo
+
+                    company = CompanyInfo.objects.filter(pk=company_id).first()
+                if company and not CompanyEntitlementService.is_module_enabled(
+                    company, module_code
+                ):
+                    self.message = (
+                        f"El módulo '{module_code}' no está incluido en el plan contratado por su empresa."
+                    )
+                    return False
+
+            if user.is_superuser:
+                return True
 
             return PermissionService.user_has_permission(
                 user=user,
@@ -88,14 +109,39 @@ def HasAnyPermission(*permission_codes: str):
             if not (user and user.is_authenticated and user.is_active):
                 return False
 
-            if user.is_superuser:
-                return True
-
             company_id = getattr(request, "company_id", None)
             if not company_id and hasattr(request, "company") and request.company:
                 company_id = getattr(request.company, "id_company", None) or getattr(
                     request.company, "pk", None
                 )
+
+            # Control de Entitlements: Verificar que al menos uno de los módulos esté contratado
+            if company_id:
+                from apps.subscriptions.services.company_entitlement_service import (
+                    CompanyEntitlementService,
+                )
+
+                company = getattr(request, "company", None)
+                if not company:
+                    from apps.company_info.models import CompanyInfo
+
+                    company = CompanyInfo.objects.filter(pk=company_id).first()
+
+                if company:
+                    has_any_module = any(
+                        CompanyEntitlementService.is_module_enabled(
+                            company, code.split(".", 1)[0]
+                        )
+                        for code in permission_codes
+                    )
+                    if not has_any_module:
+                        self.message = (
+                            "Los módulos requeridos para esta acción no están incluidos en el plan de su empresa."
+                        )
+                        return False
+
+            if user.is_superuser:
+                return True
 
             return any(
                 PermissionService.user_has_permission(

@@ -232,3 +232,50 @@ class ImpersonationService:
             logger.error(
                 f"[SaaS Security] Fallo al guardar log de auditoría para impersonación: {e}"
             )
+
+    @classmethod
+    @transaction.atomic
+    def end_impersonation(
+        cls,
+        actor_user: User,
+        auth_payload: Optional[dict] = None,
+    ) -> dict:
+        """
+        Finaliza formalmente una sesión de soporte técnico por impersonación
+        y registra la traza inmutable en el registro de auditoría.
+        """
+        impersonator_id = None
+        impersonated_company_id = None
+        target_user_id = getattr(actor_user, "id_user", None) or getattr(actor_user, "pk", None)
+
+        if auth_payload and isinstance(auth_payload, dict):
+            impersonator_id = auth_payload.get("impersonator_id")
+            impersonated_company_id = auth_payload.get("impersonated_company")
+
+        try:
+            AuditLog.objects.create(
+                user_id=impersonator_id or target_user_id,
+                company_id=impersonated_company_id,
+                method="POST",
+                path="/api/v1/saas-admin/tenants/impersonate/end/",
+                status_code=200,
+                payload={
+                    "security_event": "SUPPORT_IMPERSONATION_ENDED",
+                    "impersonator_id": impersonator_id,
+                    "target_user_id": target_user_id,
+                    "company_id": impersonated_company_id,
+                },
+            )
+        except Exception as e:
+            logger.error(
+                f"[SaaS Security] Error registrando fin de impersonación en AuditLog: {e}"
+            )
+
+        logger.info(
+            f"[SaaS Security] Finalizó sesión de impersonación para usuario #{target_user_id}"
+        )
+
+        return {
+            "impersonation_ended": True,
+            "message": "Sesión de soporte finalizada correctamente.",
+        }

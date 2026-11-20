@@ -255,6 +255,7 @@ class GlobalMetricsSerializer(serializers.Serializer):
     total_companies = serializers.IntegerField(read_only=True)
     active_companies = serializers.IntegerField(read_only=True)
     suspended_companies = serializers.IntegerField(read_only=True)
+    total_users = serializers.IntegerField(read_only=True, default=0)
     active_trials = serializers.IntegerField(read_only=True)
     active_paid_subscriptions = serializers.IntegerField(read_only=True)
     past_due_subscriptions = serializers.IntegerField(read_only=True)
@@ -262,3 +263,9 @@ class GlobalMetricsSerializer(serializers.Serializer):
     mrr = serializers.FloatField(read_only=True)
     current_month_revenue = serializers.FloatField(read_only=True)
     total_historical_revenue = serializers.FloatField(read_only=True)
+    recent_payments = serializers.ListField(
+        child=serializers.DictField(),
+        read_only=True,
+        required=False,
+        default=list,
+    )

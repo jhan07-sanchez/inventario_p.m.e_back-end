@@ -7,6 +7,7 @@ from django.utils import timezone
 from apps.company_info.models import CompanyInfo
 from apps.core.exceptions import TenantNotFoundException
 from apps.subscriptions.models import Plan, Subscription, SubscriptionPayment
+from apps.users.models import User
 
 
 class SaaSAdminSelector:
@@ -198,10 +199,43 @@ class SaaSAdminSelector:
             status=SubscriptionPayment.PaymentStatus.APPROVED,
         ).aggregate(total=Sum("amount"))["total"] or Decimal("0.00")
 
+        #CONTAR SOLO USUARIOS DE EMPRESAS CLIENTES (TENANTS)
+        # Filtramos a los usuarios que tienen una membresía activa en alguna empresa.
+        # Usamos .distinct() por si un usuario pertenece a varias empresas, para no contarlo doble.
+        total_users = (
+            User.objects.filter(
+                is_active=True,
+                is_staff=False,  # Excluye al equipo de soporte/ventas
+                is_superuser=False,  # # Excluye al dueño del SaaS
+                memberships__is_active=True,
+                memberships__status="ACTIVE",
+            )
+            .distinct()
+            .count()
+        )
+
+        recent_payments = (
+            SubscriptionPayment.objects.filter(is_active=True)
+            .select_related("subscription__company", "subscription__plan")
+            .order_by("-payment_date")[:5]
+        )
+        recent_payments_data = [
+            {
+                "id_payment": p.id_payment,
+                "amount": float(p.amount),
+                "payment_date": p.payment_date.isoformat() if p.payment_date else None,
+                "company_name": p.subscription.company.business_name if p.subscription and p.subscription.company else "N/A",
+                "plan_name": p.subscription.plan.name if p.subscription and p.subscription.plan else "N/A",
+                "status": p.status,
+            }
+            for p in recent_payments
+        ]
+
         return {
             "total_companies": total_companies,
             "active_companies": active_companies,
             "suspended_companies": suspended_companies,
+            "total_users": total_users,
             "active_trials": active_trials,
             "active_paid_subscriptions": active_paid_count,
             "past_due_subscriptions": past_due_subs,
@@ -209,6 +243,7 @@ class SaaSAdminSelector:
             "mrr": float(mrr_rounded),
             "current_month_revenue": float(current_month_revenue),
             "total_historical_revenue": float(total_historical_revenue),
+            "recent_payments": recent_payments_data,
         }
 
 

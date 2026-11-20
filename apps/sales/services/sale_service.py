@@ -321,6 +321,19 @@ class SaleService(BaseService[Sale]):
             company_id=getattr(sale, "company_id", None)
         )
 
+        try:
+            from apps.notifications.services import NotificationService
+
+            NotificationService().notify_sale_completed(
+                sale_number=str(getattr(sale, "sale_number", sale.pk)),
+                total_amount=float(getattr(sale, "total_amount", 0.0)),
+                company_id=getattr(sale, "company_id", None),
+                origin_id=str(sale.pk),
+                exclude_user_id=getattr(user, "pk", None),
+            )
+        except Exception:
+            pass
+
         return sale
 
     @staticmethod
@@ -409,6 +422,19 @@ class SaleService(BaseService[Sale]):
         DashboardMetricsService.invalidate_sales_cache(
             company_id=getattr(sale, "company_id", None)
         )
+
+        try:
+            from apps.notifications.services import NotificationService
+
+            NotificationService().notify_sale_completed(
+                sale_number=str(getattr(sale, "sale_number", sale.pk)),
+                total_amount=float(getattr(sale, "total_amount", 0.0)),
+                company_id=getattr(sale, "company_id", None),
+                origin_id=str(sale.pk),
+                exclude_user_id=getattr(user, "pk", None),
+            )
+        except Exception:
+            pass
 
         return sale
 
@@ -603,6 +629,19 @@ class SaleService(BaseService[Sale]):
         DashboardMetricsService.invalidate_sales_cache(
             company_id=getattr(sale, "company_id", None)
         )
+
+        try:
+            from apps.notifications.services import NotificationService
+
+            NotificationService().notify_sale_cancelled(
+                sale_number=str(getattr(sale, "sale_number", sale.pk)),
+                reason=reason,
+                company_id=getattr(sale, "company_id", None),
+                origin_id=str(sale.pk),
+                exclude_user_id=getattr(user, "pk", None),
+            )
+        except Exception:
+            pass
 
         return sale
 

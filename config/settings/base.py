@@ -62,6 +62,7 @@ LOCAL_APPS = [
     "apps.finance.apps.FinanceConfig",
     "apps.subscriptions.apps.SubscriptionsConfig",
     "apps.saas_admin.apps.SaasAdminConfig",
+    "apps.notifications.apps.NotificationsConfig",
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS

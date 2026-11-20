@@ -157,6 +157,8 @@ class InventoryService(BaseService[Inventory]):
             )
         )
 
+        InventoryService._check_and_notify_stock(inventory_locked)
+
         return movement
 
     @staticmethod
@@ -218,6 +220,8 @@ class InventoryService(BaseService[Inventory]):
                 getattr(inventory_locked, "product", None), "company_id", None
             )
         )
+
+        InventoryService._check_and_notify_stock(inventory_locked)
 
         return movement
 
@@ -281,6 +285,8 @@ class InventoryService(BaseService[Inventory]):
             )
         )
 
+        InventoryService._check_and_notify_stock(inventory_locked)
+
         return movement
 
     @staticmethod
@@ -315,3 +321,39 @@ class InventoryService(BaseService[Inventory]):
             company_id=getattr(getattr(inventory, "product", None), "company_id", None)
         )
         return instance
+
+    @staticmethod
+    def _check_and_notify_stock(inventory_locked: Inventory) -> None:
+        """
+        Evalúa umbrales de stock mínimo y emite alertas al módulo de notificaciones.
+        Ejecución segura desacoplada.
+        """
+        try:
+            from apps.notifications.services import NotificationService
+
+            prod = getattr(inventory_locked, "product", None)
+            comp_id = getattr(prod, "company_id", None)
+            if not comp_id:
+                return
+
+            prod_name = getattr(prod, "product_name", f"Producto #{inventory_locked.pk}")
+            min_stock = getattr(inventory_locked, "min_stock", Decimal("0.00")) or Decimal("0.00")
+            current = inventory_locked.current_stock
+
+            if current <= Decimal("0.00"):
+                NotificationService().notify_inventory_stock_exhausted(
+                    product_name=prod_name,
+                    company_id=comp_id,
+                    origin_id=str(inventory_locked.pk),
+                )
+            elif current <= min_stock:
+                NotificationService().notify_inventory_stock_low(
+                    product_name=prod_name,
+                    current_stock=float(current),
+                    min_stock=float(min_stock),
+                    company_id=comp_id,
+                    origin_id=str(inventory_locked.pk),
+                )
+        except Exception:
+            pass
+

@@ -89,21 +89,18 @@ class PlanLimitValidatorService:
         if not company:
             return
 
-        sub = SubscriptionSelector.get_current_subscription(company)
-        if not sub or not sub.plan:
-            return
+        from apps.subscriptions.services.company_entitlement_service import (
+            CompanyEntitlementService,
+        )
 
-        enabled_modules = sub.plan.enabled_modules or []
-        # Si la lista de módulos está vacía, se considera acceso completo por defecto (retrocompatibilidad)
-        if not enabled_modules:
-            return
-
-        if module_code.lower() not in [m.lower() for m in enabled_modules]:
+        if not CompanyEntitlementService.is_module_enabled(company, module_code):
+            sub = SubscriptionSelector.get_current_subscription(company)
+            plan_name = sub.plan.name if sub and sub.plan else "Sin Plan"
             raise PermissionDenied(
                 detail={
                     "error": "MODULE_NOT_IN_PLAN",
-                    "message": f"El módulo '{module_code}' no está incluido en su plan ({sub.plan.name}). Actualice su suscripción.",
+                    "message": f"El módulo '{module_code}' no está incluido en su plan ({plan_name}). Actualice su suscripción.",
                     "module": module_code,
-                    "plan": sub.plan.name,
+                    "plan": plan_name,
                 }
             )

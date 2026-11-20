@@ -18,3 +18,4 @@ class SecurityContextResult:
     dashboard: dict = field(default_factory=dict)
     companies: list[dict] = field(default_factory=list)
     active_company: dict | None = None
+    contracted_modules: list[str] = field(default_factory=list)

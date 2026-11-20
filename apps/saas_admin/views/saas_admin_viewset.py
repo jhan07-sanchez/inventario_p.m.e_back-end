@@ -176,3 +176,26 @@ class SaaSAdminViewSet(BaseGenericViewSet):
             code="SAAS_IMPERSONATION_STARTED",
             message="Sesión de soporte iniciada correctamente.",
         )
+
+    @action(detail=False, methods=["post"], url_path="impersonate/end")
+    def end_impersonate(self, request):
+        """
+        Finaliza una sesión de soporte técnico por impersonación y registra la traza de salida.
+        """
+        auth_payload = {}
+        if hasattr(request, "auth") and request.auth and hasattr(request.auth, "get"):
+            auth_payload = {
+                "impersonator_id": request.auth.get("impersonator_id"),
+                "impersonated_company": request.auth.get("impersonated_company"),
+            }
+
+        result = ImpersonationService.end_impersonation(
+            actor_user=request.user,
+            auth_payload=auth_payload,
+        )
+
+        return self.success_response(
+            data=result,
+            code="SAAS_IMPERSONATION_ENDED",
+            message="Sesión de soporte finalizada.",
+        )

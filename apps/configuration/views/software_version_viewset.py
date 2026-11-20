@@ -105,9 +105,28 @@ class SoftwareVersionViewSet(BaseViewSet):
 
     def get_queryset(self):
         qs = SoftwareVersionSelector().get_queryset()
+        user = getattr(self.request, "user", None)
+        company_id = getattr(self.request, "company_id", None)
+
+        from apps.core.security.services.permission_service import PermissionService
+
+        is_release_manager = bool(
+            user
+            and (
+                user.is_superuser
+                or PermissionService.user_has_permission(
+                    user, "system.manage_releases", company_id=company_id
+                )
+            )
+        )
+
         status_param = self.request.query_params.get("status")
-        if status_param and status_param in SoftwareVersion.Status.values:
+        if not is_release_manager:
+            # Los clientes del ERP únicamente pueden ver versiones publicadas (Fase 2)
+            qs = qs.filter(status=SoftwareVersion.Status.PUBLISHED)
+        elif status_param and status_param in SoftwareVersion.Status.values:
             qs = qs.filter(status=status_param)
+
         return qs
 
     def get_serializer_class(self):

@@ -263,6 +263,18 @@ class SoftwareVersionService(BaseService[SoftwareVersion]):
         )
 
         cls.invalidate_cache()
+
+        try:
+            from apps.notifications.services import NotificationService
+
+            NotificationService().notify_version_published(
+                version_name=version.name,
+                version_number=version.version,
+                is_critical=version.is_critical,
+            )
+        except Exception:
+            pass
+
         return version
 
     @classmethod

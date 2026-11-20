@@ -124,6 +124,17 @@ class PermissionService:
 
         if user.is_superuser:
             val = {code: True for code in SecurityRegistry.get_all_security_codes()}
+            if company_id is not None:
+                from apps.company_info.models import CompanyInfo
+                from apps.subscriptions.services.company_entitlement_service import (
+                    CompanyEntitlementService,
+                )
+
+                company = CompanyInfo.objects.filter(pk=company_id).first()
+                if company:
+                    val = CompanyEntitlementService.filter_effective_permissions(
+                        company, val
+                    )
             cache.set(cache_key, val, timeout=timeout)
             return val
 
@@ -136,6 +147,19 @@ class PermissionService:
             for code in all_codes:
                 if PermissionService.role_grants_permission(role, code):
                     effective[code] = True
+
+        # Filtrar por módulos contratados por la empresa (Entitlements)
+        if company_id is not None:
+            from apps.company_info.models import CompanyInfo
+            from apps.subscriptions.services.company_entitlement_service import (
+                CompanyEntitlementService,
+            )
+
+            company = CompanyInfo.objects.filter(pk=company_id).first()
+            if company:
+                effective = CompanyEntitlementService.filter_effective_permissions(
+                    company, effective
+                )
 
         cache.set(cache_key, effective, timeout=timeout)
         return effective

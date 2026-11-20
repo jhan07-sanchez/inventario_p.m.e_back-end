@@ -121,6 +121,20 @@ class SecurityService:
             user, company_id=company_id
         )
 
+        contracted_modules: list[str] = []
+        target_cid = company_id or (active_company.get("id_company") if active_company else None)
+        if target_cid:
+            from apps.company_info.models import CompanyInfo
+            from apps.subscriptions.services.company_entitlement_service import (
+                CompanyEntitlementService,
+            )
+
+            c_obj = CompanyInfo.objects.filter(pk=target_cid).first()
+            if c_obj:
+                contracted_modules = sorted(
+                    list(CompanyEntitlementService.get_company_enabled_modules(c_obj))
+                )
+
         return SecurityContextResult(
             roles=role_names,
             permissions=PermissionBuilder.build(effective_permissions),
@@ -131,6 +145,7 @@ class SecurityService:
             ),
             companies=companies,
             active_company=active_company,
+            contracted_modules=contracted_modules,
         )
 
     @staticmethod
@@ -149,12 +164,27 @@ class SecurityService:
             user, company_id=company_id
         )
 
+        contracted_modules: list[str] = []
+        target_cid = company_id or (active_company.get("id_company") if active_company else None)
+        if target_cid:
+            from apps.company_info.models import CompanyInfo
+            from apps.subscriptions.services.company_entitlement_service import (
+                CompanyEntitlementService,
+            )
+
+            c_obj = CompanyInfo.objects.filter(pk=target_cid).first()
+            if c_obj:
+                contracted_modules = sorted(
+                    list(CompanyEntitlementService.get_company_enabled_modules(c_obj))
+                )
+
         return SecurityContextResult(
             roles=role_names,
             permissions=PermissionBuilder.build(effective_permissions),
             actions=ActionBuilder.build(effective_permissions),
             companies=companies,
             active_company=active_company,
+            contracted_modules=contracted_modules,
         )
 
     @staticmethod

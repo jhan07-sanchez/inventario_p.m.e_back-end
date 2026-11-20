@@ -67,6 +67,20 @@ class CashSessionService(BaseService[CashSession]):
             notes=dto.notes,
         )
 
+        try:
+            from apps.notifications.services import NotificationService
+
+            reg_name = getattr(register, "name", "Caja")
+            user_name = getattr(user, "username", "Usuario")
+            NotificationService().notify_cash_session_opened(
+                register_name=reg_name,
+                user_name=user_name,
+                company_id=company_id,
+                origin_id=str(session.pk),
+            )
+        except Exception:
+            pass
+
         return session
 
     @staticmethod
@@ -125,4 +139,19 @@ class CashSessionService(BaseService[CashSession]):
                 "updated_at",
             ]
         )
+
+        if session.difference != Decimal("0.00"):
+            try:
+                from apps.notifications.services import NotificationService
+
+                reg_name = getattr(session.cash_register, "name", "Caja")
+                NotificationService().notify_cash_session_closed_difference(
+                    register_name=reg_name,
+                    difference=float(session.difference),
+                    company_id=session.company_id,
+                    origin_id=str(session.pk),
+                )
+            except Exception:
+                pass
+
         return session

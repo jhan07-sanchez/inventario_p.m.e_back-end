@@ -52,7 +52,7 @@ class SystemInfoView(viewsets.ViewSet):
         return Response(
             {
                 "app_name": "Inventario P.M.E",
-                "version": installed_version,
+                "version": update_info.get("latest_version", installed_version),
                 "installed_version": installed_version,
                 "installed_version_published_at": update_info.get(
                     "installed_version_published_at"
