@@ -38,6 +38,12 @@ class PurchaseService(BaseService[Purchase]):
         Crea una nueva compra y sus detalles a partir del DTO.
         """
 
+        company_id = getattr(dto, "company_id", None)
+        if not company_id:
+            from apps.core.context import get_current_company_id
+
+            company_id = get_current_company_id()
+
         try:
             supplier = Supplier.objects.get(pk=dto.supplier_id)
         except Supplier.DoesNotExist:
@@ -46,9 +52,14 @@ class PurchaseService(BaseService[Purchase]):
         if not supplier.is_active:
             raise SupplierInactiveException()
 
-        company_id = getattr(dto, "company_id", None) or getattr(
-            supplier, "company_id", None
-        )
+        # Validar aislamiento multi-tenant del proveedor
+        if company_id is not None and getattr(supplier, "company_id", None) is not None:
+            if supplier.company_id != company_id:
+                raise ValidationError(
+                    "El proveedor seleccionado pertenece a otra empresa."
+                )
+        elif not company_id and getattr(supplier, "company_id", None):
+            company_id = supplier.company_id
 
         # Crear la cabecera
         purchase = Purchase.objects.create(
@@ -115,7 +126,9 @@ class PurchaseService(BaseService[Purchase]):
         try:
             from apps.notifications.services import NotificationService
 
-            supp_name = getattr(getattr(purchase, "supplier", None), "name", "Proveedor")
+            supp_name = getattr(
+                getattr(purchase, "supplier", None), "name", "Proveedor"
+            )
             NotificationService().notify_purchase_registered(
                 purchase_number=str(getattr(purchase, "purchase_number", purchase.pk)),
                 total_amount=float(purchase.total),
@@ -173,7 +186,9 @@ class PurchaseService(BaseService[Purchase]):
         try:
             from apps.notifications.services import NotificationService
 
-            supp_name = getattr(getattr(purchase, "supplier", None), "name", "Proveedor")
+            supp_name = getattr(
+                getattr(purchase, "supplier", None), "name", "Proveedor"
+            )
             NotificationService().notify_purchase_registered(
                 purchase_number=str(getattr(purchase, "purchase_number", purchase.pk)),
                 total_amount=float(purchase.total),
@@ -321,7 +336,9 @@ class PurchaseService(BaseService[Purchase]):
         try:
             from apps.notifications.services import NotificationService
 
-            supp_name = getattr(getattr(purchase, "supplier", None), "name", "Proveedor")
+            supp_name = getattr(
+                getattr(purchase, "supplier", None), "name", "Proveedor"
+            )
             NotificationService().notify_purchase_registered(
                 purchase_number=str(getattr(purchase, "purchase_number", purchase.pk)),
                 total_amount=float(purchase.total),
@@ -344,6 +361,19 @@ class PurchaseService(BaseService[Purchase]):
         if purchase.status not in [Purchase.Status.DRAFT, Purchase.Status.PENDING]:
             raise InvalidPurchaseTransitionException(
                 "No se puede cancelar una compra que ya ha sido recibida o completada."
+            )
+
+        from apps.cash.models.payment import Payment
+        from apps.purchases.selectors.purchase_selector import PurchaseSelector
+
+        existing_payments = Payment.objects.filter(
+            PurchaseSelector.get_purchase_payment_filter(purchase.id_purchase),
+            status=Payment.PaymentStatus.COMPLETED,
+            is_active=True,
+        )
+        if existing_payments.exists():
+            raise ValidationError(
+                "No se puede cancelar una compra que tiene pagos registrados. Debe anular o revertir los pagos primero."
             )
 
         purchase.status = Purchase.Status.CANCELLED

@@ -1,4 +1,3 @@
-from decimal import Decimal
 from django.contrib.auth import get_user_model
 from django.core.cache import cache
 from django.test import TestCase
@@ -6,7 +5,6 @@ from rest_framework import status
 from rest_framework.test import APIClient
 
 from apps.core.models.audit_log import AuditLog
-from apps.saas_admin.services.team_service import SaaSTeamService
 
 User = get_user_model()
 
@@ -93,7 +91,9 @@ class SaaSTeamAndAuditAPITestCase(TestCase):
 
         # Verificar auditoría generada
         self.assertTrue(
-            AuditLog.objects.filter(payload__security_event="SAAS_TEAM_MEMBER_CREATED").exists()
+            AuditLog.objects.filter(
+                payload__security_event="SAAS_TEAM_MEMBER_CREATED"
+            ).exists()
         )
 
     def test_toggle_team_member_status(self):
@@ -151,9 +151,13 @@ class SaaSTeamAndAuditAPITestCase(TestCase):
     def test_end_impersonate_action(self):
         """Finalizar sesión de impersonación."""
         self.client.force_authenticate(user=self.superadmin)
-        response = self.client.post("/api/v1/saas-admin/tenants/impersonate/end/", format="json")
+        response = self.client.post(
+            "/api/v1/saas-admin/tenants/impersonate/end/", format="json"
+        )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertTrue(response.json()["success"])
         self.assertTrue(
-            AuditLog.objects.filter(payload__security_event="SUPPORT_IMPERSONATION_ENDED").exists()
+            AuditLog.objects.filter(
+                payload__security_event="SUPPORT_IMPERSONATION_ENDED"
+            ).exists()
         )

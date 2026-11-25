@@ -122,8 +122,18 @@ class SecurityService:
         )
 
         contracted_modules: list[str] = []
-        target_cid = company_id or (active_company.get("id_company") if active_company else None)
-        if target_cid:
+        target_cid = company_id or (
+            active_company.get("id_company") if active_company else None
+        )
+        if getattr(user, "is_superuser", False):
+            from apps.subscriptions.services.company_entitlement_service import (
+                CompanyEntitlementService,
+            )
+
+            contracted_modules = sorted(
+                list(CompanyEntitlementService.get_all_valid_module_codes())
+            )
+        elif target_cid:
             from apps.company_info.models import CompanyInfo
             from apps.subscriptions.services.company_entitlement_service import (
                 CompanyEntitlementService,
@@ -165,8 +175,18 @@ class SecurityService:
         )
 
         contracted_modules: list[str] = []
-        target_cid = company_id or (active_company.get("id_company") if active_company else None)
-        if target_cid:
+        target_cid = company_id or (
+            active_company.get("id_company") if active_company else None
+        )
+        if getattr(user, "is_superuser", False):
+            from apps.subscriptions.services.company_entitlement_service import (
+                CompanyEntitlementService,
+            )
+
+            contracted_modules = sorted(
+                list(CompanyEntitlementService.get_all_valid_module_codes())
+            )
+        elif target_cid:
             from apps.company_info.models import CompanyInfo
             from apps.subscriptions.services.company_entitlement_service import (
                 CompanyEntitlementService,

@@ -336,8 +336,12 @@ class InventoryService(BaseService[Inventory]):
             if not comp_id:
                 return
 
-            prod_name = getattr(prod, "product_name", f"Producto #{inventory_locked.pk}")
-            min_stock = getattr(inventory_locked, "min_stock", Decimal("0.00")) or Decimal("0.00")
+            prod_name = getattr(
+                prod, "product_name", f"Producto #{inventory_locked.pk}"
+            )
+            min_stock = getattr(
+                inventory_locked, "min_stock", Decimal("0.00")
+            ) or Decimal("0.00")
             current = inventory_locked.current_stock
 
             if current <= Decimal("0.00"):
@@ -356,4 +360,3 @@ class InventoryService(BaseService[Inventory]):
                 )
         except Exception:
             pass
-

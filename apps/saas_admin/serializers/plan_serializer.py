@@ -1,4 +1,5 @@
 from decimal import Decimal
+
 from rest_framework import serializers
 
 from apps.subscriptions.models import Plan
@@ -89,7 +90,9 @@ class SaaSPlanCreateSerializer(serializers.ModelSerializer):
     def validate_code(self, value: str) -> str:
         code_clean = value.strip().upper()
         if not code_clean:
-            raise serializers.ValidationError("El código del plan no puede estar vacío.")
+            raise serializers.ValidationError(
+                "El código del plan no puede estar vacío."
+            )
         if Plan.objects.filter(code=code_clean).exists():
             raise serializers.ValidationError(
                 f"Ya existe un plan registrado con el código '{code_clean}'."
@@ -98,7 +101,9 @@ class SaaSPlanCreateSerializer(serializers.ModelSerializer):
 
     def validate_enabled_modules(self, value):
         if not isinstance(value, list):
-            raise serializers.ValidationError("enabled_modules debe ser una lista de identificadores.")
+            raise serializers.ValidationError(
+                "enabled_modules debe ser una lista de identificadores."
+            )
 
         from apps.subscriptions.services.company_entitlement_service import (
             CompanyEntitlementService,
@@ -164,7 +169,9 @@ class SaaSPlanUpdateSerializer(serializers.ModelSerializer):
 
     def validate_enabled_modules(self, value):
         if not isinstance(value, list):
-            raise serializers.ValidationError("enabled_modules debe ser una lista de identificadores.")
+            raise serializers.ValidationError(
+                "enabled_modules debe ser una lista de identificadores."
+            )
 
         from apps.subscriptions.services.company_entitlement_service import (
             CompanyEntitlementService,

@@ -32,6 +32,16 @@ class Payment(ActiveModel):
         verbose_name="Venta Asociada",
     )
 
+    purchase = models.ForeignKey(
+        "purchases.Purchase",
+        on_delete=models.PROTECT,
+        related_name="payments",
+        null=True,
+        blank=True,
+        verbose_name="Compra Asociada",
+        help_text="Orden de compra a la que se aplica este pago o egreso.",
+    )
+
     amount = models.DecimalField(
         max_digits=12,
         decimal_places=2,
@@ -75,6 +85,8 @@ class Payment(ActiveModel):
         ordering = ["-created_at"]
         indexes = [
             models.Index(fields=["sale"]),
+            models.Index(fields=["purchase"]),
+            models.Index(fields=["purchase", "status"], name="idx_pay_purch_status"),
             models.Index(fields=["payment_method"]),
             models.Index(fields=["status"]),
         ]

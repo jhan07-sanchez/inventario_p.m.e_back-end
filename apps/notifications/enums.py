@@ -5,6 +5,7 @@ class NotificationCategory(models.TextChoices):
     """
     Categorías funcionales de notificaciones en el sistema P.M.E.
     """
+
     INVENTORY = "INVENTORY", "Inventario"
     SALES = "SALES", "Ventas"
     PURCHASES = "PURCHASES", "Compras"
@@ -21,6 +22,7 @@ class NotificationPriority(models.TextChoices):
     """
     Niveles de severidad y prioridad para clasificación visual y alertas.
     """
+
     INFO = "INFO", "Informativa"
     SUCCESS = "SUCCESS", "Éxito"
     WARNING = "WARNING", "Advertencia"
@@ -31,6 +33,7 @@ class NotificationEventType:
     """
     Catálogo de códigos de eventos de negocio emitidos por el ERP.
     """
+
     # Inventario
     INVENTORY_STOCK_LOW = "INVENTORY.STOCK_LOW"
     INVENTORY_STOCK_EXHAUSTED = "INVENTORY.STOCK_EXHAUSTED"

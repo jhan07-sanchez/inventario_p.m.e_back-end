@@ -20,6 +20,7 @@ class TenantContextMiddleware(MiddlewareMixin):
         re.compile(r"^/api/v1/auth/"),
         re.compile(r"^/api/v1/system/"),
         re.compile(r"^/api/v1/saas-admin/"),
+        re.compile(r"^/api/v1/versions/"),
         re.compile(r"^/api/v1/companies/my-companies/"),
         re.compile(r"^/api/docs/"),
         re.compile(r"^/api/schema/"),

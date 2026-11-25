@@ -1,3 +1,4 @@
+import atexit
 import json
 import logging
 import sys
@@ -11,6 +12,7 @@ from apps.core.models.audit_log import AuditLog
 
 # Executor global para evitar thread exhaustion en producción/desarrollo
 audit_executor = ThreadPoolExecutor(max_workers=5)
+atexit.register(audit_executor.shutdown, wait=True)
 
 logger = logging.getLogger(__name__)
 

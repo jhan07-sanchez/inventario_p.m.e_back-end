@@ -32,12 +32,7 @@ class FinancialAccountSelector(BaseSelector[FinancialAccount]):
             qs = qs.filter(is_active=True)
 
         if company_id:
-            if company_id == 1:
-                from django.db.models import Q
-
-                qs = qs.filter(Q(company_id=1) | Q(company__isnull=True))
-            else:
-                qs = qs.filter(company_id=company_id)
+            qs = qs.filter(company_id=company_id)
         if account_type:
             qs = qs.filter(account_type=account_type)
         return qs
@@ -56,12 +51,7 @@ class FinancialAccountSelector(BaseSelector[FinancialAccount]):
             .filter(pk=account_id)
         )
         if company_id:
-            if company_id == 1:
-                from django.db.models import Q
-
-                qs = qs.filter(Q(company_id=1) | Q(company__isnull=True))
-            else:
-                qs = qs.filter(company_id=company_id)
+            qs = qs.filter(company_id=company_id)
         return qs.first()
 
     @classmethod

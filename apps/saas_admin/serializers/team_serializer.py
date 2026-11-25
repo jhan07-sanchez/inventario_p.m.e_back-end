@@ -1,9 +1,8 @@
-from typing import Any, Optional
-from rest_framework import serializers
 from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
+from rest_framework import serializers
 
-from apps.users.models import Role, UserRole
+from apps.users.models import Role
 
 User = get_user_model()
 
@@ -129,6 +128,7 @@ class SaaSTeamDetailSerializer(serializers.ModelSerializer):
 
     def get_recent_activity(self, obj: User) -> list[dict]:
         from apps.core.models.audit_log import AuditLog
+
         logs = AuditLog.objects.filter(user=obj).order_by("-created_at")[:10]
         return [
             {
@@ -157,7 +157,9 @@ class SaaSTeamCreateSerializer(serializers.Serializer):
     first_name = serializers.CharField(max_length=150, required=True)
     last_name = serializers.CharField(max_length=150, required=True)
     document_number = serializers.CharField(max_length=50, required=True)
-    phone_number = serializers.CharField(max_length=20, required=False, allow_blank=True, default="")
+    phone_number = serializers.CharField(
+        max_length=20, required=False, allow_blank=True, default=""
+    )
     saas_profile = serializers.ChoiceField(
         choices=["SUPERADMIN", "SUPPORT", "SALES", "FINANCE"],
         required=True,
@@ -167,19 +169,25 @@ class SaaSTeamCreateSerializer(serializers.Serializer):
     def validate_username(self, value):
         val = value.strip()
         if User.objects.filter(username__iexact=val).exists():
-            raise serializers.ValidationError("El nombre de usuario ya se encuentra registrado.")
+            raise serializers.ValidationError(
+                "El nombre de usuario ya se encuentra registrado."
+            )
         return val
 
     def validate_email(self, value):
         val = value.strip().lower()
         if User.objects.filter(email__iexact=val).exists():
-            raise serializers.ValidationError("El correo electrónico ya se encuentra registrado.")
+            raise serializers.ValidationError(
+                "El correo electrónico ya se encuentra registrado."
+            )
         return val
 
     def validate_document_number(self, value):
         val = value.strip()
         if User.objects.filter(document_number=val).exists():
-            raise serializers.ValidationError("El número de documento ya se encuentra registrado.")
+            raise serializers.ValidationError(
+                "El número de documento ya se encuentra registrado."
+            )
         return val
 
 
@@ -188,7 +196,9 @@ class SaaSTeamUpdateSerializer(serializers.Serializer):
 
     first_name = serializers.CharField(max_length=150, required=False)
     last_name = serializers.CharField(max_length=150, required=False)
-    phone_number = serializers.CharField(max_length=20, required=False, allow_blank=True)
+    phone_number = serializers.CharField(
+        max_length=20, required=False, allow_blank=True
+    )
     saas_profile = serializers.ChoiceField(
         choices=["SUPERADMIN", "SUPPORT", "SALES", "FINANCE"],
         required=False,

@@ -78,12 +78,7 @@ class CashSessionSelector(BaseSelector[CashSession]):
             user=user, status=CashSession.SessionStatus.OPEN, is_active=True
         )
         if company_id is not None:
-            if company_id == 1:
-                from django.db.models import Q
-
-                qs = qs.filter(Q(company_id=1) | Q(company_id__isnull=True))
-            else:
-                qs = qs.filter(company_id=company_id)
+            qs = qs.filter(company_id=company_id)
         return qs.select_related("cash_register").first()
 
     @staticmethod

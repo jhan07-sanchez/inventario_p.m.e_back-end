@@ -1,8 +1,7 @@
 from typing import Optional
+
 from django.contrib.auth import get_user_model
 from django.db.models import Q, QuerySet
-
-from apps.users.models import Role, UserRole
 
 User = get_user_model()
 

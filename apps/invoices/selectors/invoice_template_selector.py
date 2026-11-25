@@ -61,7 +61,7 @@ class InvoiceTemplateSelector(BaseSelector[InvoiceTemplate]):
         )
         if company_id:
             val = qs.filter(company_id=company_id).first()
-            if not val and company_id == 1:
+            if not val:
                 val = qs.filter(company__isnull=True).first()
         else:
             val = qs.first()

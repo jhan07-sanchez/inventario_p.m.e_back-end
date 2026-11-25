@@ -1,7 +1,7 @@
 from django.core.exceptions import ValidationError
 from rest_framework import status
 from rest_framework.exceptions import PermissionDenied
-from rest_framework.viewsets import GenericViewSet, ModelViewSet
+from rest_framework.viewsets import GenericViewSet, ModelViewSet, ReadOnlyModelViewSet
 
 from apps.core.utils.api_response import ApiResponse
 
@@ -28,13 +28,16 @@ class BaseResponseMixin:
 
         # 1. Verificar headers HTTP (case-insensitive)
         headers = getattr(req, "headers", {})
+        query_company_id = (
+            req.query_params.get("company_id")
+            if hasattr(req, "query_params")
+            else (req.GET.get("company_id") if hasattr(req, "GET") else None)
+        )
         header_val = (
             headers.get("X-Company-ID")
             or headers.get("x-company-id")
             or req.META.get("HTTP_X_COMPANY_ID")
-            or req.query_params.get("company_id")
-            if hasattr(req, "query_params")
-            else None
+            or query_company_id
         )
         if header_val:
             try:
@@ -161,10 +164,6 @@ class TenantIsolationMixin:
 
         # 1. Modelos con relación directa 'company' o 'company_id' (TenantModel)
         if "company" in fields or "company_id" in fields or hasattr(model, "company"):
-            from django.db.models import Q
-
-            if company_id == 1 and not company_ids:
-                return qs.filter(Q(company_id=1) | Q(company_id__isnull=True))
             return qs.filter(**kw("company_id"))
 
         # 2. Modelo User (aislado por membresías activas de la empresa)
@@ -240,20 +239,9 @@ class TenantIsolationMixin:
 
         # 11. Modelos Financieros indirectos
         if model._meta.app_label == "finance":
-            from django.db.models import Q
-
             if model.__name__ in ("FinancialMovement", "FinancialReconciliation"):
-                if company_id == 1 and not company_ids:
-                    return qs.filter(
-                        Q(account__company_id=1) | Q(account__company__isnull=True)
-                    )
                 return qs.filter(**kw("account__company_id"))
             if model.__name__ == "FinancialTransfer":
-                if company_id == 1 and not company_ids:
-                    return qs.filter(
-                        Q(source_account__company_id=1)
-                        | Q(source_account__company__isnull=True)
-                    )
                 return qs.filter(**kw("source_account__company_id"))
 
         # 12. Subscriptions Payment
@@ -307,7 +295,15 @@ class TenantIsolationMixin:
                     "company_id", flat=True
                 )
             )
-            if user_company_ids:
+            if len(user_company_ids) == 1:
+                return self._apply_tenant_filter(qs, company_id=user_company_ids[0])
+            elif len(user_company_ids) > 1 and self._is_tenant_model(
+                getattr(qs, "model", None)
+            ):
+                raise PermissionDenied(
+                    "Se requiere especificar la empresa activa mediante el encabezado X-Company-ID al pertenecer a múltiples organizaciones."
+                )
+            elif user_company_ids:
                 return self._apply_tenant_filter(qs, company_ids=user_company_ids)
 
         # Sin contexto de empresa (ej. pruebas sin multi-tenant, o modelos globales)
@@ -429,6 +425,9 @@ class BaseViewSet(TenantIsolationMixin, BaseResponseMixin, ModelViewSet):
 
         if self._is_tenant_model(model):
             company_id = getattr(self.request, "company_id", None)
+            if not company_id and hasattr(self, "get_company_id"):
+                company_id = self.get_company_id(self.request)
+
             if (
                 not company_id
                 and hasattr(self.request, "company")
@@ -477,6 +476,8 @@ class BaseViewSet(TenantIsolationMixin, BaseResponseMixin, ModelViewSet):
             instance = serializer.instance
             existing_company_id = getattr(instance, "company_id", None)
             request_company_id = getattr(self.request, "company_id", None)
+            if not request_company_id and hasattr(self, "get_company_id"):
+                request_company_id = self.get_company_id(self.request)
             company_id = existing_company_id or request_company_id
 
             user = getattr(self.request, "user", None)
@@ -524,3 +525,14 @@ class BaseGenericViewSet(TenantIsolationMixin, BaseResponseMixin, GenericViewSet
                     serializer.fields[fname].read_only = True
 
         return serializer
+
+
+class BaseReadOnlyViewSet(
+    TenantIsolationMixin, BaseResponseMixin, ReadOnlyModelViewSet
+):
+    """
+    ViewSet base para vistas de solo lectura (list y retrieve).
+    Incorpora aislamiento multi-tenant estricto y estandarización de respuestas ApiResponse.
+    """
+
+    pass

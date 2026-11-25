@@ -72,12 +72,7 @@ class FinanceDashboardSelector:
             is_active=True,
         )
         if company_id is not None:
-            if company_id == 1:
-                open_cash_sessions = open_cash_sessions.filter(
-                    Q(company_id=1) | Q(company_id__isnull=True)
-                )
-            else:
-                open_cash_sessions = open_cash_sessions.filter(company_id=company_id)
+            open_cash_sessions = open_cash_sessions.filter(company_id=company_id)
 
         total_open_drawers = open_cash_sessions.aggregate(
             total=Sum("expected_balance")
@@ -108,14 +103,7 @@ class FinanceDashboardSelector:
             is_active=True,
         )
         if company_id is not None:
-            if company_id == 1:
-                receivables_invoices = receivables_invoices.filter(
-                    Q(company_id=1) | Q(company_id__isnull=True)
-                )
-            else:
-                receivables_invoices = receivables_invoices.filter(
-                    company_id=company_id
-                )
+            receivables_invoices = receivables_invoices.filter(company_id=company_id)
 
         receivables_invoices = receivables_invoices.annotate(
             paid_amount=Coalesce(
@@ -145,18 +133,15 @@ class FinanceDashboardSelector:
             is_active=True,
         )
         if company_id is not None:
-            if company_id == 1:
-                pending_purchases = pending_purchases.filter(
-                    Q(company_id=1) | Q(company_id__isnull=True)
-                )
-            else:
-                pending_purchases = pending_purchases.filter(company_id=company_id)
+            pending_purchases = pending_purchases.filter(company_id=company_id)
 
         total_payables = Decimal("0.00")
         pur_list = list(pending_purchases)
         if pur_list:
+            import re
             from collections import defaultdict
 
+            purchase_ref_re = re.compile(r"^COMPRA #(\d+)(?:\D|$)")
             payments_by_pur = defaultdict(Decimal)
             pur_ids = {p.id_purchase for p in pur_list}
             relevant_payments = Payment.objects.filter(
@@ -165,11 +150,12 @@ class FinanceDashboardSelector:
                 is_active=True,
             ).values("reference", "amount")
             for p in relevant_payments:
-                ref = p["reference"]
-                for pid in pur_ids:
-                    if ref.startswith(f"COMPRA #{pid}"):
+                ref = p.get("reference") or ""
+                m = purchase_ref_re.match(ref)
+                if m:
+                    pid = int(m.group(1))
+                    if pid in pur_ids:
                         payments_by_pur[pid] += p["amount"]
-                        break
 
             for pur in pur_list:
                 paid = payments_by_pur.get(pur.id_purchase, Decimal("0.00"))
@@ -185,18 +171,10 @@ class FinanceDashboardSelector:
             is_active=True,
         )
         if company_id is not None:
-            if company_id == 1:
-                payments_in_period = payments_in_period.filter(
-                    Q(sale__company_id=1)
-                    | Q(sale__company__isnull=True)
-                    | Q(cash_movements__cash_session__company_id=1)
-                    | Q(cash_movements__cash_session__company__isnull=True)
-                ).distinct()
-            else:
-                payments_in_period = payments_in_period.filter(
-                    Q(sale__company_id=company_id)
-                    | Q(cash_movements__cash_session__company_id=company_id)
-                ).distinct()
+            payments_in_period = payments_in_period.filter(
+                Q(sale__company_id=company_id)
+                | Q(cash_movements__cash_session__company_id=company_id)
+            ).distinct()
 
         pm_aggregates = payments_in_period.values("payment_method").annotate(
             total=Sum("amount")
@@ -256,12 +234,7 @@ class FinanceDashboardSelector:
             is_active=True,
         )
         if company_id is not None:
-            if company_id == 1:
-                sales_in_period = sales_in_period.filter(
-                    Q(company_id=1) | Q(company_id__isnull=True)
-                )
-            else:
-                sales_in_period = sales_in_period.filter(company_id=company_id)
+            sales_in_period = sales_in_period.filter(company_id=company_id)
 
         total_sales_amount = sales_in_period.aggregate(total=Sum("total"))[
             "total"
@@ -275,12 +248,7 @@ class FinanceDashboardSelector:
             is_active=True,
         )
         if company_id is not None:
-            if company_id == 1:
-                purchases_in_period = purchases_in_period.filter(
-                    Q(company_id=1) | Q(company_id__isnull=True)
-                )
-            else:
-                purchases_in_period = purchases_in_period.filter(company_id=company_id)
+            purchases_in_period = purchases_in_period.filter(company_id=company_id)
 
         total_purchases_amount = purchases_in_period.aggregate(total=Sum("total"))[
             "total"

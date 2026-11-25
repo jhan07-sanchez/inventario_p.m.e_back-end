@@ -85,22 +85,86 @@ class CompanyEntitlementService:
     }
 
     SUBMODULE_METADATA: Dict[str, Dict[str, Any]] = {
-        "users": {"label": "Usuarios", "icon": "fas fa-users", "description": "Control de cuentas y acceso de miembros."},
-        "roles": {"label": "Roles y Permisos", "icon": "fas fa-user-shield", "description": "Matriz de privilegios y perfiles."},
-        "user_roles": {"label": "Asignación de Roles", "icon": "fas fa-user-tag", "description": "Asignación de roles por usuario."},
-        "customers": {"label": "Clientes", "icon": "fas fa-user-tie", "description": "Directorio y cartera de clientes."},
-        "suppliers": {"label": "Proveedores", "icon": "fas fa-truck", "description": "Directorio de proveedores comerciales."},
-        "categories": {"label": "Categorías y Marcas", "icon": "fas fa-tags", "description": "Organización del catálogo."},
-        "products": {"label": "Productos", "icon": "fas fa-box", "description": "Gestión de artículos y precios de venta."},
-        "inventory": {"label": "Inventario & Stock", "icon": "fas fa-warehouse", "description": "Control de existencias y movimientos de almacén."},
-        "purchases": {"label": "Compras", "icon": "fas fa-shopping-cart", "description": "Órdenes de compra y recepción de insumos."},
-        "sales": {"label": "Ventas & POS", "icon": "fas fa-cash-register", "description": "Punto de venta y gestión de cotizaciones y pedidos."},
-        "cash": {"label": "Caja Registradora", "icon": "fas fa-cash-register", "description": "Apertura, cierre y arqueo de turnos de caja."},
-        "invoices": {"label": "Facturación Electrónica", "icon": "fas fa-file-invoice-dollar", "description": "Emisión y anulación de comprobantes fiscales."},
-        "finance": {"label": "Finanzas y Tesorería", "icon": "fas fa-coins", "description": "Cuentas bancarias, conciliaciones y transferencias."},
-        "reports": {"label": "Reportes Avanzados", "icon": "fas fa-chart-bar", "description": "Estadísticas e indicadores analíticos del negocio."},
-        "settings": {"label": "Configuración del Sistema", "icon": "fas fa-cog", "description": "Ajustes de versiones y parámetros de operación."},
-        "dashboard": {"label": "Dashboard Principal", "icon": "fas fa-home", "description": "Panel de control principal y bienvenida personalizada."},
+        "users": {
+            "label": "Usuarios",
+            "icon": "fas fa-users",
+            "description": "Control de cuentas y acceso de miembros.",
+        },
+        "roles": {
+            "label": "Roles y Permisos",
+            "icon": "fas fa-user-shield",
+            "description": "Matriz de privilegios y perfiles.",
+        },
+        "user_roles": {
+            "label": "Asignación de Roles",
+            "icon": "fas fa-user-tag",
+            "description": "Asignación de roles por usuario.",
+        },
+        "customers": {
+            "label": "Clientes",
+            "icon": "fas fa-user-tie",
+            "description": "Directorio y cartera de clientes.",
+        },
+        "suppliers": {
+            "label": "Proveedores",
+            "icon": "fas fa-truck",
+            "description": "Directorio de proveedores comerciales.",
+        },
+        "categories": {
+            "label": "Categorías y Marcas",
+            "icon": "fas fa-tags",
+            "description": "Organización del catálogo.",
+        },
+        "products": {
+            "label": "Productos",
+            "icon": "fas fa-box",
+            "description": "Gestión de artículos y precios de venta.",
+        },
+        "inventory": {
+            "label": "Inventario & Stock",
+            "icon": "fas fa-warehouse",
+            "description": "Control de existencias y movimientos de almacén.",
+        },
+        "purchases": {
+            "label": "Compras",
+            "icon": "fas fa-shopping-cart",
+            "description": "Órdenes de compra y recepción de insumos.",
+        },
+        "sales": {
+            "label": "Ventas & POS",
+            "icon": "fas fa-cash-register",
+            "description": "Punto de venta y gestión de cotizaciones y pedidos.",
+        },
+        "cash": {
+            "label": "Caja Registradora",
+            "icon": "fas fa-cash-register",
+            "description": "Apertura, cierre y arqueo de turnos de caja.",
+        },
+        "invoices": {
+            "label": "Facturación Electrónica",
+            "icon": "fas fa-file-invoice-dollar",
+            "description": "Emisión y anulación de comprobantes fiscales.",
+        },
+        "finance": {
+            "label": "Finanzas y Tesorería",
+            "icon": "fas fa-coins",
+            "description": "Cuentas bancarias, conciliaciones y transferencias.",
+        },
+        "reports": {
+            "label": "Reportes Avanzados",
+            "icon": "fas fa-chart-bar",
+            "description": "Estadísticas e indicadores analíticos del negocio.",
+        },
+        "settings": {
+            "label": "Configuración del Sistema",
+            "icon": "fas fa-cog",
+            "description": "Ajustes de versiones y parámetros de operación.",
+        },
+        "dashboard": {
+            "label": "Dashboard Principal",
+            "icon": "fas fa-home",
+            "description": "Panel de control principal y bienvenida personalizada.",
+        },
     }
 
     # ──────────────────────────────────────────────────────────────────
@@ -124,7 +188,9 @@ class CompanyEntitlementService:
             g_meta = cls.GROUP_METADATA.get(group_id, {})
             group_label = g_meta.get("label", group.label)
             group_icon = g_meta.get("icon", group.icon or "fas fa-folder")
-            group_desc = g_meta.get("description", f"Módulos correspondientes a {group_label}.")
+            group_desc = g_meta.get(
+                "description", f"Módulos correspondientes a {group_label}."
+            )
             group_order = g_meta.get("order", group.order)
 
             # Obtener submódulos asignados a este grupo
@@ -133,59 +199,77 @@ class CompanyEntitlementService:
 
             for mod in group_modules:
                 s_meta = cls.SUBMODULE_METADATA.get(mod.module_id, {})
-                submodules_list.append({
-                    "id": mod.module_id,
-                    "code": mod.module_id,
-                    "label": s_meta.get("label", mod.label),
-                    "icon": s_meta.get("icon", mod.icon or "fas fa-cube"),
-                    "description": s_meta.get("description", f"Acceso al módulo {mod.label}."),
-                    "order": mod.order,
-                    "permissions_count": len(mod.permissions) + len(mod.actions),
-                    "is_available": True,
-                })
+                submodules_list.append(
+                    {
+                        "id": mod.module_id,
+                        "code": mod.module_id,
+                        "label": s_meta.get("label", mod.label),
+                        "icon": s_meta.get("icon", mod.icon or "fas fa-cube"),
+                        "description": s_meta.get(
+                            "description", f"Acceso al módulo {mod.label}."
+                        ),
+                        "order": mod.order,
+                        "permissions_count": len(mod.permissions) + len(mod.actions),
+                        "is_available": True,
+                    }
+                )
 
             submodules_list.sort(key=lambda s: s["order"])
 
-            catalog.append({
-                "id": group_id,
-                "code": group_id,
-                "label": group_label,
-                "icon": group_icon,
-                "description": group_desc,
-                "order": group_order,
-                "submodules": submodules_list,
-                "submodules_count": len(submodules_list),
-            })
+            catalog.append(
+                {
+                    "id": group_id,
+                    "code": group_id,
+                    "label": group_label,
+                    "icon": group_icon,
+                    "description": group_desc,
+                    "order": group_order,
+                    "submodules": submodules_list,
+                    "submodules_count": len(submodules_list),
+                }
+            )
 
         # 2. Procesar módulos raíz (sin parent) bajo un grupo 'general'
-        root_modules = [m for m in modules if m.parent is None and m.module_id not in cls.BASELINE_MODULES]
+        root_modules = [
+            m
+            for m in modules
+            if m.parent is None and m.module_id not in cls.BASELINE_MODULES
+        ]
         if root_modules:
             g_meta = cls.GROUP_METADATA.get("general", {})
             submodules_list = []
             for mod in root_modules:
                 s_meta = cls.SUBMODULE_METADATA.get(mod.module_id, {})
-                submodules_list.append({
-                    "id": mod.module_id,
-                    "code": mod.module_id,
-                    "label": s_meta.get("label", mod.label),
-                    "icon": s_meta.get("icon", mod.icon or "fas fa-cube"),
-                    "description": s_meta.get("description", f"Acceso al módulo {mod.label}."),
-                    "order": mod.order,
-                    "permissions_count": len(mod.permissions) + len(mod.actions),
-                    "is_available": True,
-                })
+                submodules_list.append(
+                    {
+                        "id": mod.module_id,
+                        "code": mod.module_id,
+                        "label": s_meta.get("label", mod.label),
+                        "icon": s_meta.get("icon", mod.icon or "fas fa-cube"),
+                        "description": s_meta.get(
+                            "description", f"Acceso al módulo {mod.label}."
+                        ),
+                        "order": mod.order,
+                        "permissions_count": len(mod.permissions) + len(mod.actions),
+                        "is_available": True,
+                    }
+                )
             submodules_list.sort(key=lambda s: s["order"])
 
-            catalog.append({
-                "id": "general",
-                "code": "general",
-                "label": g_meta.get("label", "Módulos Generales"),
-                "icon": g_meta.get("icon", "fas fa-cogs"),
-                "description": g_meta.get("description", "Módulos y herramientas generales del ERP."),
-                "order": g_meta.get("order", 50),
-                "submodules": submodules_list,
-                "submodules_count": len(submodules_list),
-            })
+            catalog.append(
+                {
+                    "id": "general",
+                    "code": "general",
+                    "label": g_meta.get("label", "Módulos Generales"),
+                    "icon": g_meta.get("icon", "fas fa-cogs"),
+                    "description": g_meta.get(
+                        "description", "Módulos y herramientas generales del ERP."
+                    ),
+                    "order": g_meta.get("order", 50),
+                    "submodules": submodules_list,
+                    "submodules_count": len(submodules_list),
+                }
+            )
 
         catalog.sort(key=lambda c: c["order"])
         return catalog
@@ -268,6 +352,7 @@ class CompanyEntitlementService:
         if isinstance(company, (int, str)):
             company_id = company
             from apps.company_info.models import CompanyInfo
+
             company = CompanyInfo.objects.filter(pk=company_id).first()
         else:
             company_id = getattr(company, "id_company", getattr(company, "pk", None))
@@ -280,7 +365,9 @@ class CompanyEntitlementService:
         if cached is not None and isinstance(cached, (set, list)):
             return set(cached)
 
-        from apps.subscriptions.selectors.subscription_selector import SubscriptionSelector
+        from apps.subscriptions.selectors.subscription_selector import (
+            SubscriptionSelector,
+        )
 
         sub = SubscriptionSelector.get_current_subscription(company)
 
@@ -288,8 +375,12 @@ class CompanyEntitlementService:
         if not sub or not sub.plan:
             if getattr(settings, "TESTING", False):
                 # En entorno de pruebas unitarias: permitir acceso total a tests legacy sin suscripción creada
-                all_module_ids = {m.module_id.lower() for m in SecurityRegistry.get_all_modules()}
-                all_group_ids = {g.group_id.lower() for g in SecurityRegistry.get_all_groups()}
+                all_module_ids = {
+                    m.module_id.lower() for m in SecurityRegistry.get_all_modules()
+                }
+                all_group_ids = {
+                    g.group_id.lower() for g in SecurityRegistry.get_all_groups()
+                }
                 enabled = all_module_ids | all_group_ids | cls.BASELINE_MODULES
             else:
                 # En producción: empresa sin suscripción o sin plan solo accede a módulos base (dashboard)
@@ -308,8 +399,12 @@ class CompanyEntitlementService:
         # Si un plan tiene enabled_modules vacío:
         if not plan_modules:
             if getattr(settings, "TESTING", False):
-                all_module_ids = {m.module_id.lower() for m in SecurityRegistry.get_all_modules()}
-                all_group_ids = {g.group_id.lower() for g in SecurityRegistry.get_all_groups()}
+                all_module_ids = {
+                    m.module_id.lower() for m in SecurityRegistry.get_all_modules()
+                }
+                all_group_ids = {
+                    g.group_id.lower() for g in SecurityRegistry.get_all_groups()
+                }
                 enabled = all_module_ids | all_group_ids | cls.BASELINE_MODULES
             else:
                 logger.warning(
@@ -324,7 +419,9 @@ class CompanyEntitlementService:
         return enabled
 
     @classmethod
-    def is_module_enabled(cls, company: Optional[CompanyInfo], module_code: str) -> bool:
+    def is_module_enabled(
+        cls, company: Optional[CompanyInfo], module_code: str
+    ) -> bool:
         """
         Valida si un módulo específico está contratado y vigente para la empresa indicada.
         """
@@ -378,7 +475,10 @@ class CompanyEntitlementService:
             target_module = cls.canonicalize_module_code(target_module)
 
             # Si el módulo está contratado o es baseline, conserva el permiso concedido
-            if target_module in enabled_modules or target_module in cls.BASELINE_MODULES:
+            if (
+                target_module in enabled_modules
+                or target_module in cls.BASELINE_MODULES
+            ):
                 filtered[code] = True
             else:
                 filtered[code] = False
@@ -414,4 +514,6 @@ class CompanyEntitlementService:
         )
         for c_id in company_ids:
             cls.invalidate_company(c_id)
-        logger.info(f"[Entitlements] Caché invalidada para {len(company_ids)} empresas del plan #{plan_id}")
+        logger.info(
+            f"[Entitlements] Caché invalidada para {len(company_ids)} empresas del plan #{plan_id}"
+        )

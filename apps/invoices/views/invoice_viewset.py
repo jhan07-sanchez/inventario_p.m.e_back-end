@@ -151,6 +151,7 @@ class InvoiceViewSet(BaseViewSet):
         )
 
         if page is not None:
+            InvoiceSelector.attach_payment_totals(page)
             serializer = self.get_serializer(
                 page,
                 many=True,
@@ -159,6 +160,7 @@ class InvoiceViewSet(BaseViewSet):
                 serializer.data,
             )
 
+        InvoiceSelector.attach_payment_totals(queryset)
         serializer = self.get_serializer(
             queryset,
             many=True,

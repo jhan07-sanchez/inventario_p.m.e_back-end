@@ -22,6 +22,13 @@ class CompanyInfoService(BaseService[CompanyInfo]):
     def __init__(self):
         super().__init__(CompanyInfo)
 
+    @classmethod
+    def _invalidate_cache(cls, company_id: int | None = None) -> None:
+        """Invalida las claves de caché tanto por ID de empresa como la clave fallback global."""
+        cache.delete("company_info_current")
+        if company_id:
+            cache.delete(f"company_info_{company_id}")
+
     @staticmethod
     @transaction.atomic
     def create_company_info(
@@ -72,7 +79,7 @@ class CompanyInfoService(BaseService[CompanyInfo]):
                     is_active=True,
                 )
 
-        cache.delete("company_info_current")
+        CompanyInfoService._invalidate_cache(company.id_company)
         return company
 
     @staticmethod
@@ -149,15 +156,14 @@ class CompanyInfoService(BaseService[CompanyInfo]):
 
         company.save(update_fields=update_fields)
 
-        cache.delete("company_info_current")
+        CompanyInfoService._invalidate_cache(company.id_company)
         return company
 
-    ALLOWED_LOGO_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".svg"}
+    ALLOWED_LOGO_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp"}
     ALLOWED_LOGO_CONTENT_TYPES = {
         "image/jpeg",
         "image/png",
         "image/webp",
-        "image/svg+xml",
         "image/pjpeg",
         "image/x-png",
     }
@@ -167,7 +173,8 @@ class CompanyInfoService(BaseService[CompanyInfo]):
     def validate_logo_file(cls, logo_file) -> None:
         """
         Valida que el archivo del logo cumpla con los requisitos de seguridad,
-        tamaño máximo y formato de imagen permitido.
+        tamaño máximo, extensión, MIME type e integridad binaria (Pillow verify).
+        Se excluye SVG para eliminar riesgos de Stored XSS y XXE.
         """
         import os
 
@@ -200,6 +207,26 @@ class CompanyInfoService(BaseService[CompanyInfo]):
                 f"Tipo MIME '{content_type}' no permitido para imágenes de logo."
             )
 
+        # Validar integridad binaria real del archivo mediante Pillow
+        try:
+            from PIL import Image, UnidentifiedImageError
+
+            img = Image.open(logo_file)
+            img.verify()
+            if img.format.lower() not in {"jpeg", "png", "webp"}:
+                raise ValidationError(
+                    f"El formato interno de la imagen '{img.format}' no está permitido."
+                )
+        except ValidationError:
+            raise
+        except (UnidentifiedImageError, Exception) as exc:
+            raise ValidationError(
+                f"El archivo cargado no es una imagen válida o está dañado: {exc}"
+            )
+        finally:
+            if hasattr(logo_file, "seek"):
+                logo_file.seek(0)
+
     @staticmethod
     @transaction.atomic
     def update_logo(
@@ -219,7 +246,7 @@ class CompanyInfoService(BaseService[CompanyInfo]):
         company.logo = logo_file
         company.save(update_fields=["logo", "updated_at"])
 
-        cache.delete("company_info_current")
+        CompanyInfoService._invalidate_cache(company.id_company)
         return company
 
     @staticmethod
@@ -236,7 +263,7 @@ class CompanyInfoService(BaseService[CompanyInfo]):
             company.logo = None
             company.save(update_fields=["logo", "updated_at"])
 
-        cache.delete("company_info_current")
+        CompanyInfoService._invalidate_cache(company.id_company)
         return company
 
     @staticmethod
@@ -254,7 +281,7 @@ class CompanyInfoService(BaseService[CompanyInfo]):
             )
 
         CompanyInfoService().delete(company)
-        cache.delete("company_info_current")
+        CompanyInfoService._invalidate_cache(company.id_company)
 
     @staticmethod
     @transaction.atomic
@@ -269,5 +296,5 @@ class CompanyInfoService(BaseService[CompanyInfo]):
             return company
 
         restored = CompanyInfoService().restore(company)
-        cache.delete("company_info_current")
+        CompanyInfoService._invalidate_cache(company.id_company)
         return restored

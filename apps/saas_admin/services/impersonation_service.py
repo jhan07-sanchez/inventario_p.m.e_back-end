@@ -246,7 +246,9 @@ class ImpersonationService:
         """
         impersonator_id = None
         impersonated_company_id = None
-        target_user_id = getattr(actor_user, "id_user", None) or getattr(actor_user, "pk", None)
+        target_user_id = getattr(actor_user, "id_user", None) or getattr(
+            actor_user, "pk", None
+        )
 
         if auth_payload and isinstance(auth_payload, dict):
             impersonator_id = auth_payload.get("impersonator_id")

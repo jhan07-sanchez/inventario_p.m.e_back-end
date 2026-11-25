@@ -1,4 +1,4 @@
-from django.db.models import Prefetch, QuerySet
+from django.db.models import Prefetch, Q, QuerySet
 from django.shortcuts import get_object_or_404
 
 from apps.core.selectors.base_selector import BaseSelector
@@ -55,6 +55,67 @@ class PurchaseSelector(BaseSelector[Purchase]):
             )
             .order_by("-id_purchase")
         )
+
+    @staticmethod
+    def get_purchase_payment_filter(purchase_id: int) -> Q:
+        """
+        Retorna la condición Q para identificar pagos asociados a una compra,
+        utilizando la ForeignKey relacional 'purchase_id' y manteniendo compatibilidad
+        con referencias de texto históricas.
+        """
+        base = f"COMPRA #{purchase_id}"
+        return (
+            Q(purchase_id=purchase_id)
+            | Q(reference=base)
+            | Q(reference__startswith=f"{base} -")
+            | Q(reference__startswith=f"{base} ")
+            | Q(reference__startswith=f"{base}:")
+        )
+
+    @staticmethod
+    def attach_payment_totals(purchases) -> None:
+        """
+        Pre-calcula y asocia los totales pagados a una lista de compras en una única consulta,
+        utilizando la relación directa purchase_id o la referencia histórica,
+        eliminando el problema de consultas N+1 en serializadores de compra.
+        """
+        import re
+        from collections import defaultdict
+        from decimal import Decimal
+
+        from apps.cash.models.payment import Payment
+
+        pur_list = list(purchases)
+        if not pur_list:
+            return
+
+        pur_ids = {p.id_purchase for p in pur_list if p and hasattr(p, "id_purchase")}
+        if not pur_ids:
+            return
+
+        payments_by_pur = defaultdict(Decimal)
+        purchase_ref_re = re.compile(r"^COMPRA #(\d+)(?:\D|$)")
+
+        payments = Payment.objects.filter(
+            Q(purchase_id__in=pur_ids) | Q(reference__startswith="COMPRA #"),
+            status=Payment.PaymentStatus.COMPLETED,
+            is_active=True,
+        ).values("purchase_id", "reference", "amount")
+
+        for p in payments:
+            pid = p.get("purchase_id")
+            if pid and pid in pur_ids:
+                payments_by_pur[pid] += p["amount"]
+            else:
+                ref = p.get("reference") or ""
+                m = purchase_ref_re.match(ref)
+                if m:
+                    legacy_pid = int(m.group(1))
+                    if legacy_pid in pur_ids:
+                        payments_by_pur[legacy_pid] += p["amount"]
+
+        for p in pur_list:
+            p._cached_paid = payments_by_pur.get(p.id_purchase, Decimal("0.00"))
 
     @staticmethod
     def get_purchases(company_id: int | None = None) -> QuerySet[Purchase]:

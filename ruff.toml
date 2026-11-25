@@ -3,6 +3,9 @@ select = ["E", "F", "W", "I"]
 ignore = ["E501"]
 exclude = ["**/migrations/**", "venv", ".venv", "__pycache__", "manage.py"]
 
+[lint.per-file-ignores]
+"scripts/*" = ["E402"]
+
 [format]
 quote-style = "double"
 indent-style = "space"

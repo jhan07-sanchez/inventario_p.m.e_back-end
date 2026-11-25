@@ -1,3 +1,4 @@
+import math
 from datetime import timedelta
 
 from django.db import models
@@ -116,8 +117,10 @@ class Subscription(ActiveModel):
 
     @property
     def days_remaining(self) -> int:
-        """Retorna los días restantes de servicio o 0 si ya venció."""
+        """Retorna los días restantes de servicio redondeando hacia arriba."""
         now = timezone.now()
         if self.end_date > now:
-            return (self.end_date - now).days
+            # Calculamos la diferencia exacta
+            diff = self.end_date - now
+            return math.ceil(diff.total_seconds() / (24 * 3600))
         return 0

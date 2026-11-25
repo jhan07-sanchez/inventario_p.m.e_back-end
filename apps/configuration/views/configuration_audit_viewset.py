@@ -1,5 +1,4 @@
 from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework import viewsets
 from rest_framework.filters import OrderingFilter, SearchFilter
 
 from apps.configuration.docs import (
@@ -9,10 +8,11 @@ from apps.configuration.docs import (
 from apps.configuration.selectors import ConfigurationAuditSelector
 from apps.configuration.serializers import ConfigurationAuditSerializer
 from apps.core.security import HasPermission
+from apps.core.views.base_viewset import BaseReadOnlyViewSet
 from apps.users.permissions import IsAuthenticatedAndActive
 
 
-class ConfigurationAuditViewSet(viewsets.ReadOnlyModelViewSet):
+class ConfigurationAuditViewSet(BaseReadOnlyViewSet):
     """
     ViewSet de solo lectura para consultar el historial de cambios.
     No permite crear, editar ni borrar registros manualmente.

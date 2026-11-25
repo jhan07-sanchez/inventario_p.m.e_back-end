@@ -1,14 +1,13 @@
 import logging
+
 from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
-from rest_framework.response import Response
 
 from apps.core.views.base_viewset import BaseViewSet
 from apps.notifications.selectors.notification_selector import NotificationSelector
 from apps.notifications.serializers.notification_serializer import (
     NotificationSerializer,
-    NotificationUnreadCountSerializer,
 )
 from apps.notifications.services.notification_service import NotificationService
 

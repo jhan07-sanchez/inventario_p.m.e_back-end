@@ -1,11 +1,9 @@
 import threading
-from datetime import timedelta
 from decimal import Decimal
 
 from django.contrib.auth import get_user_model
 from django.db import connection
 from django.test import TransactionTestCase
-from django.utils import timezone
 
 from apps.company_info.models import CompanyInfo
 from apps.saas_admin.services.saas_subscription_service import SaaSSubscriptionService
@@ -58,7 +56,9 @@ class SaaSSubscriptionConcurrencyTests(TransactionTestCase):
             status=CompanyInfo.CompanyStatus.ACTIVE,
         )
 
-    def test_simultaneous_assignments_preserve_single_active_subscription_invariant(self):
+    def test_simultaneous_assignments_preserve_single_active_subscription_invariant(
+        self,
+    ):
         """
         Escenario 1: Dos solicitudes de asignación simultáneas para la misma empresa.
         Verifica que al finalizar el proceso, la empresa NUNCA quede con múltiples suscripciones activas.

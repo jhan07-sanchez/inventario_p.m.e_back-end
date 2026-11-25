@@ -117,7 +117,10 @@ class RecipientResolver:
                         if m.role and isinstance(m.role.permissions, dict):
                             perms = m.role.permissions
                             # Verificamos permiso directo o comodín '*'
-                            if perms.get(permission_code) is True or perms.get("*") is True:
+                            if (
+                                perms.get(permission_code) is True
+                                or perms.get("*") is True
+                            ):
                                 recipients_map[u.pk] = u
                                 continue
                             # Verificamos permiso por módulo (ej. 'inventory.*' para 'inventory.view')
@@ -130,8 +133,14 @@ class RecipientResolver:
                         recipients_map[u.pk] = u
 
             except (ProgrammingError, OperationalError) as e:
-                logger.warning("Error resolviendo miembros de empresa %s: %s", company_id, e)
+                logger.warning(
+                    "Error resolviendo miembros de empresa %s: %s", company_id, e
+                )
             except Exception as e:
-                logger.error("Error inesperado en RecipientResolver para empresa %s: %s", company_id, e)
+                logger.error(
+                    "Error inesperado en RecipientResolver para empresa %s: %s",
+                    company_id,
+                    e,
+                )
 
         return list(recipients_map.values())

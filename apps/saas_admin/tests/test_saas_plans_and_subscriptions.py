@@ -1,5 +1,6 @@
 from datetime import timedelta
 from decimal import Decimal
+
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.utils import timezone
@@ -9,8 +10,6 @@ from rest_framework.test import APIClient
 from apps.company_info.models import CompanyInfo
 from apps.core.models.audit_log import AuditLog
 from apps.subscriptions.models import Plan, Subscription
-from apps.saas_admin.services.saas_plan_service import SaaSPlanService
-from apps.saas_admin.services.saas_subscription_service import SaaSSubscriptionService
 
 User = get_user_model()
 
@@ -115,7 +114,14 @@ class SaaSPlansAndSubscriptionsTests(TestCase):
             "max_users": 50,
             "max_products": 10000,
             "max_invoices_per_month": 5000,
-            "enabled_modules": ["inventory", "sales", "finance", "cash", "invoices", "reports"],
+            "enabled_modules": [
+                "inventory",
+                "sales",
+                "finance",
+                "cash",
+                "invoices",
+                "reports",
+            ],
             "is_active": True,
         }
         res = self.client.post("/api/v1/saas-admin/plans/", payload, format="json")
@@ -148,7 +154,9 @@ class SaaSPlansAndSubscriptionsTests(TestCase):
             "price": "59.99",
             "max_products": 100,
         }
-        res = self.client.patch(f"/api/v1/saas-admin/plans/{self.plan_basic.pk}/", payload, format="json")
+        res = self.client.patch(
+            f"/api/v1/saas-admin/plans/{self.plan_basic.pk}/", payload, format="json"
+        )
         self.assertEqual(res.status_code, status.HTTP_200_OK)
         self.plan_basic.refresh_from_db()
         self.assertEqual(self.plan_basic.name, "Plan Básico Mejorado")
@@ -161,13 +169,17 @@ class SaaSPlansAndSubscriptionsTests(TestCase):
         self.assertTrue(self.plan_basic.is_active)
 
         # Desactivar
-        res = self.client.patch(f"/api/v1/saas-admin/plans/{self.plan_basic.pk}/toggle-status/")
+        res = self.client.patch(
+            f"/api/v1/saas-admin/plans/{self.plan_basic.pk}/toggle-status/"
+        )
         self.assertEqual(res.status_code, status.HTTP_200_OK)
         self.plan_basic.refresh_from_db()
         self.assertFalse(self.plan_basic.is_active)
 
         # Reactivar
-        res2 = self.client.patch(f"/api/v1/saas-admin/plans/{self.plan_basic.pk}/toggle-status/")
+        res2 = self.client.patch(
+            f"/api/v1/saas-admin/plans/{self.plan_basic.pk}/toggle-status/"
+        )
         self.assertEqual(res2.status_code, status.HTTP_200_OK)
         self.plan_basic.refresh_from_db()
         self.assertTrue(self.plan_basic.is_active)
@@ -185,14 +197,18 @@ class SaaSPlansAndSubscriptionsTests(TestCase):
             "duration_days": 60,
             "notes": "Asignación semestral de prueba acordada",
         }
-        res = self.client.post("/api/v1/saas-admin/subscriptions/assign/", payload, format="json")
+        res = self.client.post(
+            "/api/v1/saas-admin/subscriptions/assign/", payload, format="json"
+        )
         self.assertEqual(res.status_code, status.HTTP_201_CREATED)
         sub_data = res.json()["data"]
         self.assertEqual(sub_data["company_id"], self.company.pk)
         self.assertEqual(sub_data["plan"]["code"], "BASIC_TEST")
 
         # Verificar auditoría
-        audit = AuditLog.objects.filter(payload__security_event="ASSIGN_SUBSCRIPTION_PLAN").first()
+        audit = AuditLog.objects.filter(
+            payload__security_event="ASSIGN_SUBSCRIPTION_PLAN"
+        ).first()
         self.assertIsNotNone(audit)
         self.assertEqual(audit.company, self.company)
 
@@ -214,16 +230,25 @@ class SaaSPlansAndSubscriptionsTests(TestCase):
             "new_plan_id": self.plan_pro.pk,
             "reason": "Upgrade a Plan Pro por crecimiento de la empresa",
         }
-        res = self.client.post(f"/api/v1/saas-admin/subscriptions/{sub.pk}/change-plan/", payload, format="json")
+        res = self.client.post(
+            f"/api/v1/saas-admin/subscriptions/{sub.pk}/change-plan/",
+            payload,
+            format="json",
+        )
         self.assertEqual(res.status_code, status.HTTP_200_OK)
 
         sub.refresh_from_db()
         self.assertEqual(sub.plan.code, "PRO_TEST")
         # La fecha de fin se conserva idéntica (al segundo)
-        self.assertEqual(sub.end_date.strftime("%Y-%m-%d %H:%M"), expected_end_date.strftime("%Y-%m-%d %H:%M"))
+        self.assertEqual(
+            sub.end_date.strftime("%Y-%m-%d %H:%M"),
+            expected_end_date.strftime("%Y-%m-%d %H:%M"),
+        )
 
         # Verificar auditoría con detalle de plan anterior y nuevo
-        audit = AuditLog.objects.filter(payload__security_event="CHANGE_SUBSCRIPTION_PLAN").first()
+        audit = AuditLog.objects.filter(
+            payload__security_event="CHANGE_SUBSCRIPTION_PLAN"
+        ).first()
         self.assertIsNotNone(audit)
         self.assertEqual(audit.payload["old_plan_code"], "BASIC_TEST")
         self.assertEqual(audit.payload["new_plan_code"], "PRO_TEST")
@@ -245,12 +270,17 @@ class SaaSPlansAndSubscriptionsTests(TestCase):
             "duration_days": 30,
             "reason": "Pago recibido por transferencia bancaria",
         }
-        res = self.client.post(f"/api/v1/saas-admin/subscriptions/{sub.pk}/renew/", payload, format="json")
+        res = self.client.post(
+            f"/api/v1/saas-admin/subscriptions/{sub.pk}/renew/", payload, format="json"
+        )
         self.assertEqual(res.status_code, status.HTTP_200_OK)
 
         sub.refresh_from_db()
         expected_new_end = initial_end + timedelta(days=30)
-        self.assertEqual(sub.end_date.strftime("%Y-%m-%d %H:%M"), expected_new_end.strftime("%Y-%m-%d %H:%M"))
+        self.assertEqual(
+            sub.end_date.strftime("%Y-%m-%d %H:%M"),
+            expected_new_end.strftime("%Y-%m-%d %H:%M"),
+        )
 
     def test_commercial_kpis(self):
         """Verifica el cálculo de KPIs comerciales."""
@@ -274,7 +304,9 @@ class SaaSPlansAndSubscriptionsTests(TestCase):
         )
 
         self.client.force_authenticate(user=self.superadmin)
-        res = self.client.get(f"/api/v1/saas-admin/subscriptions/company/{self.company.pk}/quotas/")
+        res = self.client.get(
+            f"/api/v1/saas-admin/subscriptions/company/{self.company.pk}/quotas/"
+        )
         self.assertEqual(res.status_code, status.HTTP_200_OK)
         data = res.json()["data"]
         self.assertTrue(data["has_subscription"])
@@ -306,10 +338,14 @@ class SaaSPlansAndSubscriptionsTests(TestCase):
         res_subs = self.client.get("/api/v1/saas-admin/subscriptions/")
         self.assertEqual(res_subs.status_code, status.HTTP_403_FORBIDDEN)
 
-        res_quotas = self.client.get(f"/api/v1/saas-admin/subscriptions/company/{self.company.pk}/quotas/")
+        res_quotas = self.client.get(
+            f"/api/v1/saas-admin/subscriptions/company/{self.company.pk}/quotas/"
+        )
         self.assertEqual(res_quotas.status_code, status.HTTP_403_FORBIDDEN)
 
-        res_assign = self.client.post("/api/v1/saas-admin/subscriptions/assign/", {}, format="json")
+        res_assign = self.client.post(
+            "/api/v1/saas-admin/subscriptions/assign/", {}, format="json"
+        )
         self.assertEqual(res_assign.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_assign_plan_cancels_previous_active_subscription(self):
@@ -334,7 +370,9 @@ class SaaSPlansAndSubscriptionsTests(TestCase):
             "duration_days": 30,
             "notes": "Nueva asignación que supera la anterior",
         }
-        res = self.client.post("/api/v1/saas-admin/subscriptions/assign/", payload, format="json")
+        res = self.client.post(
+            "/api/v1/saas-admin/subscriptions/assign/", payload, format="json"
+        )
         self.assertEqual(res.status_code, status.HTTP_201_CREATED)
 
         sub_old.refresh_from_db()
@@ -363,7 +401,9 @@ class SaaSPlansAndSubscriptionsTests(TestCase):
             "plan_id": self.plan_inactive.pk,
             "duration_days": 30,
         }
-        res = self.client.post("/api/v1/saas-admin/subscriptions/assign/", payload, format="json")
+        res = self.client.post(
+            "/api/v1/saas-admin/subscriptions/assign/", payload, format="json"
+        )
         self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn("desactivado", str(res.json()))
 
@@ -382,7 +422,11 @@ class SaaSPlansAndSubscriptionsTests(TestCase):
             "new_plan_id": self.plan_inactive.pk,
             "reason": "Intento de asignación de plan inactivo",
         }
-        res = self.client.post(f"/api/v1/saas-admin/subscriptions/{sub.pk}/change-plan/", payload, format="json")
+        res = self.client.post(
+            f"/api/v1/saas-admin/subscriptions/{sub.pk}/change-plan/",
+            payload,
+            format="json",
+        )
         self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn("inactivo", str(res.json()))
 
@@ -402,7 +446,11 @@ class SaaSPlansAndSubscriptionsTests(TestCase):
             "new_plan_id": self.plan_pro.pk,
             "reason": "Intento de cambio en suscripción expirada",
         }
-        res = self.client.post(f"/api/v1/saas-admin/subscriptions/{sub_expired.pk}/change-plan/", payload, format="json")
+        res = self.client.post(
+            f"/api/v1/saas-admin/subscriptions/{sub_expired.pk}/change-plan/",
+            payload,
+            format="json",
+        )
         self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn("vencida", str(res.json()).lower())
 
@@ -421,7 +469,11 @@ class SaaSPlansAndSubscriptionsTests(TestCase):
             "new_plan_id": self.plan_pro.pk,
             "reason": "Intento de cambio en suscripción cancelada",
         }
-        res = self.client.post(f"/api/v1/saas-admin/subscriptions/{sub_cancelled.pk}/change-plan/", payload, format="json")
+        res = self.client.post(
+            f"/api/v1/saas-admin/subscriptions/{sub_cancelled.pk}/change-plan/",
+            payload,
+            format="json",
+        )
         self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn("cancelada", str(res.json()).lower())
 
@@ -440,7 +492,11 @@ class SaaSPlansAndSubscriptionsTests(TestCase):
             "duration_days": 30,
             "reason": "Intento de renovación de suscripción cancelada",
         }
-        res = self.client.post(f"/api/v1/saas-admin/subscriptions/{sub_cancelled.pk}/renew/", payload, format="json")
+        res = self.client.post(
+            f"/api/v1/saas-admin/subscriptions/{sub_cancelled.pk}/renew/",
+            payload,
+            format="json",
+        )
         self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn("cancelada", str(res.json()).lower())
 
@@ -463,7 +519,11 @@ class SaaSPlansAndSubscriptionsTests(TestCase):
             "duration_days": 30,
             "reason": "Reactivación y pago recibido tras vencimiento",
         }
-        res = self.client.post(f"/api/v1/saas-admin/subscriptions/{sub_expired.pk}/renew/", payload, format="json")
+        res = self.client.post(
+            f"/api/v1/saas-admin/subscriptions/{sub_expired.pk}/renew/",
+            payload,
+            format="json",
+        )
         self.assertEqual(res.status_code, status.HTTP_200_OK)
 
         sub_expired.refresh_from_db()
@@ -490,7 +550,9 @@ class SaaSPlansAndSubscriptionsTests(TestCase):
             "duration_days": 30,
             "reason": "Pago recibido y deuda saneada",
         }
-        res = self.client.post(f"/api/v1/saas-admin/subscriptions/{sub.pk}/renew/", payload, format="json")
+        res = self.client.post(
+            f"/api/v1/saas-admin/subscriptions/{sub.pk}/renew/", payload, format="json"
+        )
         self.assertEqual(res.status_code, status.HTTP_200_OK)
 
         self.company.refresh_from_db()

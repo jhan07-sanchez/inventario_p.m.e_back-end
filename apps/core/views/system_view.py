@@ -48,16 +48,22 @@ class SystemInfoView(viewsets.ViewSet):
     def list(self, request):
         installed_version = SoftwareVersionSelector.get_installed_version()
         update_info = SoftwareVersionSelector.check_for_updates()
+        latest_published = SoftwareVersionSelector.get_latest_published_version()
+        current_version = (
+            latest_published.version if latest_published else installed_version
+        )
 
         return Response(
             {
                 "app_name": "Inventario P.M.E",
-                "version": update_info.get("latest_version", installed_version),
-                "installed_version": installed_version,
-                "installed_version_published_at": update_info.get(
-                    "installed_version_published_at"
+                "version": current_version,
+                "installed_version": current_version,
+                "installed_version_published_at": (
+                    latest_published.published_at.isoformat()
+                    if latest_published and latest_published.published_at
+                    else update_info.get("installed_version_published_at")
                 ),
-                "latest_version": update_info.get("latest_version", installed_version),
+                "latest_version": current_version,
                 "has_update": update_info.get("has_update", False),
                 "is_mandatory": update_info.get("is_mandatory", False),
                 "priority": update_info.get("priority", "OPTIONAL"),

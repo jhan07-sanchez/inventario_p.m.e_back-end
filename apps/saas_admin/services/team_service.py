@@ -1,5 +1,6 @@
 import logging
 from typing import Optional
+
 from django.contrib.auth import get_user_model
 from django.core.exceptions import PermissionDenied
 from django.db import transaction
@@ -85,7 +86,9 @@ class SaaSTeamService:
         Solo permitido para el Superadministrador.
         """
         if not (actor_user and actor_user.is_superuser):
-            raise PermissionDenied("Solo el Superadministrador puede registrar personal del equipo SaaS.")
+            raise PermissionDenied(
+                "Solo el Superadministrador puede registrar personal del equipo SaaS."
+            )
 
         profile_key = data["saas_profile"].upper()
         profile_config = PROFILE_ROLE_MAPPING.get(profile_key)
@@ -147,19 +150,28 @@ class SaaSTeamService:
         Actualiza los datos y/o perfil de un miembro del equipo SaaS.
         """
         if not (actor_user and actor_user.is_superuser):
-            raise PermissionDenied("Solo el Superadministrador puede modificar miembros del equipo.")
+            raise PermissionDenied(
+                "Solo el Superadministrador puede modificar miembros del equipo."
+            )
 
         try:
             member = User.objects.get(pk=user_id, is_staff=True)
         except User.DoesNotExist:
-            raise BusinessException("Miembro del equipo no encontrado o no pertenece al staff.", code="TEAM_MEMBER_NOT_FOUND")
+            raise BusinessException(
+                "Miembro del equipo no encontrado o no pertenece al staff.",
+                code="TEAM_MEMBER_NOT_FOUND",
+            )
 
         # Evitar que el actor se quite sus propios privilegios de superadmin si es el único
         if member.pk == actor_user.pk and "saas_profile" in data:
             if data["saas_profile"] != "SUPERADMIN":
-                super_count = User.objects.filter(is_superuser=True, is_active=True).count()
+                super_count = User.objects.filter(
+                    is_superuser=True, is_active=True
+                ).count()
                 if super_count <= 1:
-                    raise BusinessException("No puede revocar sus propios privilegios de superadministrador siendo el único activo.")
+                    raise BusinessException(
+                        "No puede revocar sus propios privilegios de superadministrador siendo el único activo."
+                    )
 
         # Actualizar campos básicos
         if "first_name" in data:
@@ -218,12 +230,16 @@ class SaaSTeamService:
         Activa o desactiva (revocación de acceso) a un miembro del equipo.
         """
         if not (actor_user and actor_user.is_superuser):
-            raise PermissionDenied("Solo el Superadministrador puede modificar el estado de un integrante.")
+            raise PermissionDenied(
+                "Solo el Superadministrador puede modificar el estado de un integrante."
+            )
 
         try:
             member = User.objects.get(pk=user_id)
         except User.DoesNotExist:
-            raise BusinessException("Miembro no encontrado.", code="TEAM_MEMBER_NOT_FOUND")
+            raise BusinessException(
+                "Miembro no encontrado.", code="TEAM_MEMBER_NOT_FOUND"
+            )
 
         if member.pk == actor_user.pk:
             raise BusinessException("No puede desactivar su propia cuenta.")

@@ -26,6 +26,7 @@ class SubscriptionMiddleware:
     """
 
     EXEMPT_PREFIXES = (
+        "/api/v1/system",
         "/api/v1/subscriptions",
         "/api/v1/companies",
         "/api/v1/auth",
@@ -102,7 +103,8 @@ class SubscriptionMiddleware:
         if matching_module is None and path.startswith("/api/v1/"):
             # Verificar si se trata de una ruta legítima del sistema / identidad
             is_allowlisted = any(
-                self._matches(path, prefix) for prefix in self.ALLOWLISTED_UNMAPPED_PATHS
+                self._matches(path, prefix)
+                for prefix in self.ALLOWLISTED_UNMAPPED_PATHS
             )
             if not is_allowlisted:
                 logger.warning(
@@ -127,13 +129,20 @@ class SubscriptionMiddleware:
         # 4. Si la empresa está presente en el contexto del tenant, validar suscripción y entitlements
         company = getattr(request, "company", None)
         if company:
+            # Superusuarios de la plataforma tienen acceso completo para auditoría, soporte y administración
+            user = getattr(request, "user", None)
+            if user and getattr(user, "is_superuser", False):
+                return self.get_response(request)
+
             from apps.subscriptions.services.company_entitlement_service import (
                 CompanyEntitlementService,
             )
 
             # A. Validación de Entitlement Modular: ¿Tiene contratado el módulo en su plan?
             if matching_module:
-                if not CompanyEntitlementService.is_module_enabled(company, matching_module):
+                if not CompanyEntitlementService.is_module_enabled(
+                    company, matching_module
+                ):
                     sub = SubscriptionSelector.get_current_subscription(company)
                     plan_name = sub.plan.name if sub and sub.plan else "Sin Plan"
                     return JsonResponse(

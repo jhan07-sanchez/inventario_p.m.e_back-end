@@ -4,7 +4,11 @@ from rest_framework import status
 from rest_framework.test import APIClient
 
 from apps.company_info.models import CompanyInfo
-from apps.notifications.enums import NotificationCategory, NotificationPriority, NotificationEventType
+from apps.notifications.enums import (
+    NotificationCategory,
+    NotificationEventType,
+    NotificationPriority,
+)
 from apps.notifications.models import Notification
 from apps.notifications.selectors import NotificationSelector
 from apps.notifications.services import NotificationService
@@ -69,7 +73,11 @@ class NotificationSystemTests(TestCase):
         self.role_admin = Role.objects.create(
             role_name="Administrador Empresa",
             company=self.company_a,
-            permissions={"inventory.view": True, "sales.view": True, "cash.manage": True},
+            permissions={
+                "inventory.view": True,
+                "sales.view": True,
+                "cash.manage": True,
+            },
         )
 
         # Membresías
@@ -138,7 +146,12 @@ class NotificationSystemTests(TestCase):
             idempotency_key=key,
         )
         self.assertEqual(len(notifs_2), 0)
-        self.assertEqual(Notification.objects.filter(recipient=self.user1, idempotency_key=key).count(), 1)
+        self.assertEqual(
+            Notification.objects.filter(
+                recipient=self.user1, idempotency_key=key
+            ).count(),
+            1,
+        )
 
     def test_resolve_recipients_by_company_and_permissions(self):
         """Verifica resolución inteligente de destinatarios por membresía activa y permisos."""
@@ -240,7 +253,11 @@ class NotificationSystemTests(TestCase):
         res_sales = self.client.get("/api/v1/notifications/?category=SALES")
         self.assertEqual(res_sales.status_code, status.HTTP_200_OK)
         data = res_sales.data.get("data", {})
-        results = data.get("results") if isinstance(data, dict) else (data if isinstance(data, list) else res_sales.data.get("results", []))
+        results = (
+            data.get("results")
+            if isinstance(data, dict)
+            else (data if isinstance(data, list) else res_sales.data.get("results", []))
+        )
         self.assertEqual(len(results), 1)
         self.assertEqual(results[0]["category"], NotificationCategory.SALES)
 

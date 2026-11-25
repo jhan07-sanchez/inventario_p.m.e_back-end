@@ -39,6 +39,20 @@ from rest_framework.permissions import BasePermission
 from apps.core.security.services.permission_service import PermissionService
 
 
+def _resolve_module_for_permission(permission_code: str) -> str:
+    """
+    Resuelve el código canónico del módulo al que pertenece un permiso o acción,
+    consultando SecurityRegistry como fuente de verdad.
+    Fallback: prefijo del código (ej. 'users.view' -> 'users').
+    """
+    from apps.core.security.registry import SecurityRegistry
+
+    for mod in SecurityRegistry.get_all_modules():
+        if permission_code in mod.permissions or permission_code in mod.actions:
+            return mod.module_id.lower()
+    return permission_code.split(".", 1)[0].lower()
+
+
 def HasPermission(permission_code: str):
     """
     Factory que genera una clase dinámica de permisos para un código específico.
@@ -53,6 +67,10 @@ def HasPermission(permission_code: str):
             if not (user and user.is_authenticated and user.is_active):
                 return False
 
+            # Superusuarios de la plataforma tienen acceso total sin restricciones de plan
+            if user.is_superuser:
+                return True
+
             company_id = getattr(request, "company_id", None)
             if not company_id and hasattr(request, "company") and request.company:
                 company_id = getattr(request.company, "id_company", None) or getattr(
@@ -66,7 +84,7 @@ def HasPermission(permission_code: str):
                     CompanyEntitlementService,
                 )
 
-                module_code = permission_code.split(".", 1)[0]
+                module_code = _resolve_module_for_permission(permission_code)
                 company = getattr(request, "company", None)
                 if not company:
                     from apps.company_info.models import CompanyInfo
@@ -75,13 +93,8 @@ def HasPermission(permission_code: str):
                 if company and not CompanyEntitlementService.is_module_enabled(
                     company, module_code
                 ):
-                    self.message = (
-                        f"El módulo '{module_code}' no está incluido en el plan contratado por su empresa."
-                    )
+                    self.message = f"El módulo '{module_code}' no está incluido en el plan contratado por su empresa."
                     return False
-
-            if user.is_superuser:
-                return True
 
             return PermissionService.user_has_permission(
                 user=user,
@@ -109,6 +122,10 @@ def HasAnyPermission(*permission_codes: str):
             if not (user and user.is_authenticated and user.is_active):
                 return False
 
+            # Superusuarios de la plataforma tienen acceso total sin restricciones de plan
+            if user.is_superuser:
+                return True
+
             company_id = getattr(request, "company_id", None)
             if not company_id and hasattr(request, "company") and request.company:
                 company_id = getattr(request.company, "id_company", None) or getattr(
@@ -130,18 +147,13 @@ def HasAnyPermission(*permission_codes: str):
                 if company:
                     has_any_module = any(
                         CompanyEntitlementService.is_module_enabled(
-                            company, code.split(".", 1)[0]
+                            company, _resolve_module_for_permission(code)
                         )
                         for code in permission_codes
                     )
                     if not has_any_module:
-                        self.message = (
-                            "Los módulos requeridos para esta acción no están incluidos en el plan de su empresa."
-                        )
+                        self.message = "Los módulos requeridos para esta acción no están incluidos en el plan de su empresa."
                         return False
-
-            if user.is_superuser:
-                return True
 
             return any(
                 PermissionService.user_has_permission(

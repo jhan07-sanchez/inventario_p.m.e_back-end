@@ -1,4 +1,5 @@
 from rest_framework.permissions import BasePermission
+
 from apps.core.security.services.permission_service import PermissionService
 
 
@@ -27,7 +28,7 @@ class IsSaaSAdmin(BasePermission):
     Permiso para usuarios con acceso al panel de administración SaaS:
     - Superadministradores (acceso completo).
     - Personal interno autorizado (is_staff=True con rol global o permiso SaaS).
-    
+
     Deniega terminantemente a usuarios empresariales o clientes del ERP.
     """
 
@@ -40,7 +41,10 @@ class IsSaaSAdmin(BasePermission):
 
         # Permitir finalizar sesión de soporte si el token presenta claim de impersonación
         if getattr(request, "auth", None) and hasattr(request.auth, "get"):
-            if request.auth.get("is_impersonated", False) and getattr(view, "action", None) == "end_impersonate":
+            if (
+                request.auth.get("is_impersonated", False)
+                and getattr(view, "action", None) == "end_impersonate"
+            ):
                 return True
 
         if user.is_superuser:
@@ -62,7 +66,9 @@ def HasSaaSPermission(permission_code: str):
     """
 
     class DynamicSaaSPermission(BasePermission):
-        message = f"Acceso denegado. No posee el permiso administrativo '{permission_code}'."
+        message = (
+            f"Acceso denegado. No posee el permiso administrativo '{permission_code}'."
+        )
 
         def has_permission(self, request, view):
             user = getattr(request, "user", None)
@@ -82,5 +88,7 @@ def HasSaaSPermission(permission_code: str):
                 company_id=None,
             )
 
-    DynamicSaaSPermission.__name__ = f"HasSaaSPermission_{permission_code.replace('.', '_')}"
+    DynamicSaaSPermission.__name__ = (
+        f"HasSaaSPermission_{permission_code.replace('.', '_')}"
+    )
     return DynamicSaaSPermission

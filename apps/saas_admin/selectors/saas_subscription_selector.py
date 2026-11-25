@@ -1,4 +1,5 @@
-from typing import Optional, Any, Dict
+from typing import Any, Dict, Optional
+
 from django.db.models import Count, Q, QuerySet
 from django.utils import timezone
 
@@ -25,7 +26,10 @@ class SaaSSubscriptionSelector:
         qs = Plan.objects.annotate(
             active_subs_count=Count(
                 "subscriptions",
-                filter=Q(subscriptions__is_active=True, subscriptions__status=Subscription.Status.ACTIVE),
+                filter=Q(
+                    subscriptions__is_active=True,
+                    subscriptions__status=Subscription.Status.ACTIVE,
+                ),
             )
         ).order_by("-is_active", "price")
 

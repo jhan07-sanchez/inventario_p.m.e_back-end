@@ -67,10 +67,10 @@ class PurchaseListSerializer(serializers.ModelSerializer):
             from django.db.models import Sum
 
             from apps.cash.models.payment import Payment
+            from apps.purchases.selectors.purchase_selector import PurchaseSelector
 
-            ref_prefix = f"COMPRA #{obj.id_purchase}"
             total = Payment.objects.filter(
-                reference__startswith=ref_prefix,
+                PurchaseSelector.get_purchase_payment_filter(obj.id_purchase),
                 status=Payment.PaymentStatus.COMPLETED,
                 is_active=True,
             ).aggregate(total=Sum("amount"))["total"] or Decimal("0.00")
@@ -138,10 +138,10 @@ class PurchaseRetrieveSerializer(serializers.ModelSerializer):
             from django.db.models import Sum
 
             from apps.cash.models.payment import Payment
+            from apps.purchases.selectors.purchase_selector import PurchaseSelector
 
-            ref_prefix = f"COMPRA #{obj.id_purchase}"
             total = Payment.objects.filter(
-                reference__startswith=ref_prefix,
+                PurchaseSelector.get_purchase_payment_filter(obj.id_purchase),
                 status=Payment.PaymentStatus.COMPLETED,
                 is_active=True,
             ).aggregate(total=Sum("amount"))["total"] or Decimal("0.00")
@@ -174,10 +174,10 @@ class PurchaseRetrieveSerializer(serializers.ModelSerializer):
     @extend_schema_field(serializers.ListField(child=serializers.DictField()))
     def get_payments_summary(self, obj):
         from apps.cash.models.payment import Payment
+        from apps.purchases.selectors.purchase_selector import PurchaseSelector
 
-        ref_prefix = f"COMPRA #{obj.id_purchase}"
         payments = Payment.objects.filter(
-            reference__startswith=ref_prefix,
+            PurchaseSelector.get_purchase_payment_filter(obj.id_purchase),
             is_active=True,
         ).order_by("-created_at")
 

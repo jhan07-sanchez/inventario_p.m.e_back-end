@@ -174,6 +174,7 @@ class PurchaseViewSet(BaseViewSet):
         )
 
         if page is not None:
+            PurchaseSelector.attach_payment_totals(page)
             serializer = self.get_serializer(
                 page,
                 many=True,
@@ -183,6 +184,7 @@ class PurchaseViewSet(BaseViewSet):
                 serializer.data,
             )
 
+        PurchaseSelector.attach_payment_totals(queryset)
         serializer = self.get_serializer(
             queryset,
             many=True,

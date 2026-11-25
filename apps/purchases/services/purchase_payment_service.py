@@ -46,10 +46,11 @@ class PurchasePaymentService:
         if dto.amount <= Decimal("0.00"):
             raise ValidationError("El monto del pago debe ser mayor a cero.")
 
-        # Obtener pagos completados existentes para esta compra
-        ref_prefix = f"COMPRA #{purchase.id_purchase}"
+        # Obtener pagos completados existentes para esta compra de forma estricta (sin colisión de prefijos)
+        from apps.purchases.selectors.purchase_selector import PurchaseSelector
+
         existing_payments = Payment.objects.filter(
-            reference__startswith=ref_prefix,
+            PurchaseSelector.get_purchase_payment_filter(purchase.id_purchase),
             status=Payment.PaymentStatus.COMPLETED,
             is_active=True,
         )
@@ -119,9 +120,8 @@ class PurchasePaymentService:
                 )
 
         # Crear registro en Payment
-        full_ref = f"{ref_prefix}"
-        if dto.reference:
-            full_ref += f" - {dto.reference}"
+        base_ref = f"COMPRA #{purchase.id_purchase}"
+        full_ref = f"{base_ref} - {dto.reference}" if dto.reference else base_ref
 
         supplier_name = (
             purchase.supplier.business_name
@@ -134,6 +134,7 @@ class PurchasePaymentService:
 
         payment = Payment.objects.create(
             sale=None,
+            purchase=purchase,
             amount=dto.amount,
             payment_method=dto.payment_method,
             status=Payment.PaymentStatus.COMPLETED,
@@ -184,9 +185,10 @@ class PurchasePaymentService:
         except Purchase.DoesNotExist:
             raise PurchaseNotFoundException()
 
-        ref_prefix = f"COMPRA #{purchase.id_purchase}"
+        from apps.purchases.selectors.purchase_selector import PurchaseSelector
+
         payments = Payment.objects.filter(
-            reference__startswith=ref_prefix,
+            PurchaseSelector.get_purchase_payment_filter(purchase.id_purchase),
             is_active=True,
         ).order_by("-created_at")
 

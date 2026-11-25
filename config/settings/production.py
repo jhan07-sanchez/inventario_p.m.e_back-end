@@ -92,6 +92,57 @@ STORAGES = {
     },
 }
 
+# ======================================
+# Configuración de Caché para Producción Multi-Worker
+# ======================================
+# Evita la desincronización y split-brain de caché/throttling entre workers de Gunicorn.
+# Soporta Redis (si se provee REDIS_URL) o DatabaseCache compartido en PostgreSQL.
+REDIS_URL = config("REDIS_URL", default="")
+USE_DATABASE_CACHE = config("USE_DATABASE_CACHE", default=False, cast=bool)
 
+if REDIS_URL:
+    try:
+        import redis  # noqa: F401
 
-# prueba render
+        CACHES = {
+            "default": {
+                "BACKEND": "django.core.cache.backends.redis.RedisCache",
+                "LOCATION": REDIS_URL,
+                "TIMEOUT": 300,
+                "KEY_PREFIX": "pme_saas",
+            }
+        }
+    except ImportError:
+        import logging
+
+        logging.getLogger("django").warning(
+            "REDIS_URL está configurado pero el paquete 'redis' no está instalado. "
+            "Usando LocMemCache de respaldo."
+        )
+        CACHES = {
+            "default": {
+                "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+                "LOCATION": "inventario-pme-prod-cache",
+                "TIMEOUT": 300,
+                "OPTIONS": {"MAX_ENTRIES": 2000},
+            }
+        }
+elif USE_DATABASE_CACHE:
+    CACHES = {
+        "default": {
+            "BACKEND": "django.core.cache.backends.db.DatabaseCache",
+            "LOCATION": "cache_table",
+            "TIMEOUT": 300,
+            "KEY_PREFIX": "pme_saas",
+            "OPTIONS": {"MAX_ENTRIES": 5000},
+        }
+    }
+else:
+    CACHES = {
+        "default": {
+            "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+            "LOCATION": "inventario-pme-prod-cache",
+            "TIMEOUT": 300,
+            "OPTIONS": {"MAX_ENTRIES": 2000},
+        }
+    }

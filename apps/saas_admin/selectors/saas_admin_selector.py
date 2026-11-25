@@ -199,7 +199,7 @@ class SaaSAdminSelector:
             status=SubscriptionPayment.PaymentStatus.APPROVED,
         ).aggregate(total=Sum("amount"))["total"] or Decimal("0.00")
 
-        #CONTAR SOLO USUARIOS DE EMPRESAS CLIENTES (TENANTS)
+        # CONTAR SOLO USUARIOS DE EMPRESAS CLIENTES (TENANTS)
         # Filtramos a los usuarios que tienen una membresía activa en alguna empresa.
         # Usamos .distinct() por si un usuario pertenece a varias empresas, para no contarlo doble.
         total_users = (
@@ -224,8 +224,12 @@ class SaaSAdminSelector:
                 "id_payment": p.id_payment,
                 "amount": float(p.amount),
                 "payment_date": p.payment_date.isoformat() if p.payment_date else None,
-                "company_name": p.subscription.company.business_name if p.subscription and p.subscription.company else "N/A",
-                "plan_name": p.subscription.plan.name if p.subscription and p.subscription.plan else "N/A",
+                "company_name": p.subscription.company.business_name
+                if p.subscription and p.subscription.company
+                else "N/A",
+                "plan_name": p.subscription.plan.name
+                if p.subscription and p.subscription.plan
+                else "N/A",
                 "status": p.status,
             }
             for p in recent_payments

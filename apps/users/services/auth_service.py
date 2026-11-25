@@ -35,20 +35,12 @@ class AuthService:
         """
         Autentica un usuario y genera los tokens JWT.
         """
-        # 1. Buscamos al usuario primero para verificar si está bloqueado
-        user = User.objects.filter(email=email).first()
-
-        if user and user.is_locked_out:
-            # Calculamos el tiempo exacto
-            remaining_time = user.lockout_until - timezone.now()
-            remaining_minutes = max(1, int(remaining_time.total_seconds() / 60))
-            raise AccountLockedException(remaining_minutes=remaining_minutes)
-
-        # 2. Autenticamos las credenciales
+        # 1. Autenticamos las credenciales primero (mitigación de enumeración de usuarios y timing attacks)
         authenticated_user = authenticate(email=email, password=password)
 
         if authenticated_user is None:
-            # 3. Manejo de intentos fallidos (solo si el usuario existe en la BD)
+            # Manejo de intentos fallidos solo si el usuario existe en BD
+            user = User.objects.filter(email=email).first()
             if user:
                 user.failed_login_attempts += 1
                 max_attempts = GlobalParameterService.get_typed_value(
@@ -58,19 +50,28 @@ class AuthService:
                 if user.failed_login_attempts >= max_attempts:
                     # Bloqueo por 15 minutos
                     user.lockout_until = timezone.now() + timedelta(minutes=15)
-                    user.failed_login_attempts = (
-                        0  # Reiniciamos el contador tras bloquear
-                    )
+                    user.failed_login_attempts = 0
 
                 user.save(update_fields=["failed_login_attempts", "lockout_until"])
 
             raise InvalidCredentialsException()
 
-        # 4. Login Exitoso: Si tenía intentos fallidos previos, los reiniciamos
-        if user and (user.failed_login_attempts > 0 or user.lockout_until):
-            user.failed_login_attempts = 0
-            user.lockout_until = None
-            user.save(update_fields=["failed_login_attempts", "lockout_until"])
+        # 2. Verificamos si la cuenta está bloqueada temporalmente tras autenticación
+        if authenticated_user.is_locked_out:
+            remaining_time = authenticated_user.lockout_until - timezone.now()
+            remaining_minutes = max(1, int(remaining_time.total_seconds() / 60))
+            raise AccountLockedException(remaining_minutes=remaining_minutes)
+
+        # 3. Login Exitoso: Si tenía intentos fallidos previos, los reiniciamos
+        if (
+            authenticated_user.failed_login_attempts > 0
+            or authenticated_user.lockout_until
+        ):
+            authenticated_user.failed_login_attempts = 0
+            authenticated_user.lockout_until = None
+            authenticated_user.save(
+                update_fields=["failed_login_attempts", "lockout_until"]
+            )
 
         # 5. Validaciones de negocio estandar
         if not authenticated_user.is_active:

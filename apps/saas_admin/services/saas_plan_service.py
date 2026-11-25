@@ -1,6 +1,7 @@
 from typing import Any, Dict
+
 from django.db import transaction
-from rest_framework.exceptions import NotFound, ValidationError
+from rest_framework.exceptions import NotFound
 
 from apps.core.models.audit_log import AuditLog
 from apps.subscriptions.models import Plan
@@ -45,7 +46,9 @@ class SaaSPlanService:
 
     @classmethod
     @transaction.atomic
-    def update_plan(cls, plan_id: int, validated_data: Dict[str, Any], actor_user=None) -> Plan:
+    def update_plan(
+        cls, plan_id: int, validated_data: Dict[str, Any], actor_user=None
+    ) -> Plan:
         """
         Edita un plan comercial existente, validando su existencia y registrando auditoría.
         """
@@ -84,7 +87,10 @@ class SaaSPlanService:
                 "id_plan": plan.id_plan,
                 "code": plan.code,
                 "old_state": old_state,
-                "new_state": {k: str(getattr(plan, k)) if k == "price" else getattr(plan, k) for k in old_state},
+                "new_state": {
+                    k: str(getattr(plan, k)) if k == "price" else getattr(plan, k)
+                    for k in old_state
+                },
             },
         )
         return plan
@@ -123,7 +129,9 @@ class SaaSPlanService:
     def _log_action(actor_user, action: str, plan: Plan, payload: dict) -> None:
         try:
             AuditLog.objects.create(
-                user=actor_user if getattr(actor_user, "is_authenticated", False) else None,
+                user=actor_user
+                if getattr(actor_user, "is_authenticated", False)
+                else None,
                 company=None,
                 method="POST",
                 path=f"/api/v1/saas-admin/plans/{plan.id_plan}/",

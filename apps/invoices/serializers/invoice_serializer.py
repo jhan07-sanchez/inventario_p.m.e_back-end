@@ -105,9 +105,10 @@ class InvoiceRetrieveSerializer(serializers.ModelSerializer):
 
             paid = Decimal("0.00")
             if obj.purchase_id:
-                ref_prefix = f"COMPRA #{obj.purchase_id}"
+                from apps.purchases.selectors.purchase_selector import PurchaseSelector
+
                 paid = Payment.objects.filter(
-                    reference__startswith=ref_prefix,
+                    PurchaseSelector.get_purchase_payment_filter(obj.purchase_id),
                     status=Payment.PaymentStatus.COMPLETED,
                     is_active=True,
                 ).aggregate(total=Sum("amount"))["total"] or Decimal("0.00")

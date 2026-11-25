@@ -9,6 +9,18 @@ class InvoiceTemplate(TenantModel):
     la generación de facturas u otros documentos empresariales.
     """
 
+    # Excepción justificada: Permite company_id NULL para plantillas globales del sistema base
+    company = models.ForeignKey(
+        "company_info.CompanyInfo",
+        on_delete=models.PROTECT,
+        related_name="%(app_label)s_%(class)s_set",
+        verbose_name="Empresa",
+        help_text="Organización / Empresa a la que pertenece este registro.",
+        null=True,
+        blank=True,
+        db_index=True,
+    )
+
     class DocumentType(models.TextChoices):
         PURCHASE_INVOICE = "PURCHASE_INVOICE", "Factura de Compra"
         SALE_INVOICE = "SALE_INVOICE", "Factura de Venta"

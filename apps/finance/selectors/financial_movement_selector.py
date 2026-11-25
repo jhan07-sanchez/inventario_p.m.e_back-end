@@ -36,12 +36,7 @@ class FinancialMovementSelector(BaseSelector[FinancialMovement]):
         if not include_deleted:
             qs = qs.filter(is_active=True)
         if company_id:
-            if company_id == 1:
-                qs = qs.filter(
-                    Q(account__company_id=1) | Q(account__company__isnull=True)
-                )
-            else:
-                qs = qs.filter(account__company_id=company_id)
+            qs = qs.filter(account__company_id=company_id)
         if account_id:
             qs = qs.filter(account_id=account_id)
         if movement_type:
@@ -70,12 +65,7 @@ class FinancialMovementSelector(BaseSelector[FinancialMovement]):
             .filter(pk=movement_id)
         )
         if company_id:
-            if company_id == 1:
-                qs = qs.filter(
-                    Q(account__company_id=1) | Q(account__company__isnull=True)
-                )
-            else:
-                qs = qs.filter(account__company_id=company_id)
+            qs = qs.filter(account__company_id=company_id)
         return qs.first()
 
     @classmethod

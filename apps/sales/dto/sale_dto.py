@@ -15,6 +15,7 @@ class SaleCreateDto:
 
     details: tuple[SaleDetailDto, ...]
     customer_id: int | None = None
+    company_id: int | None = None
     discount: Decimal = Decimal("0.00")
     tax: Decimal = Decimal("0.00")
     payment_method: str = "CASH"

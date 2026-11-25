@@ -4,7 +4,9 @@ from rest_framework.decorators import action
 from apps.core.pagination.custom_pagination import CustomPagination
 from apps.core.views.base_viewset import BaseGenericViewSet
 from apps.saas_admin.permissions import IsSaaSAdmin
-from apps.saas_admin.selectors.saas_subscription_selector import SaaSSubscriptionSelector
+from apps.saas_admin.selectors.saas_subscription_selector import (
+    SaaSSubscriptionSelector,
+)
 from apps.saas_admin.serializers.subscription_serializer import (
     SaaSAssignPlanSerializer,
     SaaSChangePlanSerializer,
@@ -55,7 +57,9 @@ class SaaSSubscriptionViewSet(BaseGenericViewSet):
     def retrieve(self, request, pk=None, *args, **kwargs):
         """Consulta el detalle de una suscripción específica."""
         try:
-            sub = Subscription.objects.select_related("company", "plan").get(id_subscription=int(pk))
+            sub = Subscription.objects.select_related("company", "plan").get(
+                id_subscription=int(pk)
+            )
         except (Subscription.DoesNotExist, ValueError):
             return self.error_response(
                 message=f"No se encontró la suscripción con ID {pk}.",
@@ -80,7 +84,9 @@ class SaaSSubscriptionViewSet(BaseGenericViewSet):
             message="KPIs comerciales calculados correctamente.",
         )
 
-    @action(detail=False, methods=["get"], url_path=r"company/(?P<company_id>[^/.]+)/quotas")
+    @action(
+        detail=False, methods=["get"], url_path=r"company/(?P<company_id>[^/.]+)/quotas"
+    )
     def company_quotas(self, request, company_id=None):
         """Consulta el consumo en tiempo real de cuotas (usuarios, productos, facturas) de una empresa."""
         if not company_id or not company_id.isdigit():
@@ -89,7 +95,9 @@ class SaaSSubscriptionViewSet(BaseGenericViewSet):
                 status_code=status.HTTP_400_BAD_REQUEST,
             )
 
-        metrics = SaaSSubscriptionSelector.get_company_quotas_and_metrics(int(company_id))
+        metrics = SaaSSubscriptionSelector.get_company_quotas_and_metrics(
+            int(company_id)
+        )
         if not metrics:
             return self.error_response(
                 message=f"No se encontró la empresa con ID {company_id}.",

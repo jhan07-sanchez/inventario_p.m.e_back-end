@@ -1,7 +1,7 @@
 from rest_framework import serializers
 
-from apps.subscriptions.models import Plan, Subscription
 from apps.saas_admin.serializers.plan_serializer import SaaSPlanSerializer
+from apps.subscriptions.models import Subscription
 
 
 class SaaSSubscriptionListSerializer(serializers.ModelSerializer):
@@ -54,7 +54,9 @@ class SaaSAssignPlanSerializer(serializers.Serializer):
         default=Subscription.Status.ACTIVE,
         required=False,
     )
-    notes = serializers.CharField(required=False, allow_blank=True, default="", max_length=500)
+    notes = serializers.CharField(
+        required=False, allow_blank=True, default="", max_length=500
+    )
 
 
 class SaaSChangePlanSerializer(serializers.Serializer):
@@ -71,5 +73,9 @@ class SaaSRenewSubscriptionSerializer(serializers.Serializer):
     Validador para la renovación de vigencia de una suscripción.
     """
 
-    duration_days = serializers.IntegerField(required=False, allow_null=True, min_value=1)
-    reason = serializers.CharField(required=False, allow_blank=True, default="", max_length=500)
+    duration_days = serializers.IntegerField(
+        required=False, allow_null=True, min_value=1
+    )
+    reason = serializers.CharField(
+        required=False, allow_blank=True, default="", max_length=500
+    )

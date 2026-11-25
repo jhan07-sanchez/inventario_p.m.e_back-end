@@ -1,15 +1,15 @@
-import json
 from decimal import Decimal
+
 from django.contrib.auth import get_user_model
 from django.test import TestCase, override_settings
-from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APIClient
 
 from apps.company_info.models import CompanyInfo
-from apps.core.security.registry import SecurityRegistry
-from apps.subscriptions.models import Plan, Subscription
-from apps.subscriptions.services.company_entitlement_service import CompanyEntitlementService
+from apps.subscriptions.models import Plan
+from apps.subscriptions.services.company_entitlement_service import (
+    CompanyEntitlementService,
+)
 from apps.subscriptions.services.subscription_service import SubscriptionService
 from apps.users.models import CompanyMembership, Role
 
@@ -137,7 +137,9 @@ class CompanyEntitlementTestCase(TestCase):
             "enabled_modules": ["inventory", "modulo_inventado_xyz"],
             "is_active": True,
         }
-        resp = self.client.post("/api/v1/saas-admin/plans/", data=payload, format="json")
+        resp = self.client.post(
+            "/api/v1/saas-admin/plans/", data=payload, format="json"
+        )
         self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
         data = resp.json()
         self.assertIn("enabled_modules", str(data))
@@ -156,22 +158,30 @@ class CompanyEntitlementTestCase(TestCase):
             "enabled_modules": ["clients", "customers", "stock", "inventory"],
             "is_active": True,
         }
-        resp = self.client.post("/api/v1/saas-admin/plans/", data=payload, format="json")
+        resp = self.client.post(
+            "/api/v1/saas-admin/plans/", data=payload, format="json"
+        )
         self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
         created_plan = Plan.objects.get(code="CANONICAL_PLAN")
         self.assertIn("customers", created_plan.enabled_modules)
         self.assertIn("inventory", created_plan.enabled_modules)
         self.assertNotIn("clients", created_plan.enabled_modules)
         self.assertNotIn("stock", created_plan.enabled_modules)
-        self.assertEqual(len(created_plan.enabled_modules), len(set(created_plan.enabled_modules)))
+        self.assertEqual(
+            len(created_plan.enabled_modules), len(set(created_plan.enabled_modules))
+        )
 
     def test_company_entitlement_service_expands_and_caches(self):
         """Verifica que CompanyEntitlementService expanda grupos y cachee por empresa."""
         # Asignar plan básico
-        SubscriptionService.assign_or_renew_plan(self.company, self.plan_basic, duration_days=30)
+        SubscriptionService.assign_or_renew_plan(
+            self.company, self.plan_basic, duration_days=30
+        )
 
         # 1. Resolver módulos habilitados
-        enabled = CompanyEntitlementService.get_company_enabled_modules(self.company.id_company)
+        enabled = CompanyEntitlementService.get_company_enabled_modules(
+            self.company.id_company
+        )
         self.assertIn("sales", enabled)
         # El grupo 'inventory' debe haberse expandido a sus submódulos
         self.assertIn("inventory", enabled)
@@ -181,13 +191,27 @@ class CompanyEntitlementTestCase(TestCase):
         self.assertNotIn("finance", enabled)
 
         # 2. Comprobar is_module_enabled
-        self.assertTrue(CompanyEntitlementService.is_module_enabled(self.company.id_company, "sales"))
-        self.assertTrue(CompanyEntitlementService.is_module_enabled(self.company.id_company, "products"))
-        self.assertFalse(CompanyEntitlementService.is_module_enabled(self.company.id_company, "finance"))
+        self.assertTrue(
+            CompanyEntitlementService.is_module_enabled(
+                self.company.id_company, "sales"
+            )
+        )
+        self.assertTrue(
+            CompanyEntitlementService.is_module_enabled(
+                self.company.id_company, "products"
+            )
+        )
+        self.assertFalse(
+            CompanyEntitlementService.is_module_enabled(
+                self.company.id_company, "finance"
+            )
+        )
 
     def test_permission_service_filters_uncontracted_permissions(self):
         """Verifica que PermissionService filtre permisos de módulos no contratados."""
-        SubscriptionService.assign_or_renew_plan(self.company, self.plan_basic, duration_days=30)
+        SubscriptionService.assign_or_renew_plan(
+            self.company, self.plan_basic, duration_days=30
+        )
 
         # Obtener contexto de seguridad con el usuario
         self.client.force_authenticate(user=self.owner)
@@ -212,7 +236,9 @@ class CompanyEntitlementTestCase(TestCase):
 
     def test_subscription_middleware_blocks_uncontracted_module_request(self):
         """Verifica que una petición HTTP a una ruta de módulo no contratado sea rechazada con 403."""
-        SubscriptionService.assign_or_renew_plan(self.company, self.plan_basic, duration_days=30)
+        SubscriptionService.assign_or_renew_plan(
+            self.company, self.plan_basic, duration_days=30
+        )
 
         self.client.force_authenticate(user=self.owner)
         self.client.defaults["HTTP_X_COMPANY_ID"] = str(self.company.id_company)
@@ -225,7 +251,9 @@ class CompanyEntitlementTestCase(TestCase):
 
     def test_plan_upgrade_invalidates_cache_and_grants_access(self):
         """Verifica que al actualizar el plan a uno con 'finance', se invalide la caché y se conceda acceso."""
-        sub = SubscriptionService.assign_or_renew_plan(self.company, self.plan_basic, duration_days=30)
+        sub = SubscriptionService.assign_or_renew_plan(
+            self.company, self.plan_basic, duration_days=30
+        )
 
         self.client.force_authenticate(user=self.owner)
         self.client.defaults["HTTP_X_COMPANY_ID"] = str(self.company.id_company)
@@ -279,8 +307,61 @@ class CompanyEntitlementTestCase(TestCase):
             owner_user=self.owner,
         )
 
-        enabled = CompanyEntitlementService.get_company_enabled_modules(prod_company.id_company)
+        enabled = CompanyEntitlementService.get_company_enabled_modules(
+            prod_company.id_company
+        )
         self.assertEqual(enabled, {"dashboard"})
-        self.assertFalse(CompanyEntitlementService.is_module_enabled(prod_company.id_company, "sales"))
-        self.assertFalse(CompanyEntitlementService.is_module_enabled(prod_company.id_company, "inventory"))
+        self.assertFalse(
+            CompanyEntitlementService.is_module_enabled(
+                prod_company.id_company, "sales"
+            )
+        )
+        self.assertFalse(
+            CompanyEntitlementService.is_module_enabled(
+                prod_company.id_company, "inventory"
+            )
+        )
 
+    def test_superuser_bypasses_subscription_middleware_and_entitlements(self):
+        """Verifica que un superusuario pueda consultar endpoints comerciales aun sin suscripción en la empresa."""
+        self.client.force_authenticate(user=self.superadmin)
+        self.client.defaults["HTTP_X_COMPANY_ID"] = str(self.company.id_company)
+
+        # Sin plan asignado a self.company, el superadmin debe poder acceder
+        resp = self.client.get("/api/v1/finance/accounts/")
+        self.assertNotEqual(resp.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_has_permission_resolves_system_manage_releases_to_settings(self):
+        """Verifica que system.manage_releases resuelva a 'settings' y no al módulo inexistente 'system'."""
+        from apps.core.security.permissions import HasPermission
+
+        # 1. Superusuario siempre tiene permiso, incluso con company_id
+        perm = HasPermission("system.manage_releases")()
+        request = type(
+            "Req",
+            (),
+            {
+                "user": self.superadmin,
+                "company": self.company,
+                "company_id": self.company.id_company,
+            },
+        )()
+        self.assertTrue(perm.has_permission(request, None))
+
+        # 2. Usuario normal con plan sin 'settings' es rechazado indicando el módulo 'settings'
+        SubscriptionService.assign_or_renew_plan(
+            self.company, self.plan_basic, duration_days=30
+        )
+        perm_user = HasPermission("system.manage_releases")()
+        req_user = type(
+            "Req",
+            (),
+            {
+                "user": self.owner,
+                "company": self.company,
+                "company_id": self.company.id_company,
+            },
+        )()
+        self.assertFalse(perm_user.has_permission(req_user, None))
+        self.assertIn("settings", perm_user.message)
+        self.assertNotIn("'system'", perm_user.message)

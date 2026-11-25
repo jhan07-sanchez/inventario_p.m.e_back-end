@@ -6,7 +6,11 @@ from django.db import OperationalError, ProgrammingError, transaction
 from django.utils import timezone
 
 from apps.core.services.base_service import BaseService
-from apps.notifications.enums import NotificationCategory, NotificationPriority, NotificationEventType
+from apps.notifications.enums import (
+    NotificationCategory,
+    NotificationEventType,
+    NotificationPriority,
+)
 from apps.notifications.models.notification import Notification
 from apps.notifications.selectors.notification_selector import NotificationSelector
 from apps.notifications.services.recipient_resolver import RecipientResolver
@@ -131,7 +135,9 @@ class NotificationService(BaseService[Notification]):
                 e,
             )
         except Exception as e:
-            logger.error("Error inesperado en NotificationService.notify: %s", e, exc_info=True)
+            logger.error(
+                "Error inesperado en NotificationService.notify: %s", e, exc_info=True
+            )
 
         return created_notifications
 
@@ -140,6 +146,7 @@ class NotificationService(BaseService[Notification]):
         Ejecuta la emisión de la notificación una vez que la transacción activa haga commit exitoso.
         Si no hay transacción activa, se ejecuta inmediatamente.
         """
+
         def _execute():
             self.notify(**kwargs)
 
@@ -221,7 +228,11 @@ class NotificationService(BaseService[Notification]):
             company_id=company_id,
             action_url="/inventario",
             origin_id=str(origin_id),
-            metadata={"product_name": product_name, "current_stock": current_stock, "min_stock": min_stock},
+            metadata={
+                "product_name": product_name,
+                "current_stock": current_stock,
+                "min_stock": min_stock,
+            },
             idempotency_key=idem,
             permission_code="inventory.view",
         )
@@ -315,7 +326,11 @@ class NotificationService(BaseService[Notification]):
             company_id=company_id,
             action_url="/compras",
             origin_id=str(origin_id),
-            metadata={"purchase_number": purchase_number, "total": total_amount, "supplier": supplier_name},
+            metadata={
+                "purchase_number": purchase_number,
+                "total": total_amount,
+                "supplier": supplier_name,
+            },
             idempotency_key=f"purchase_registered_{company_id}_{origin_id}",
             permission_code="purchases.view",
             exclude_user_ids=[exclude_user_id] if exclude_user_id else None,
@@ -379,7 +394,9 @@ class NotificationService(BaseService[Notification]):
             title="Diferencia en Cierre de Caja",
             message=f"Se detectó un {tipo} de ${abs(difference):,.2f} al cerrar '{register_name}'.",
             category=NotificationCategory.CASH,
-            priority=NotificationPriority.CRITICAL if abs(difference) > 100 else NotificationPriority.WARNING,
+            priority=NotificationPriority.CRITICAL
+            if abs(difference) > 100
+            else NotificationPriority.WARNING,
             event_type=NotificationEventType.CASH_SESSION_CLOSED_DIFFERENCE,
             company_id=company_id,
             action_url="/caja",
@@ -466,7 +483,11 @@ class NotificationService(BaseService[Notification]):
         """
         try:
             active_users = User.objects.filter(is_active=True)
-            prio = NotificationPriority.CRITICAL if is_critical else NotificationPriority.INFO
+            prio = (
+                NotificationPriority.CRITICAL
+                if is_critical
+                else NotificationPriority.INFO
+            )
             title = f"Nueva Actualización P.M.E. v{version_number}"
             msg = f"Se ha publicado la versión {version_number}: '{version_name}'. Consulta las novedades del sistema."
 
@@ -480,7 +501,10 @@ class NotificationService(BaseService[Notification]):
                 recipients=active_users,
                 action_url="/configuracion/versiones",
                 origin_id=version_number,
-                metadata={"version_number": version_number, "version_name": version_name},
+                metadata={
+                    "version_number": version_number,
+                    "version_name": version_name,
+                },
                 idempotency_key=f"version_published_{version_number}",
             )
         except Exception as e:

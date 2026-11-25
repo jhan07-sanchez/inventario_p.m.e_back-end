@@ -77,9 +77,23 @@ class SaleService(BaseService[Sale]):
         if not dto.details:
             raise SaleHasNoDetailsException()
 
+        # Asignación de consecutivo transaccional e independiente por empresa
+        from apps.core.models.company_sequence import CompanySequence
+        from apps.core.services.company_sequence_service import CompanySequenceService
+
+        if company_id:
+            _, assigned_sale_number = CompanySequenceService.get_next_number(
+                company_id=company_id,
+                document_type=CompanySequence.DocumentType.SALE,
+                prefix="VTA",
+                padding=6,
+            )
+        else:
+            assigned_sale_number = "TEMP"
+
         sale = Sale.objects.create(
             company_id=company_id,
-            sale_number="TEMP",
+            sale_number=assigned_sale_number,
             customer=customer,
             user=user,
             status=Sale.SaleStatus.PENDING,
@@ -94,7 +108,8 @@ class SaleService(BaseService[Sale]):
             change_amount=dto.change_amount,
         )
 
-        sale.sale_number = f"VTA-{sale.id_sale:06d}"
+        if not company_id:
+            sale.sale_number = f"VTA-{sale.id_sale:06d}"
 
         # Fetch all products at once to avoid N+1 queries scoped to company
         product_ids = [d.product_id for d in dto.details]
@@ -517,6 +532,7 @@ class SaleService(BaseService[Sale]):
     def cancel_sale(
         sale: Sale,
         user=None,
+        reason: str = "",
     ) -> Sale:
         """
         Cancela una venta.
@@ -691,14 +707,7 @@ class SaleService(BaseService[Sale]):
             user=user, status=CashSession.SessionStatus.OPEN, is_active=True
         )
         if sale.company_id:
-            if sale.company_id == 1:
-                from django.db.models import Q
-
-                session_qs = session_qs.filter(
-                    Q(company_id=1) | Q(company_id__isnull=True)
-                )
-            else:
-                session_qs = session_qs.filter(company_id=sale.company_id)
+            session_qs = session_qs.filter(company_id=sale.company_id)
         session = session_qs.first()
 
         if sale.sale_type == sale.SaleType.POS and not session:
@@ -759,14 +768,7 @@ class SaleService(BaseService[Sale]):
                 account_type=account_type, is_active=True
             )
             if sale.company_id:
-                if sale.company_id == 1:
-                    from django.db.models import Q
-
-                    account_qs = account_qs.filter(
-                        Q(company_id=1) | Q(company__isnull=True)
-                    )
-                else:
-                    account_qs = account_qs.filter(company_id=sale.company_id)
+                account_qs = account_qs.filter(company_id=sale.company_id)
             account = account_qs.first()
 
             if account:
@@ -804,14 +806,7 @@ class SaleService(BaseService[Sale]):
             user=user, status=CashSession.SessionStatus.OPEN, is_active=True
         )
         if sale.company_id:
-            if sale.company_id == 1:
-                from django.db.models import Q
-
-                session_qs = session_qs.filter(
-                    Q(company_id=1) | Q(company_id__isnull=True)
-                )
-            else:
-                session_qs = session_qs.filter(company_id=sale.company_id)
+            session_qs = session_qs.filter(company_id=sale.company_id)
         session = session_qs.first()
 
         payments = sale.payments.exclude(status=PaymentStatus.CANCELLED)

@@ -124,17 +124,6 @@ class PermissionService:
 
         if user.is_superuser:
             val = {code: True for code in SecurityRegistry.get_all_security_codes()}
-            if company_id is not None:
-                from apps.company_info.models import CompanyInfo
-                from apps.subscriptions.services.company_entitlement_service import (
-                    CompanyEntitlementService,
-                )
-
-                company = CompanyInfo.objects.filter(pk=company_id).first()
-                if company:
-                    val = CompanyEntitlementService.filter_effective_permissions(
-                        company, val
-                    )
             cache.set(cache_key, val, timeout=timeout)
             return val
 

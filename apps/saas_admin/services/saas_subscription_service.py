@@ -1,5 +1,6 @@
 from datetime import timedelta
 from typing import Optional
+
 from django.db import transaction
 from django.utils import timezone
 from rest_framework.exceptions import NotFound, ValidationError
@@ -40,10 +41,14 @@ class SaaSSubscriptionService:
             raise NotFound(detail=f"No se encontró el plan con ID {plan_id}.")
 
         if not plan.is_active:
-            raise ValidationError(detail=f"El plan '{plan.name}' está desactivado y no puede asignarse a nuevas suscripciones.")
+            raise ValidationError(
+                detail=f"El plan '{plan.name}' está desactivado y no puede asignarse a nuevas suscripciones."
+            )
 
         if duration_days <= 0:
-            raise ValidationError(detail="La duración en días debe ser un número entero positivo.")
+            raise ValidationError(
+                detail="La duración en días debe ser un número entero positivo."
+            )
 
         now = timezone.now()
         end_date = now + timedelta(days=duration_days)
@@ -76,11 +81,15 @@ class SaaSSubscriptionService:
             end_date=end_date,
             grace_period_days=5,
             auto_renew=True,
-            notes=notes or f"Asignación inicial por administrador {getattr(actor_user, 'email', 'SaaS Admin')}",
+            notes=notes
+            or f"Asignación inicial por administrador {getattr(actor_user, 'email', 'SaaS Admin')}",
         )
 
         # Si la empresa cliente estaba suspendida, reactivarla
-        if company.status == CompanyInfo.CompanyStatus.SUSPENDED and status == Subscription.Status.ACTIVE:
+        if (
+            company.status == CompanyInfo.CompanyStatus.SUSPENDED
+            and status == Subscription.Status.ACTIVE
+        ):
             company.status = CompanyInfo.CompanyStatus.ACTIVE
             company.save(update_fields=["status", "updated_at"])
 
@@ -101,13 +110,15 @@ class SaaSSubscriptionService:
         )
 
         # Invalidar caché de entitlements y permisos
+        from apps.core.security.services.permission_service import PermissionService
         from apps.subscriptions.services.company_entitlement_service import (
             CompanyEntitlementService,
         )
-        from apps.core.security.services.permission_service import PermissionService
 
         CompanyEntitlementService.invalidate_company(subscription.company.id_company)
-        PermissionService.invalidate_user_cache(company_id=subscription.company.id_company)
+        PermissionService.invalidate_user_cache(
+            company_id=subscription.company.id_company
+        )
 
         try:
             from apps.notifications.services import NotificationService
@@ -137,18 +148,29 @@ class SaaSSubscriptionService:
         Regla de negocio: La vigencia y los días restantes se preservan de manera estricta.
         """
         try:
-            subscription = Subscription.objects.select_for_update().select_related("plan", "company").get(
-                id_subscription=subscription_id
+            subscription = (
+                Subscription.objects.select_for_update()
+                .select_related("plan", "company")
+                .get(id_subscription=subscription_id)
             )
         except Subscription.DoesNotExist:
-            raise NotFound(detail=f"No se encontró la suscripción con ID {subscription_id}.")
+            raise NotFound(
+                detail=f"No se encontró la suscripción con ID {subscription_id}."
+            )
 
         if subscription.status == Subscription.Status.CANCELLED:
-            raise ValidationError(detail="No se puede cambiar el plan de una suscripción cancelada. Debe asignar una nueva suscripción a la empresa.")
+            raise ValidationError(
+                detail="No se puede cambiar el plan de una suscripción cancelada. Debe asignar una nueva suscripción a la empresa."
+            )
 
         now = timezone.now()
-        if subscription.status == Subscription.Status.EXPIRED or subscription.end_date <= now:
-            raise ValidationError(detail="No se puede cambiar el plan de una suscripción vencida. Debe renovar la vigencia o asignar una nueva suscripción.")
+        if (
+            subscription.status == Subscription.Status.EXPIRED
+            or subscription.end_date <= now
+        ):
+            raise ValidationError(
+                detail="No se puede cambiar el plan de una suscripción vencida. Debe renovar la vigencia o asignar una nueva suscripción."
+            )
 
         try:
             new_plan = Plan.objects.get(id_plan=new_plan_id)
@@ -156,17 +178,19 @@ class SaaSSubscriptionService:
             raise NotFound(detail=f"No se encontró el nuevo plan con ID {new_plan_id}.")
 
         if not new_plan.is_active:
-            raise ValidationError(detail=f"El plan '{new_plan.name}' no está disponible para contratación porque se encuentra inactivo.")
+            raise ValidationError(
+                detail=f"El plan '{new_plan.name}' no está disponible para contratación porque se encuentra inactivo."
+            )
 
         old_plan = subscription.plan
         if old_plan.id_plan == new_plan.id_plan:
-            raise ValidationError(detail=f"La suscripción ya cuenta con el plan '{new_plan.name}'.")
+            raise ValidationError(
+                detail=f"La suscripción ya cuenta con el plan '{new_plan.name}'."
+            )
 
         # Modificación de plan sin alterar end_date
         subscription.plan = new_plan
-        subscription.notes = (
-            f"{subscription.notes}\n[SaaS Admin] Cambio de plan: {old_plan.name} ({old_plan.code}) → {new_plan.name} ({new_plan.code}). Motivo: {reason}".strip()
-        )
+        subscription.notes = f"{subscription.notes}\n[SaaS Admin] Cambio de plan: {old_plan.name} ({old_plan.code}) → {new_plan.name} ({new_plan.code}). Motivo: {reason}".strip()
         subscription.save(update_fields=["plan", "notes", "updated_at"])
 
         cls._log_subscription_action(
@@ -201,18 +225,28 @@ class SaaSSubscriptionService:
         o acumulando sobre la fecha de vencimiento previa si aún está vigente.
         """
         try:
-            subscription = Subscription.objects.select_for_update().select_related("plan", "company").get(
-                id_subscription=subscription_id
+            subscription = (
+                Subscription.objects.select_for_update()
+                .select_related("plan", "company")
+                .get(id_subscription=subscription_id)
             )
         except Subscription.DoesNotExist:
-            raise NotFound(detail=f"No se encontró la suscripción con ID {subscription_id}.")
+            raise NotFound(
+                detail=f"No se encontró la suscripción con ID {subscription_id}."
+            )
 
         if subscription.status == Subscription.Status.CANCELLED:
-            raise ValidationError(detail="No se puede renovar una suscripción cancelada. Debe asignar una nueva suscripción formal a la empresa.")
+            raise ValidationError(
+                detail="No se puede renovar una suscripción cancelada. Debe asignar una nueva suscripción formal a la empresa."
+            )
 
         days = duration_days
         if days is None or days <= 0:
-            days = 365 if subscription.plan.billing_cycle == Plan.BillingCycle.ANNUAL else 30
+            days = (
+                365
+                if subscription.plan.billing_cycle == Plan.BillingCycle.ANNUAL
+                else 30
+            )
 
         now = timezone.now()
         base_date = subscription.end_date if subscription.end_date > now else now
@@ -223,9 +257,7 @@ class SaaSSubscriptionService:
 
         subscription.end_date = new_end_date
         subscription.status = Subscription.Status.ACTIVE
-        subscription.notes = (
-            f"{subscription.notes}\n[SaaS Admin] Renovación extendida en {days} días hasta {new_end_date.strftime('%Y-%m-%d')}. Motivo: {reason}".strip()
-        )
+        subscription.notes = f"{subscription.notes}\n[SaaS Admin] Renovación extendida en {days} días hasta {new_end_date.strftime('%Y-%m-%d')}. Motivo: {reason}".strip()
         subscription.save(update_fields=["end_date", "status", "notes", "updated_at"])
 
         # Si la empresa cliente estaba suspendida por mora, reactivarla
@@ -249,13 +281,15 @@ class SaaSSubscriptionService:
         )
 
         # Invalidar caché de entitlements y permisos
+        from apps.core.security.services.permission_service import PermissionService
         from apps.subscriptions.services.company_entitlement_service import (
             CompanyEntitlementService,
         )
-        from apps.core.security.services.permission_service import PermissionService
 
         CompanyEntitlementService.invalidate_company(subscription.company.id_company)
-        PermissionService.invalidate_user_cache(company_id=subscription.company.id_company)
+        PermissionService.invalidate_user_cache(
+            company_id=subscription.company.id_company
+        )
 
         try:
             from apps.notifications.services import NotificationService
@@ -282,7 +316,9 @@ class SaaSSubscriptionService:
     ) -> None:
         try:
             AuditLog.objects.create(
-                user=actor_user if getattr(actor_user, "is_authenticated", False) else None,
+                user=actor_user
+                if getattr(actor_user, "is_authenticated", False)
+                else None,
                 company=company,
                 method="POST",
                 path=f"/api/v1/saas-admin/subscriptions/{subscription.id_subscription}/",

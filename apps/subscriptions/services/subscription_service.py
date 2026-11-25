@@ -8,7 +8,6 @@ from rest_framework.exceptions import ValidationError
 
 from apps.company_info.models import CompanyInfo
 from apps.subscriptions.models import Plan, Subscription, SubscriptionPayment
-from apps.subscriptions.selectors.subscription_selector import SubscriptionSelector
 
 
 class SubscriptionService:
@@ -35,7 +34,9 @@ class SubscriptionService:
 
         company_id = getattr(company, "id_company", getattr(company, "pk", company))
         try:
-            company_obj = CompanyInfo.objects.select_for_update().get(id_company=company_id)
+            company_obj = CompanyInfo.objects.select_for_update().get(
+                id_company=company_id
+            )
         except CompanyInfo.DoesNotExist:
             raise ValidationError(f"No se encontró la empresa con ID {company_id}.")
 
@@ -69,10 +70,10 @@ class SubscriptionService:
             current_sub.save(
                 update_fields=["plan", "end_date", "status", "notes", "updated_at"]
             )
+            from apps.core.security.services.permission_service import PermissionService
             from apps.subscriptions.services.company_entitlement_service import (
                 CompanyEntitlementService,
             )
-            from apps.core.security.services.permission_service import PermissionService
 
             CompanyEntitlementService.invalidate_company(company_obj.id_company)
             PermissionService.invalidate_user_cache(company_id=company_obj.id_company)
@@ -105,10 +106,10 @@ class SubscriptionService:
             notes=notes,
         )
 
+        from apps.core.security.services.permission_service import PermissionService
         from apps.subscriptions.services.company_entitlement_service import (
             CompanyEntitlementService,
         )
-        from apps.core.security.services.permission_service import PermissionService
 
         CompanyEntitlementService.invalidate_company(company_obj.id_company)
         PermissionService.invalidate_user_cache(company_id=company_obj.id_company)
@@ -153,10 +154,10 @@ class SubscriptionService:
         subscription.status = Subscription.Status.ACTIVE
         subscription.save(update_fields=["end_date", "status", "updated_at"])
 
+        from apps.core.security.services.permission_service import PermissionService
         from apps.subscriptions.services.company_entitlement_service import (
             CompanyEntitlementService,
         )
-        from apps.core.security.services.permission_service import PermissionService
 
         CompanyEntitlementService.invalidate_company(subscription.company_id)
         PermissionService.invalidate_user_cache(company_id=subscription.company_id)
