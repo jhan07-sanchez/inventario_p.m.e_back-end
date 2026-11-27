@@ -14,6 +14,7 @@ from apps.subscriptions.selectors.subscription_selector import SubscriptionSelec
 from apps.subscriptions.serializers.subscription_serializers import (
     PlanSerializer,
     SubscriptionSerializer,
+    SubscriptionStatusSerializer,
 )
 from apps.subscriptions.services.subscription_service import SubscriptionService
 
@@ -53,14 +54,46 @@ class SubscriptionViewSet(viewsets.ViewSet):
         metrics = SubscriptionSelector.get_company_usage_metrics(company)
         sub = SubscriptionSelector.get_current_subscription(company)
         sub_data = SubscriptionSerializer(sub).data if sub else None
+        status_data = SubscriptionSelector.get_subscription_status(company)
+        status_serialized = SubscriptionStatusSerializer(
+            status_data, context={"company": company, "request": request}
+        ).data
 
         return ApiResponse.success(
             data={
                 "subscription": sub_data,
+                "status": status_serialized,
                 "metrics": metrics,
             },
             message="Información de suscripción obtenida exitosamente.",
         )
+
+    @action(detail=False, methods=["get"], url_path="current/status")
+    def current_status(self, request):
+        """
+        Retorna el estado operativo de la suscripción de la empresa activa
+        (is_valid, is_read_only, can_write, status, grace_period, renew_url).
+        """
+        company = getattr(request, "company", None)
+        if not company:
+            return ApiResponse.error(
+                message="No hay una empresa seleccionada en el contexto actual.",
+                status_code=status.HTTP_400_BAD_REQUEST,
+            )
+
+        status_data = SubscriptionSelector.get_subscription_status(company)
+        serializer = SubscriptionStatusSerializer(
+            status_data, context={"company": company, "request": request}
+        )
+        return ApiResponse.success(
+            data=serializer.data,
+            message="Estado de suscripción obtenido exitosamente.",
+        )
+
+    @action(detail=False, methods=["get"], url_path="status")
+    def status_alias(self, request):
+        """Alias para /api/v1/subscriptions/status/"""
+        return self.current_status(request)
 
     @subscription_change_plan_schema
     @action(detail=False, methods=["post"], url_path="change-plan")

@@ -90,37 +90,87 @@ class Subscription(ActiveModel):
 
     @property
     def is_in_grace_period(self) -> bool:
-        """Determina si la suscripción vencida se encuentra aún dentro del período de gracia."""
+        """
+        Determina si la suscripción vencida se encuentra aún dentro del período de gracia.
+        REGLA DE NEGOCIO:
+        - TRIAL: NUNCA tiene período de gracia. Retorna False siempre.
+        - CANCELLED o EXPIRED: NUNCA están en período de gracia.
+        - ACTIVE o PAST_DUE: True si now > end_date y now <= end_date + grace_period_days, con grace_period_days > 0.
+        """
+        if self.status in [self.Status.TRIAL, self.Status.CANCELLED, self.Status.EXPIRED]:
+            return False
+
+        if not self.grace_period_days or self.grace_period_days <= 0:
+            return False
+
         now = timezone.now()
         if now <= self.end_date:
             return False
+
         grace_deadline = self.end_date + timedelta(days=self.grace_period_days)
         return now <= grace_deadline
+
+    @property
+    def is_expired(self) -> bool:
+        """
+        Determina si la suscripción está vencida definitivamente.
+        - EXPIRED o CANCELLED explícito -> True.
+        - Inactiva (is_active=False) -> True.
+        - TRIAL: Vencida si now > end_date (sin período de gracia).
+        - ACTIVE / PAST_DUE: Vencida si now > end_date + grace_period_days (o now > end_date si grace_period_days <= 0).
+        """
+        if not self.is_active or self.status in [self.Status.EXPIRED, self.Status.CANCELLED]:
+            return True
+
+        now = timezone.now()
+        if self.status == self.Status.TRIAL:
+            return now > self.end_date
+
+        if self.status in [self.Status.ACTIVE, self.Status.PAST_DUE]:
+            grace_days = self.grace_period_days if self.grace_period_days else 0
+            deadline = self.end_date + timedelta(days=grace_days)
+            return now > deadline
+
+        return True
 
     @property
     def is_valid(self) -> bool:
         """
         Determina si el inquilino tiene derecho operativo sobre el software.
-        Válido si está en TRIAL/ACTIVE vigente o si está en período de gracia.
+        Es válida si no ha expirado según sus reglas específicas.
         """
-        if not self.is_active or self.status == self.Status.CANCELLED:
-            return False
+        return not self.is_expired
 
-        now = timezone.now()
-        if self.status in [self.Status.TRIAL, self.Status.ACTIVE]:
-            return now <= self.end_date or self.is_in_grace_period
+    @property
+    def is_read_only(self) -> bool:
+        """
+        Determina si la cuenta de la empresa está en modo de SOLO LECTURA.
+        Aplica cuando la suscripción ha expirado, está cancelada o inactiva.
+        """
+        return self.is_expired
 
-        if self.status == self.Status.PAST_DUE:
-            return self.is_in_grace_period
-
-        return False
+    @property
+    def can_write(self) -> bool:
+        """
+        Determina si la suscripción autoriza operaciones de escritura (mutación de datos).
+        Inverso estricto de is_read_only.
+        """
+        return not self.is_read_only
 
     @property
     def days_remaining(self) -> int:
-        """Retorna los días restantes de servicio redondeando hacia arriba."""
+        """Retorna los días restantes de servicio redondeando hacia arriba. 0 si ya venció."""
         now = timezone.now()
         if self.end_date > now:
-            # Calculamos la diferencia exacta
             diff = self.end_date - now
+            return math.ceil(diff.total_seconds() / (24 * 3600))
+        return 0
+
+    @property
+    def days_overdue(self) -> int:
+        """Retorna la cantidad de días transcurridos desde end_date si ya venció. 0 si aún está vigente."""
+        now = timezone.now()
+        if now > self.end_date:
+            diff = now - self.end_date
             return math.ceil(diff.total_seconds() / (24 * 3600))
         return 0

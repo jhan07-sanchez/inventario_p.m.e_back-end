@@ -18,6 +18,12 @@ BASE_DIR = Path(__file__).resolve().parent.parent.parent
 # ──────────────────────────────────────────────────────
 APP_VERSION = config("APP_VERSION", default="1.0.0")
 
+# ──────────────────────────────────────────────────────
+# Canales de Soporte y Renovación de Suscripciones (SaaS)
+# ──────────────────────────────────────────────────────
+SUPPORT_WHATSAPP = config("SUPPORT_WHATSAPP", default="")
+SUPPORT_EMAIL = config("SUPPORT_EMAIL", default="")
+
 SECRET_KEY = config("SECRET_KEY", default="")
 
 DEBUG = config("DEBUG", default=False, cast=bool)

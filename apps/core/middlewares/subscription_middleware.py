@@ -4,6 +4,9 @@ from django.http import JsonResponse
 
 from apps.core.exceptions.error_codes import ErrorCodes
 from apps.subscriptions.selectors.subscription_selector import SubscriptionSelector
+from apps.subscriptions.services.subscription_contact_service import (
+    SubscriptionContactService,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -28,7 +31,6 @@ class SubscriptionMiddleware:
     EXEMPT_PREFIXES = (
         "/api/v1/system",
         "/api/v1/subscriptions",
-        "/api/v1/companies",
         "/api/v1/auth",
         "/api/v1/security",
         "/api/v1/saas-admin",
@@ -165,26 +167,73 @@ class SubscriptionMiddleware:
                         status=403,
                     )
 
-            # B. Si el método es de escritura y la suscripción está vencida o cancelada
+            # B. Si el método es de escritura y la suscripción no existe o no permite escribir
             if request.method not in self.SAFE_METHODS:
                 subscription = SubscriptionSelector.get_current_subscription(company)
-                if subscription and not subscription.is_valid:
+                contact_whatsapp, contact_email = SubscriptionContactService.get_channels(company)
+                
+                # CASO 1: Empresa sin suscripción asociada
+                if not subscription:
                     return JsonResponse(
                         {
                             "success": False,
-                            "code": ErrorCodes.SUBSCRIPTION_EXPIRED_OR_SUSPENDED,
-                            "error_code": ErrorCodes.SUBSCRIPTION_EXPIRED_OR_SUSPENDED,
-                            "message": (
-                                "La suscripción de su empresa ha vencido o se encuentra suspendida. "
-                                "Por favor regularice su pago en el módulo de suscripciones para continuar realizando operaciones."
-                            ),
+                            "code": ErrorCodes.SUBSCRIPTION_REQUIRED,
+                            "error_code": ErrorCodes.SUBSCRIPTION_REQUIRED,
+                            "message": "Su empresa no cuenta con una suscripción activa. Por favor seleccione y contrate un plan para comenzar a operar.",
                             "data": {
-                                "status": subscription.status,
-                                "days_remaining": subscription.days_remaining,
+                                "status": "NO_SUBSCRIPTION",
+                                "is_read_only": True,
+                                "can_write": False,
+                                "contact_whatsapp": contact_whatsapp,
+                                "contact_email": contact_email,
                             },
-                            "status": subscription.status,
-                            "days_remaining": subscription.days_remaining,
-                            "errors": None,
+                        },
+                        status=403,
+                    )
+
+                # CASO 2: Suscripción vencida, cancelada o en modo solo lectura
+                if not subscription.can_write:
+                    status_name = (
+                        "EXPIRED"
+                        if subscription.is_expired
+                        else subscription.status
+                    )
+                    return JsonResponse(
+                        {
+                            "success": False,
+                            "code": ErrorCodes.SUBSCRIPTION_EXPIRED,
+                            "error_code": ErrorCodes.SUBSCRIPTION_EXPIRED,
+                            "message": "Tu suscripción ha vencido. Tu cuenta está en modo lectura.",
+                            "data": {
+                                "status": status_name,
+                                "is_read_only": True,
+                                "can_write": False,
+                                "contact_whatsapp": contact_whatsapp,
+                                "contact_email": contact_email,
+                            },
+                        },
+                        status=403,
+                    )
+
+        else:
+            # CASO 3: Petición de escritura sobre un endpoint comercial o del tenant sin contexto de empresa resuelto (Fail-Closed)
+            if request.method not in self.SAFE_METHODS:
+                user = getattr(request, "user", None)
+                if not user or not getattr(user, "is_superuser", False):
+                    contact_whatsapp, contact_email = SubscriptionContactService.get_channels(None)
+                    return JsonResponse(
+                        {
+                            "success": False,
+                            "code": ErrorCodes.COMPANY_CONTEXT_REQUIRED,
+                            "error_code": ErrorCodes.COMPANY_CONTEXT_REQUIRED,
+                            "message": "Se requiere un contexto de empresa activa (encabezado X-Company-ID válido) para realizar operaciones de escritura.",
+                            "data": {
+                                "status": "NO_COMPANY",
+                                "is_read_only": True,
+                                "can_write": False,
+                                "contact_whatsapp": contact_whatsapp,
+                                "contact_email": contact_email,
+                            },
                         },
                         status=403,
                     )

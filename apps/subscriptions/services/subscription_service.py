@@ -17,6 +17,26 @@ class SubscriptionService:
     """
 
     @classmethod
+    def invalidate_subscription_cache(cls, company_id: int) -> None:
+        """
+        Invalida de manera atómica el caché de estado de suscripción,
+        entitlements y permisos de usuario para la empresa indicada.
+        """
+        if not company_id:
+            return
+
+        from django.core.cache import cache
+
+        from apps.core.security.services.permission_service import PermissionService
+        from apps.subscriptions.services.company_entitlement_service import (
+            CompanyEntitlementService,
+        )
+
+        cache.delete(f"subscription_status_{company_id}")
+        CompanyEntitlementService.invalidate_company(company_id)
+        PermissionService.invalidate_user_cache(company_id=company_id)
+
+    @classmethod
     @transaction.atomic
     def assign_or_renew_plan(
         cls,
@@ -70,13 +90,7 @@ class SubscriptionService:
             current_sub.save(
                 update_fields=["plan", "end_date", "status", "notes", "updated_at"]
             )
-            from apps.core.security.services.permission_service import PermissionService
-            from apps.subscriptions.services.company_entitlement_service import (
-                CompanyEntitlementService,
-            )
-
-            CompanyEntitlementService.invalidate_company(company_obj.id_company)
-            PermissionService.invalidate_user_cache(company_id=company_obj.id_company)
+            cls.invalidate_subscription_cache(company_obj.id_company)
             return current_sub
 
         # De lo contrario, cancelamos cualquier suscripción activa/trial previa para evitar solapamientos
@@ -95,25 +109,19 @@ class SubscriptionService:
             prev.save(update_fields=["status", "notes", "updated_at"])
 
         end_date = now + timedelta(days=duration_days)
+        grace_days = 0 if status == Subscription.Status.TRIAL else 5
         subscription = Subscription.objects.create(
             company=company_obj,
             plan=plan,
             status=status,
             start_date=now,
             end_date=end_date,
-            grace_period_days=5,
+            grace_period_days=grace_days,
             auto_renew=True,
             notes=notes,
         )
 
-        from apps.core.security.services.permission_service import PermissionService
-        from apps.subscriptions.services.company_entitlement_service import (
-            CompanyEntitlementService,
-        )
-
-        CompanyEntitlementService.invalidate_company(company_obj.id_company)
-        PermissionService.invalidate_user_cache(company_id=company_obj.id_company)
-
+        cls.invalidate_subscription_cache(company_obj.id_company)
         return subscription
 
     @classmethod
@@ -154,12 +162,5 @@ class SubscriptionService:
         subscription.status = Subscription.Status.ACTIVE
         subscription.save(update_fields=["end_date", "status", "updated_at"])
 
-        from apps.core.security.services.permission_service import PermissionService
-        from apps.subscriptions.services.company_entitlement_service import (
-            CompanyEntitlementService,
-        )
-
-        CompanyEntitlementService.invalidate_company(subscription.company_id)
-        PermissionService.invalidate_user_cache(company_id=subscription.company_id)
-
+        cls.invalidate_subscription_cache(subscription.company_id)
         return payment

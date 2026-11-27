@@ -104,3 +104,34 @@ class PlanLimitValidatorService:
                     "plan": plan_name,
                 }
             )
+
+    @classmethod
+    def validate_can_write(cls, company) -> None:
+        """
+        Valida que la empresa tenga una suscripción que autorice operaciones de escritura.
+        Si la suscripción está vencida, cancelada o inactiva, lanza PermissionDenied (HTTP 403).
+        """
+        if not company:
+            return
+
+        sub = SubscriptionSelector.get_current_subscription(company)
+        if not sub or not sub.can_write:
+            status_name = (
+                "EXPIRED"
+                if (sub and sub.is_expired)
+                else (sub.status if sub else "NO_SUBSCRIPTION")
+            )
+            raise PermissionDenied(
+                detail={
+                    "success": False,
+                    "code": "SUBSCRIPTION_EXPIRED",
+                    "error_code": "SUBSCRIPTION_EXPIRED",
+                    "message": "Tu suscripción ha vencido. Tu cuenta está en modo lectura.",
+                    "data": {
+                        "status": status_name,
+                        "is_read_only": True,
+                        "can_write": False,
+                        "renew_url": "/saas-admin/planes",
+                    },
+                }
+            )
