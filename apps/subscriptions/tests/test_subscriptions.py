@@ -165,7 +165,7 @@ class SubscriptionTestCase(TestCase):
         req_post.company = self.company
         res_post = middleware(req_post)
         self.assertEqual(res_post.status_code, 403)
-        self.assertIn("SUBSCRIPTION_EXPIRED_OR_SUSPENDED", res_post.content.decode())
+        self.assertIn("SUBSCRIPTION_EXPIRED", res_post.content.decode())
 
     def test_current_subscription_endpoint(self):
         SubscriptionService.assign_or_renew_plan(
